@@ -831,6 +831,24 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // GET endpoint to show webhook information
+  app.get("/api/whatsapp/webhook", (req, res) => {
+    res.json({
+      service: "WhatsApp Webhook Endpoint",
+      status: "active",
+      url: "https://workspace.hitkoch.replit.dev/api/whatsapp/webhook",
+      methods: ["POST"],
+      description: "Endpoint para receber webhooks da Evolution API WhatsApp Gateway",
+      supportedEvents: [
+        "MESSAGES_UPSERT",
+        "CONNECTION_UPDATE",
+        "QRCODE_UPDATED"
+      ],
+      lastUpdated: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
   // Webhook endpoint to receive messages from Evolution API Gateway
   app.post("/api/whatsapp/webhook", webhookRateLimiter, validateWebhookData, async (req, res) => {
     try {
@@ -982,6 +1000,122 @@ export function registerRoutes(app: Express): Server {
             error: sendError.message
           });
         }
+      }
+      
+      // Process messages from MESSAGES_UPSERT event
+      if (event === 'MESSAGES_UPSERT' && data?.messages) {
+        console.log('💬 Processando mensagens recebidas via MESSAGES_UPSERT');
+        
+        for (const message of data.messages) {
+          // Skip messages sent by the bot itself
+          if (message.key?.fromMe) {
+            console.log('⏭️ Ignorando mensagem própria');
+            continue;
+          }
+          
+          const remoteJid = message.key?.remoteJid;
+          if (!remoteJid) {
+            console.log('⏭️ RemoteJid não encontrado');
+            continue;
+          }
+          
+          const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
+          let messageText = '';
+          
+          // Extract message content based on type
+          if (message.message?.conversation) {
+            messageText = message.message.conversation;
+          } else if (message.message?.extendedTextMessage?.text) {
+            messageText = message.message.extendedTextMessage.text;
+          } else if (message.message?.imageMessage?.caption) {
+            messageText = message.message.imageMessage.caption || 'Recebi uma imagem. Como posso ajudar?';
+          } else {
+            console.log('⏭️ Tipo de mensagem não suportado:', Object.keys(message.message || {}));
+            continue;
+          }
+          
+          console.log(`📱 Nova mensagem de ${phoneNumber}: "${messageText}"`);
+          
+          try {
+            // Find the agent associated with this instance
+            const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+            if (!whatsappInstance) {
+              console.log(`❌ Instância não encontrada: ${instance}`);
+              continue;
+            }
+            
+            console.log(`🔍 Instância encontrada: ${whatsappInstance.instanceName} (Agent ID: ${whatsappInstance.agentId})`);
+            
+            // Get the agent - need to find owner first
+            let agent = null;
+            let ownerId = null;
+            
+            // Search through users to find the agent owner
+            for (let userId = 1; userId <= 100; userId++) {
+              try {
+                const userAgents = await storage.getAgentsByOwner(userId);
+                const foundAgent = userAgents.find(a => a.id === whatsappInstance.agentId);
+                if (foundAgent) {
+                  agent = foundAgent;
+                  ownerId = userId;
+                  break;
+                }
+              } catch (error) {
+                // Continue searching
+              }
+            }
+            
+            if (!agent) {
+              console.log(`❌ Agente não encontrado para instância: ${instance} (Agent ID: ${whatsappInstance.agentId})`);
+              continue;
+            }
+            
+            console.log(`🤖 Processando com agente: ${agent.name} (Owner: ${ownerId})`);
+            
+            // Generate AI response using the agent service
+            const aiResponse = await agentService.testAgent(agent, messageText);
+            
+            if (!aiResponse || aiResponse.trim().length === 0) {
+              console.log(`⚠️ Resposta vazia gerada para agente ${agent.id}`);
+              continue;
+            }
+            
+            console.log(`🧠 Resposta gerada: "${aiResponse.substring(0, 100)}..."`);
+            
+            // Send response back via WhatsApp
+            await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
+            console.log(`✅ Resposta enviada para ${phoneNumber}`);
+            
+            // Save conversation to database
+            await storage.createConversation({
+              agentId: agent.id,
+              userMessage: messageText,
+              agentResponse: aiResponse,
+              platform: 'whatsapp',
+              metadata: {
+                phoneNumber: phoneNumber,
+                instanceName: instance,
+                messageId: message.key?.id
+              }
+            });
+            
+            console.log(`💾 Conversa salva no banco de dados`);
+            
+          } catch (error) {
+            console.error(`❌ Erro ao processar mensagem de ${phoneNumber}:`, error);
+            
+            // Send fallback message
+            try {
+              const fallbackMessage = "Desculpe, estou com dificuldades técnicas no momento. Tente novamente em alguns instantes.";
+              await whatsappGatewayService.sendMessage(instance, phoneNumber, fallbackMessage);
+              console.log(`🔄 Mensagem de fallback enviada para ${phoneNumber}`);
+            } catch (fallbackError) {
+              console.error(`❌ Erro ao enviar mensagem de fallback:`, fallbackError);
+            }
+          }
+        }
+        
+        return res.status(200).json({ status: "processed" });
       }
       
       // Outros tipos de eventos
