@@ -658,7 +658,14 @@ export function registerRoutes(app: Express): Server {
       
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       if (!whatsappInstance) {
-        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+        // Return success for phantom instances to avoid frontend errors
+        console.log(`🧹 Limpando referência fantasma para agente ${agentId}`);
+        res.locals.cleaned = true;
+        return res.status(200).json({ 
+          message: "Nenhuma instância encontrada para remover",
+          agentId: parseInt(agentId),
+          cleaned: true
+        });
       }
       
       // Delete from gateway (silently fail if already deleted)
