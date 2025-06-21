@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertAgentSchema } from "@shared/schema";
-import { Search, Filter, Plus, Copy, Eye } from "lucide-react";
+import { Search, Filter, Plus, Copy, Eye, FileText } from "lucide-react";
 import { z } from "zod";
 
 const createAgentSchema = insertAgentSchema.extend({
@@ -274,163 +274,300 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Templates de Agentes</h1>
-        <p className="text-muted-foreground">
-          Escolha entre templates profissionais pré-configurados para criar seus agentes rapidamente
-        </p>
-      </div>
-
-      {/* Filtros */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Buscar templates..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category} value={category}>{category}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Grid de Templates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">{template.icon}</span>
-                  <div>
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <Badge variant="secondary" className="mt-1">
-                      {template.category}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <CardDescription className="mt-2">
-                {template.description}
-              </CardDescription>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {template.tags.map(tag => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    setSelectedTemplate(template);
-                    setShowPreview(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Visualizar
-                </Button>
-                <Button
-                  onClick={() => handleCreateFromTemplate(template)}
-                  disabled={createAgentMutation.isPending}
-                  size="sm"
-                  className="flex-1"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Agente
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredTemplates.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Nenhum template encontrado com os filtros aplicados.
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
+            <FileText className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Templates de Agentes IA
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Acelere seu desenvolvimento com templates profissionais pré-configurados. 
+            Escolha, personalize e lance seu agente em minutos.
           </p>
         </div>
-      )}
 
-      {/* Modal de Preview */}
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6 text-center">
+              <div className="text-3xl font-bold text-blue-600">{agentTemplates.length}</div>
+              <div className="text-sm text-muted-foreground">Templates Disponíveis</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6 text-center">
+              <div className="text-3xl font-bold text-purple-600">{categories.length}</div>
+              <div className="text-sm text-muted-foreground">Categorias</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6 text-center">
+              <div className="text-3xl font-bold text-indigo-600">100%</div>
+              <div className="text-sm text-muted-foreground">Personalizáveis</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filtros Melhorados */}
+        <Card className="mb-8 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                <Input
+                  placeholder="Buscar templates por nome, descrição ou tags..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 h-12 text-base bg-white/80 border-0 shadow-sm"
+                />
+              </div>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full lg:w-[200px] h-12 bg-white/80 border-0 shadow-sm">
+                  <Filter className="h-5 w-5 mr-2" />
+                  <SelectValue placeholder="Filtrar por categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">🎯 Todas as categorias</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category === "Atendimento" && "👥"} 
+                      {category === "Tecnologia" && "🔧"} 
+                      {category === "Saúde" && "🩺"} 
+                      {category === "Animais" && "🐕"} 
+                      {category === "Jurídico" && "⚖️"} 
+                      {category === "Vendas" && "💼"} 
+                      {category === "Educação" && "📚"} 
+                      {" " + category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Filtros Rápidos */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Badge 
+                variant={selectedCategory === "all" ? "default" : "secondary"}
+                className="cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => setSelectedCategory("all")}
+              >
+                Todos
+              </Badge>
+              {categories.slice(0, 4).map(category => (
+                <Badge 
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  className="cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Grid de Templates */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          {filteredTemplates.map((template) => (
+            <Card 
+              key={template.id} 
+              className="group hover:shadow-2xl hover:scale-105 transition-all duration-300 bg-white/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <CardHeader className="relative z-10 pb-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span className="text-2xl">{template.icon}</span>
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                          {template.name}
+                        </CardTitle>
+                        <Badge 
+                          variant="secondary" 
+                          className="mt-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-0"
+                        >
+                          {template.category}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <CardDescription className="text-gray-600 leading-relaxed">
+                    {template.description}
+                  </CardDescription>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {template.tags.slice(0, 3).map(tag => (
+                      <Badge key={tag} variant="outline" className="text-xs bg-white/50">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {template.tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs bg-white/50">
+                        +{template.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="relative z-10 pt-0">
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setShowPreview(true);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                    <Button
+                      onClick={() => handleCreateFromTemplate(template)}
+                      disabled={createAgentMutation.isPending}
+                      size="sm"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-0 shadow-lg"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      {createAgentMutation.isPending ? "Criando..." : "Usar Template"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {filteredTemplates.length === 0 && (
+          <div className="col-span-full">
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardContent className="text-center py-16">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum template encontrado</h3>
+                <p className="text-muted-foreground mb-6">
+                  Tente ajustar seus filtros ou termo de busca para encontrar o template ideal.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("all");
+                  }}
+                >
+                  Limpar Filtros
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de Preview Melhorado */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-3">
-              <span className="text-2xl">{selectedTemplate?.icon}</span>
-              <span>{selectedTemplate?.name}</span>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="flex items-center space-x-4 text-2xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <span className="text-2xl">{selectedTemplate?.icon}</span>
+              </div>
+              <div>
+                <div className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {selectedTemplate?.name}
+                </div>
+                <Badge variant="secondary" className="mt-1 bg-white/70">
+                  {selectedTemplate?.category}
+                </Badge>
+              </div>
             </DialogTitle>
           </DialogHeader>
           
           {selectedTemplate && (
-            <div className="space-y-6">
-              <div>
-                <Badge variant="secondary">{selectedTemplate.category}</Badge>
-                <p className="text-muted-foreground mt-2">{selectedTemplate.description}</p>
-              </div>
+            <div className="space-y-8">
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-lg mb-3 text-gray-800">Sobre este Template</h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">{selectedTemplate.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTemplate.tags.map(tag => (
+                      <Badge key={tag} variant="outline" className="bg-white/50">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">Prompt do Sistema</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(selectedTemplate.systemPrompt)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="bg-muted p-4 rounded-lg">
-                  <pre className="whitespace-pre-wrap text-sm">{selectedTemplate.systemPrompt}</pre>
-                </div>
-              </div>
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg text-gray-800">Prompt do Sistema</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(selectedTemplate.systemPrompt)}
+                      className="hover:bg-blue-100"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar
+                    </Button>
+                  </div>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
+                      {selectedTemplate.systemPrompt}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">Base de Conhecimento Sugerida</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(selectedTemplate.knowledgeBase)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="bg-muted p-4 rounded-lg">
-                  <pre className="whitespace-pre-wrap text-sm">{selectedTemplate.knowledgeBase}</pre>
-                </div>
-              </div>
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg text-gray-800">Base de Conhecimento Sugerida</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(selectedTemplate.knowledgeBase)}
+                      className="hover:bg-blue-100"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar
+                    </Button>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl border">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
+                      {selectedTemplate.knowledgeBase}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button
-                  onClick={() => handleCreateFromTemplate(selectedTemplate)}
+                  onClick={() => {
+                    handleCreateFromTemplate(selectedTemplate);
+                    setShowPreview(false);
+                  }}
                   disabled={createAgentMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-0 shadow-lg text-base"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Agente com Este Template
+                  <Plus className="h-5 w-5 mr-2" />
+                  {createAgentMutation.isPending ? "Criando Agente..." : "Criar Agente com Este Template"}
                 </Button>
-                <Button variant="outline" onClick={() => setShowPreview(false)}>
-                  Fechar
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPreview(false)}
+                  className="h-12 px-8 bg-white/70 hover:bg-white/90"
+                >
+                  Fechar Preview
                 </Button>
               </div>
             </div>
