@@ -197,8 +197,8 @@ export default function HomePage() {
                   <Webhook className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-slate-900">Setup Evolution API</p>
-                  <p className="text-xs text-slate-500">Configure webhooks and integrations</p>
+                  <p className="text-sm font-medium text-slate-900">Configurar Evolution API</p>
+                  <p className="text-xs text-slate-500">Configure webhooks e integrações</p>
                 </div>
               </div>
             </Button>
@@ -213,8 +213,8 @@ export default function HomePage() {
                   <Zap className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-slate-900">Test Agents</p>
-                  <p className="text-xs text-slate-500">Try your AI agents in real-time</p>
+                  <p className="text-sm font-medium text-slate-900">Testar Agentes</p>
+                  <p className="text-xs text-slate-500">Experimente seus agentes IA em tempo real</p>
                 </div>
               </div>
             </Button>

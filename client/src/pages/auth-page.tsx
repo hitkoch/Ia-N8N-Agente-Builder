@@ -123,7 +123,24 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                      <Button 
+                        type="submit" 
+                        className="w-full transition-all" 
+                        disabled={loginMutation.isPending}
+                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                        onMouseEnter={(e) => {
+                          if (!loginMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = '#022b44';
+                            e.currentTarget.style.color = '#FFFFFF';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loginMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = '#b8ec00';
+                            e.currentTarget.style.color = '#022b44';
+                          }
+                        }}
+                      >
                         {loginMutation.isPending ? "Entrando..." : "Entrar"}
                       </Button>
                     </form>
@@ -215,7 +232,24 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                      <Button 
+                        type="submit" 
+                        className="w-full transition-all" 
+                        disabled={registerMutation.isPending}
+                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                        onMouseEnter={(e) => {
+                          if (!registerMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = '#022b44';
+                            e.currentTarget.style.color = '#FFFFFF';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!registerMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = '#b8ec00';
+                            e.currentTarget.style.color = '#022b44';
+                          }
+                        }}
+                      >
                         {registerMutation.isPending ? "Criando conta..." : "Criar Conta"}
                       </Button>
                     </form>

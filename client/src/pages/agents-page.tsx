@@ -39,12 +39,24 @@ export default function AgentsPage({ onTest }: AgentsPageProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-xl font-semibold text-slate-900">AI Agents</h3>
-          <p className="text-sm text-slate-600 mt-1">Manage and configure your AI agents</p>
+          <h3 className="text-xl font-semibold text-slate-900">Agentes IA</h3>
+          <p className="text-sm text-slate-600 mt-1">Gerencie e configure seus agentes IA</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+          className="hover:shadow-lg transition-all"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#022b44';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#b8ec00';
+            e.currentTarget.style.color = '#022b44';
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Create Agent
+          Criar Agente
         </Button>
       </div>
 
@@ -53,11 +65,23 @@ export default function AgentsPage({ onTest }: AgentsPageProps) {
           <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Plus className="h-12 w-12 text-slate-400" />
           </div>
-          <h3 className="text-lg font-medium text-slate-900 mb-2">No agents yet</h3>
-          <p className="text-slate-600 mb-4">Create your first AI agent to get started</p>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum agente ainda</h3>
+          <p className="text-slate-600 mb-4">Crie seu primeiro agente IA para começar</p>
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+            className="hover:shadow-lg transition-all"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#022b44';
+              e.currentTarget.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b8ec00';
+              e.currentTarget.style.color = '#022b44';
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Create Your First Agent
+            Criar Seu Primeiro Agente
           </Button>
         </div>
       ) : (
