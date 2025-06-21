@@ -48,8 +48,8 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         status: agent.status || "draft",
       });
       
-      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
-      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
+      setSelectedTools(Array.isArray(agent.tools) ? agent.tools : (agent.tools ? agent.tools.split(',').filter(Boolean) : []));
+      setSelectedGoogleServices(Array.isArray(agent.googleServices) ? agent.googleServices : (agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []));
     }
   }, [agent?.id]);
 
@@ -57,8 +57,8 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     mutationFn: async (data: any) => {
       const res = await apiRequest("PUT", `/api/agents/${agentId}`, {
         ...data,
-        tools: selectedTools.join(','),
-        googleServices: selectedGoogleServices.join(','),
+        tools: selectedTools,
+        googleServices: selectedGoogleServices,
       });
       return await res.json();
     },
