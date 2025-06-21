@@ -45,6 +45,17 @@ export default function HomePage() {
     setCurrentSection("testing");
   };
 
+  const handleSectionChange = (section: string) => {
+    setCurrentSection(section);
+    if (section === "testing") {
+      // Keep the selected agent when going to testing
+      // No need to reset selectedAgentId
+    } else {
+      // Reset selected agent when going to other sections
+      setSelectedAgentId(null);
+    }
+  };
+
   const renderDashboardOverview = () => (
     <div className="space-y-8">
       {/* Stats Cards */}

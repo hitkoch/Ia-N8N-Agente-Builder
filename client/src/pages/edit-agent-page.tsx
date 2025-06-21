@@ -251,7 +251,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar currentSection="agents" onSectionChange={() => {}} />
+      <Sidebar currentSection="agents" onSectionChange={handleSectionChange} />
       
       {/* Main Content */}
       <div className="flex-1 ml-64">
