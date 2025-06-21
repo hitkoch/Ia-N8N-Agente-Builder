@@ -47,6 +47,13 @@ export default function HomePage() {
   };
 
   const handleSectionChange = (section: string) => {
+    console.log('Section change requested:', section);
+    
+    if (section === "whatsapp") {
+      window.location.href = "/whatsapp.html";
+      return;
+    }
+    
     setCurrentSection(section);
     if (section === "testing") {
       // Keep the selected agent when going to testing

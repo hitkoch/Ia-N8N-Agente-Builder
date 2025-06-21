@@ -867,6 +867,11 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('public/menu-test.html', { root: process.cwd() });
   });
 
+  // Serve debug page
+  app.get("/debug-menu", (req, res) => {
+    res.sendFile('debug-menu.html', { root: process.cwd() });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
