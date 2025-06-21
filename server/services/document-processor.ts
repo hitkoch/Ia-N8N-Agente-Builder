@@ -33,6 +33,9 @@ export async function extractTextFromFile(filePath: string, filename: string): P
         return fs.readFileSync(filePath, 'utf-8');
       
       case '.pdf':
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`Arquivo não encontrado: ${filePath}`);
+        }
         const pdfBuffer = fs.readFileSync(filePath);
         const pdfData = await pdfParse(pdfBuffer);
         return pdfData.text;

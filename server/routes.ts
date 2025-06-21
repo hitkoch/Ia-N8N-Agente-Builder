@@ -238,6 +238,9 @@ export function registerRoutes(app: Express): Server {
         const { processDocument, cleanupTempFile } = await import('./services/document-processor.js');
         
         // Process the document and generate embeddings
+        console.log(`📄 Arquivo temporário em: ${req.file.path}`);
+        console.log(`📄 Arquivo existe: ${require('fs').existsSync(req.file.path)}`);
+        
         const processedDoc = await processDocument(req.file.path, req.file.originalname);
         
         // Store each chunk as a separate RAG document
