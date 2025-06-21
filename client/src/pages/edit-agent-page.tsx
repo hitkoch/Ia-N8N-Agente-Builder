@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle, Circle, Upload, FileText, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, CheckCircle, Circle, Upload, FileText, X, BarChart, MessageSquare } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Sidebar from "@/components/sidebar";
+import ChatInterface from "@/components/chat-interface";
 
 interface EditAgentPageProps {
   agentId: string;
@@ -17,6 +19,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
@@ -30,6 +33,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     name: "",
     description: "",
     systemPrompt: "",
+    knowledgeBase: "",
     model: "gpt-4o",
     temperature: 0.7,
     status: "draft",
@@ -38,6 +42,21 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
   const [ragDocuments, setRagDocuments] = useState<any[]>([]);
+
+  // Carregar dados do agente
+  useEffect(() => {
+    if (agent) {
+      setFormData({
+        name: agent.name || "",
+        description: agent.description || "",
+        systemPrompt: agent.systemPrompt || "",
+        knowledgeBase: agent.knowledgeBase || "",
+        model: agent.model || "gpt-4o",
+        temperature: agent.temperature || 0.7,
+        status: agent.status || "draft",
+      });
+    }
+  }, [agent]);
 
   // Carregar documentos existentes
   useEffect(() => {
@@ -49,52 +68,20 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const loadRagDocuments = async () => {
     try {
       const response = await apiRequest("GET", `/api/agents/${agentId}/documents`);
-      const documents = await response.json();
-      setRagDocuments(documents);
+      const docs = await response.json();
+      setRagDocuments(docs);
     } catch (error) {
       console.error("Erro ao carregar documentos:", error);
     }
   };
-  const [currentStep, setCurrentStep] = useState(1);
-
-  React.useEffect(() => {
-    if (agent) {
-      setFormData({
-        name: agent.name || "",
-        description: agent.description || "",
-        systemPrompt: agent.systemPrompt || "",
-        knowledgeBase: agent.knowledgeBase || "",
-        model: agent.model || "gpt-4o",
-        temperature: agent.temperature || 0.7,
-        status: agent.status || "draft",
-      });
-      
-      setSelectedTools(Array.isArray(agent.tools) ? agent.tools : (agent.tools ? agent.tools.split(',').filter(Boolean) : []));
-      setSelectedGoogleServices(Array.isArray(agent.googleServices) ? agent.googleServices : (agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []));
-      try {
-        const docs = typeof agent.ragDocuments === 'string' 
-          ? JSON.parse(agent.ragDocuments || '[]')
-          : Array.isArray(agent.ragDocuments) ? agent.ragDocuments : [];
-        setRagDocuments(docs);
-      } catch {
-        setRagDocuments([]);
-      }
-    }
-  }, [agent?.id]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("PUT", `/api/agents/${agentId}`, {
-        ...data,
-        tools: selectedTools,
-        googleServices: selectedGoogleServices,
-        ragDocuments: JSON.stringify(ragDocuments),
-      });
+      const res = await apiRequest("PUT", `/api/agents/${agentId}`, data);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Agente atualizado",
         description: "O agente foi atualizado com sucesso.",
@@ -135,18 +122,16 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Mostrar loading
     toast({
       title: "Processando arquivo...",
       description: `Extraindo texto de ${file.name}`,
     });
 
     try {
-      const formData = new FormData();
-      formData.append('document', file);
+      const formDataFile = new FormData();
+      formDataFile.append('document', file);
       
-      // Upload direto para a base de conhecimento do agente
-      const response = await apiRequest("POST", `/api/agents/${agentId}/upload-document`, formData, {
+      const response = await apiRequest("POST", `/api/agents/${agentId}/upload-document`, formDataFile, {
         'Content-Type': undefined
       });
       
@@ -189,7 +174,6 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     try {
       await apiRequest("DELETE", `/api/agents/${agentId}/documents/${documentId}`);
       
-      // Remover da lista local
       setRagDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
       toast({
@@ -222,436 +206,394 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" onClick={() => setLocation("/")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-        <h1 className="text-3xl font-bold">Editar Agente</h1>
-      </div>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar currentSection="agents" onSectionChange={() => {}} />
+      
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
+        <div className="container mx-auto py-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" onClick={() => setLocation("/")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+              <h1 className="text-3xl font-bold" style={{ color: '#022b44' }}>
+                Editar Agente
+              </h1>
+            </div>
+            <Button 
+              onClick={() => setIsTestModalOpen(true)}
+              style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+              className="transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#022b44';
+                e.currentTarget.style.color = '#FFFFFF';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#b8ec00';
+                e.currentTarget.style.color = '#022b44';
+              }}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Testar Agente
+            </Button>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Timeline/Steps */}
-        <div className="lg:col-span-1">
-          <Card>
+          {/* Timeline Progress - Above Form */}
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg">Progresso da Edição</CardTitle>
+              <CardTitle style={{ color: '#022b44' }} className="text-lg flex items-center">
+                <BarChart className="h-5 w-5 mr-2" />
+                Progresso da Edição
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="flex flex-col space-y-6">
                 {steps.map((step, index) => (
-                  <div key={`step-${step.id}`} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
+                  <div key={`step-${step.id}`} className="flex items-center space-x-4">
+                    {/* Step Indicator */}
+                    <div className="flex-shrink-0 relative">
                       {step.completed ? (
-                        <CheckCircle className="h-6 w-6 text-green-500" />
+                        <div 
+                          className="h-10 w-10 rounded-full flex items-center justify-center shadow-md"
+                          style={{ backgroundColor: '#b8ec00' }}
+                        >
+                          <CheckCircle className="h-6 w-6" style={{ color: '#022b44' }} />
+                        </div>
                       ) : (
-                        <Circle className="h-6 w-6 text-gray-300" />
+                        <div 
+                          className="h-10 w-10 rounded-full border-2 flex items-center justify-center shadow-sm bg-white"
+                          style={{ borderColor: '#022b44' }}
+                        >
+                          <span className="text-sm font-medium" style={{ color: '#022b44' }}>
+                            {step.id}
+                          </span>
+                        </div>
+                      )}
+                      {/* Connector Line */}
+                      {index < steps.length - 1 && (
+                        <div 
+                          className="absolute top-10 left-5 w-0.5 h-10"
+                          style={{ 
+                            backgroundColor: step.completed ? '#b8ec00' : '#e5e7eb' 
+                          }}
+                        />
                       )}
                     </div>
+                    
+                    {/* Step Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-sm font-medium ${step.completed ? 'text-green-700' : 'text-gray-500'}`}>
+                      <div className="flex items-center space-x-3">
+                        <p 
+                          className={`text-base font-medium ${
+                            step.completed ? 'font-semibold' : ''
+                          }`}
+                          style={{ 
+                            color: step.completed ? '#022b44' : '#6b7280' 
+                          }}
+                        >
                           {step.title}
-                        </span>
+                        </p>
                         {step.completed && (
-                          <Badge variant="secondary" className="text-xs">Completo</Badge>
+                          <Badge 
+                            variant="secondary" 
+                            style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                            className="text-xs"
+                          >
+                            Concluído
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{step.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {step.description}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Form Content */}
-        <div className="lg:col-span-3">
+          {/* Main Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="tools">Ferramentas</TabsTrigger>
-                <TabsTrigger value="knowledge">Base de Conhecimento</TabsTrigger>
-                <TabsTrigger value="integrations">Integrações</TabsTrigger>
-              </TabsList>
-
-          <TabsContent value="basic" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Configurações Básicas</CardTitle>
-                <CardDescription>Defina as configurações fundamentais do agente</CardDescription>
+                <CardTitle style={{ color: '#022b44' }}>Configurações do Agente</CardTitle>
+                <CardDescription>Configure as propriedades básicas do seu agente</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Nome</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                    Nome do Agente
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nome do agente"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{ 
+                      focusRingColor: '#022b44',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#022b44';
+                      e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Digite o nome do agente"
+                    required
                   />
                 </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
-                      Descrição
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#022b44';
-                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      placeholder="Descreva a função do agente"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
-                      Prompt do Sistema
-                    </label>
-                    <textarea
-                      value={formData.systemPrompt}
-                      onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#022b44';
-                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      placeholder="Instruções para o comportamento do agente"
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
-                      Base de Conhecimento
-                    </label>
-                    <textarea
-                      value={formData.knowledgeBase || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, knowledgeBase: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#022b44';
-                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente"
-                      rows={4}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Conhecimento específico e contexto que o agente deve usar nas suas respostas.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
-                        Modelo
-                      </label>
-                      <select
-                        value={formData.model}
-                        onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#022b44';
-                          e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#d1d5db';
-                          e.target.style.boxShadow = 'none';
-                        }}
-                      >
-                        <option value="gpt-4o">GPT-4 Omni</option>
-                        <option value="gpt-4">GPT-4</option>
-                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
-                        Temperatura
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="2"
-                        step="0.1"
-                        value={formData.temperature}
-                        onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#022b44';
-                          e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#d1d5db';
-                          e.target.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                  </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="draft">Rascunho</option>
-                    <option value="testing">Testando</option>
-                    <option value="active">Ativo</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tools" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ferramentas Disponíveis</CardTitle>
-                <CardDescription>Selecione as ferramentas que o agente pode usar</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedTools.includes("web_search")}
-                      onChange={(e) => handleToolChange("web_search", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Pesquisa Web</div>
-                      <div className="text-sm text-gray-500">Buscar informações atualizadas na internet</div>
-                    </div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                    Descrição
                   </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedTools.includes("image_analysis")}
-                      onChange={(e) => handleToolChange("image_analysis", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Análise de Imagens</div>
-                      <div className="text-sm text-gray-500">Analisar e descrever imagens</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedTools.includes("calculator")}
-                      onChange={(e) => handleToolChange("calculator", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Calculadora</div>
-                      <div className="text-sm text-gray-500">Realizar cálculos matemáticos</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedTools.includes("code_interpreter")}
-                      onChange={(e) => handleToolChange("code_interpreter", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Interpretador de Código</div>
-                      <div className="text-sm text-gray-500">Executar e analisar código</div>
-                    </div>
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="knowledge" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Base de Conhecimento</CardTitle>
-                <CardDescription>Faça upload de documentos para enriquecer o conhecimento do agente</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    Clique para fazer upload ou arraste arquivos aqui
-                  </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Suporte completo para: PDF, DOCX, XLSX, XLS, TXT, MD (máx. 10MB)
-                  </p>
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="file-upload-edit"
-                    accept=".pdf,.txt,.doc,.docx,.md,.xlsx,.xls"
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#022b44';
+                      e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Descreva a função do agente"
+                    rows={3}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('file-upload-edit')?.click()}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Selecionar Arquivo
-                  </Button>
                 </div>
 
-                {ragDocuments.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Arquivos Carregados:</h4>
-                    <div className="space-y-2">
-                      {ragDocuments.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-4 w-4 text-blue-500" />
-                            <div>
-                              <p className="text-sm font-medium">{doc.originalName}</p>
-                              <p className="text-xs text-gray-500">
-                                {(doc.fileSize / 1024).toFixed(1)} KB • {doc.mimeType}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteDocument(doc.id, doc.originalName)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Excluir documento"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                    Prompt do Sistema
+                  </label>
+                  <textarea
+                    value={formData.systemPrompt}
+                    onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#022b44';
+                      e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Instruções para o comportamento do agente"
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                    Base de Conhecimento
+                  </label>
+                  <textarea
+                    value={formData.knowledgeBase || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, knowledgeBase: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#022b44';
+                      e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente"
+                    rows={4}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Conhecimento específico e contexto que o agente deve usar nas suas respostas.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                      Modelo
+                    </label>
+                    <select
+                      value={formData.model}
+                      onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#022b44';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    >
+                      <option value="gpt-4o">GPT-4 Omni</option>
+                      <option value="gpt-4">GPT-4</option>
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    </select>
                   </div>
-                )}
 
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-green-800 mb-2">✅ Formatos Suportados</h4>
-                  <ul className="text-xs text-green-700 space-y-1">
-                    <li>• PDF - Extração automática de texto</li>
-                    <li>• DOCX - Documentos Word modernos</li>
-                    <li>• XLSX/XLS - Planilhas Excel (dados tabulares)</li>
-                    <li>• TXT/MD - Arquivos de texto simples</li>
-                  </ul>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                      Temperatura
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={formData.temperature}
+                      onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#022b44';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Dicas para Melhores Resultados</h4>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Use documentos bem estruturados e organizados</li>
-                    <li>• PDFs com texto selecionável funcionam melhor</li>
-                    <li>• Planilhas Excel são convertidas em formato tabular</li>
-                    <li>• Evite documentos com muitas imagens ou diagramas</li>
-                  </ul>
+                {/* Document Upload Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: '#022b44' }}>
+                    Documentos da Base de Conhecimento
+                  </h3>
+                  
+                  <div className="border-2 border-dashed rounded-lg p-6 text-center mb-4"
+                       style={{ borderColor: '#022b44' }}>
+                    <Upload className="h-12 w-12 mx-auto mb-4" style={{ color: '#022b44' }} />
+                    <div className="text-sm text-gray-600 mb-2">
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <span 
+                          className="hover:opacity-80 transition-opacity" 
+                          style={{ color: '#022b44' }}
+                        >
+                          Fazer upload de documentos
+                        </span>
+                        <span> ou arraste e solte</span>
+                      </label>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        className="sr-only"
+                        multiple
+                        accept=".pdf,.docx,.txt,.xlsx"
+                        onChange={handleFileUpload}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">PDF, DOCX, TXT, XLSX até 10MB cada</p>
+                  </div>
+
+                  {ragDocuments.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium" style={{ color: '#022b44' }}>
+                        Arquivos Carregados ({ragDocuments.length}):
+                      </h4>
+                      <div className="space-y-2">
+                        {ragDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-4 w-4" style={{ color: '#022b44' }} />
+                              <div>
+                                <p className="text-sm font-medium">{doc.originalName}</p>
+                                <p className="text-xs text-gray-500">
+                                  {(doc.fileSize / 1024).toFixed(1)} KB • {doc.mimeType}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDocument(doc.id, doc.originalName)}
+                              className="text-red-500 hover:text-red-700"
+                              title="Excluir documento"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="integrations" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Serviços Google</CardTitle>
-                <CardDescription>Conecte com serviços do Google</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedGoogleServices.includes("calendar")}
-                      onChange={(e) => handleServiceChange("calendar", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Google Calendar</div>
-                      <div className="text-sm text-gray-500">Gerenciar eventos e compromissos</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedGoogleServices.includes("drive")}
-                      onChange={(e) => handleServiceChange("drive", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Google Drive</div>
-                      <div className="text-sm text-gray-500">Acessar e gerenciar arquivos</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedGoogleServices.includes("sheets")}
-                      onChange={(e) => handleServiceChange("sheets", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Google Sheets</div>
-                      <div className="text-sm text-gray-500">Trabalhar com planilhas</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={selectedGoogleServices.includes("docs")}
-                      onChange={(e) => handleServiceChange("docs", e.target.checked)}
-                      className="rounded"
-                    />
-                    <div>
-                      <div className="font-medium">Google Docs</div>
-                      <div className="text-sm text-gray-500">Criar e editar documentos</div>
-                    </div>
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-            </Tabs>
-
-            <div className="flex justify-end space-x-2 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={() => setLocation("/")}>
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setLocation("/")}
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                className="transition-all"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={updateMutation.isPending}
+                style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                className="transition-all"
+                onMouseEnter={(e) => {
+                  if (!updateMutation.isPending) {
+                    e.currentTarget.style.backgroundColor = '#022b44';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!updateMutation.isPending) {
+                    e.currentTarget.style.backgroundColor = '#b8ec00';
+                    e.currentTarget.style.color = '#022b44';
+                  }
+                }}
+              >
                 {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Test Modal */}
+      <Dialog open={isTestModalOpen} onOpenChange={setIsTestModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle style={{ color: '#022b44' }}>
+              Testar Agente: {agent?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 min-h-0">
+            {agent && (
+              <ChatInterface 
+                agent={agent} 
+                className="h-full"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
