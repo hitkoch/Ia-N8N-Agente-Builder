@@ -1,0 +1,73 @@
+## Objetivo Geral: Construir a Fundação de uma Plataforma "AI Agent Builder"
+
+Crie a estrutura fundamental para uma aplicação web full-stack onde usuários podem se registrar, fazer login e gerenciar seus próprios agentes de IA. A aplicação usará Node.js, Express, Prisma e PostgreSQL no backend, com um frontend simples em HTML/CSS/JS.
+
+A IA deve gerar todos os arquivos de forma organizada, seguindo as especificações detalhadas abaixo.
+
+---
+
+### **PARTE 1: ESTRUTURA E BACKEND**
+
+**1.1. Crie a Estrutura de Arquivos do Projeto:**
+/
+|-- src/
+|   |-- controllers/      (Lógica de negócio)
+|   |   |-- authController.js
+|   |   |-- agentController.js
+|   |-- routes/           (Endpoints da API)
+|   |   |-- authRoutes.js
+|   |   |-- agentRoutes.js
+|   |-- middleware/       (Funções de verificação)
+|   |   |-- authMiddleware.js
+|   |-- server.js         (Arquivo principal do servidor)
+|-- prisma/
+|   |-- schema.prisma   (Modelo do banco de dados)
+|-- public/               (Pasta para todos os arquivos de frontend)
+|   |-- css/
+|   |   |-- style.css
+|   |-- js/
+|   |   |-- auth.js       (Lógica de login/registro)
+|   |   |-- dashboard.js  (Lógica do painel do usuário)
+|   |-- login.html
+|   |-- register.html
+|   |-- dashboard.html
+|-- .env
+|-- package.json
+
+**1.2. Gere o `package.json`:**
+Inclua as seguintes dependências: `express`, `cors`, `dotenv`, `pg`, `prisma`, `@prisma/client`, `jsonwebtoken`, `bcryptjs`, e `openai`.
+
+**1.3. Gere o `prisma/schema.prisma` (Modelo de Dados):**
+Este schema é a fundação para armazenar usuários e os agentes que eles criam.
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  
+  agents Agent[] // Um usuário pode ter vários agentes
+}
+
+model Agent {
+  id             Int      @id @default(autoincrement())
+  name           String   // Nome do agente, ex: "Assistente de Vendas"
+  systemPrompt   String   @db.Text // As instruções principais e a personalidade do agente
+  model          String   @default("gpt-3.5-turbo") // Modelo de LLM a ser usado
+  
+  ownerId        Int
+  owner          User     @relation(fields: [ownerId], references: [id])
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
