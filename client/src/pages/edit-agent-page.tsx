@@ -109,20 +109,64 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const newDoc = {
-        id: Date.now(),
-        filename: file.name,
-        originalName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        content: `Conteúdo do arquivo ${file.name}`,
-      };
-      setRagDocuments(prev => [...prev, newDoc]);
+      const reader = new FileReader();
       
-      toast({
-        title: "Arquivo adicionado",
-        description: `${file.name} foi adicionado à base de conhecimento.`,
-      });
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const newDoc = {
+          id: Date.now(),
+          filename: file.name,
+          originalName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          content: content || `Conteúdo do arquivo ${file.name} - Este é um exemplo de conteúdo. Em produção, aqui estaria o texto extraído do arquivo.`,
+        };
+        setRagDocuments(prev => [...prev, newDoc]);
+        
+        toast({
+          title: "Arquivo adicionado",
+          description: `${file.name} foi adicionado à base de conhecimento.`,
+        });
+      };
+      
+      // Ler arquivo como texto
+      if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        reader.readAsText(file);
+      } else {
+        // Para outros tipos, criar conteúdo simulado
+        const simulatedContent = `
+        Este é o conteúdo simulado do arquivo ${file.name}.
+        
+        Informações importantes:
+        - Nome do arquivo: ${file.name}
+        - Tamanho: ${(file.size / 1024).toFixed(1)} KB
+        - Tipo: ${file.type}
+        
+        Em um ambiente de produção, este conteúdo seria extraído automaticamente usando bibliotecas específicas para cada tipo de arquivo (PDF, DOC, etc.).
+        
+        Exemplo de informações que poderiam estar neste documento:
+        - Políticas da empresa
+        - Procedimentos operacionais
+        - Informações de produtos
+        - Dados técnicos
+        - Perguntas frequentes
+        `;
+        
+        const newDoc = {
+          id: Date.now(),
+          filename: file.name,
+          originalName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          content: simulatedContent,
+        };
+        setRagDocuments(prev => [...prev, newDoc]);
+        
+        toast({
+          title: "Arquivo adicionado",
+          description: `${file.name} foi adicionado à base de conhecimento (conteúdo simulado).`,
+        });
+      }
     }
   };
 
