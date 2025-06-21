@@ -63,71 +63,58 @@ export class WhatsAppGatewayService {
   private readonly globalToken = process.env.WHATSAPP_GATEWAY_TOKEN || '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx';
 
   constructor() {
-    if (!this.globalToken) {
-      console.warn('⚠️ WHATSAPP_GATEWAY_TOKEN não configurado. Funcionalidades do WhatsApp podem não funcionar.');
-    }
+    console.log(`📱 WhatsApp Gateway Service inicializado`);
+    console.log(`🔗 Base URL: ${this.baseUrl}`);
+    console.log(`🔑 Token configurado: ${this.globalToken ? 'Sim' : 'Não'}`);
   }
 
   /**
    * Busca detalhes de uma instância específica
    */
   async fetchInstance(instanceName: string): Promise<InstanceStatusResponse> {
-    console.log(`🔍 Buscando detalhes da instância: ${instanceName}`);
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
-        method: 'GET',
-        headers: {
-          'apikey': this.globalToken
-        }
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error(`❌ Erro ao buscar instância: ${response.status} - ${error}`);
-        throw new Error(`Falha ao buscar instância: ${response.statusText}`);
+    const response = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
+      method: 'GET',
+      headers: {
+        'apikey': this.globalToken
       }
+    });
 
-      const data = await response.json();
-      console.log(`📊 Resposta da API:`, JSON.stringify(data, null, 2));
-      
-      // Evolution API returns array with instance data
-      const instanceData = Array.isArray(data) && data.length > 0 ? data[0] : null;
-      
-      if (!instanceData) {
-        throw new Error('Instância não encontrada');
-      }
-      
-      const status = instanceData.connectionStatus || 'close';
-      console.log(`📊 Status da instância ${instanceName}: ${status}`);
-      
-      return {
-        instance: {
-          instanceName: instanceData.name,
-          status: status,
-          instanceId: instanceData.id
-        },
-        connectionStatus: status,
-        ownerJid: instanceData.ownerJid,
-        profileName: instanceData.profileName
-      } as InstanceStatusResponse;
-    } catch (error) {
-      console.error(`❌ Erro ao buscar instância ${instanceName}:`, error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`Falha ao buscar instâncias: ${response.statusText}`);
     }
+
+    const instances = await response.json();
+    const instance = instances.find((inst: any) => inst.name === instanceName);
+
+    if (!instance) {
+      throw new Error(`Instância ${instanceName} não encontrada`);
+    }
+
+    return {
+      instance: {
+        instanceName: instance.name,
+        status: instance.connectionStatus,
+        instanceId: instance.id
+      },
+      connectionStatus: instance.connectionStatus,
+      ownerJid: instance.ownerJid,
+      profileName: instance.profileName
+    };
   }
 
   /**
    * Cria uma nova instância do WhatsApp
    */
   async createInstance(instanceName: string): Promise<CreateInstanceResponse> {
-    console.log(`📱 Criando instância WhatsApp: ${instanceName}`);
+    console.log(`📱 Criando instância: ${instanceName}`);
     
     const requestData: CreateInstanceRequest = {
-      instanceName,
+      instanceName: instanceName,
       qrcode: true,
-      integration: 'WHATSAPP-BAILEYS'
+      integration: "WHATSAPP-BAILEYS"
     };
+
+    console.log(`📋 Payload: ${JSON.stringify(requestData, null, 2)}`);
 
     const response = await fetch(`${this.baseUrl}/instance/create`, {
       method: 'POST',
@@ -139,51 +126,27 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao criar instância: ${response.status} - ${error}`);
       throw new Error(`Falha ao criar instância: ${response.statusText}`);
     }
 
     const data: CreateInstanceResponse = await response.json();
-    console.log(`✅ Instância criada: ${instanceName}, Status: ${data.instance.status}`);
+    console.log(`✅ Instância criada: ${data.instance.instanceName}`);
     
     return data;
   }
 
   /**
-   * Obtém o status e QR Code de uma instância
-   */
-  async getInstanceStatus(instanceName: string): Promise<InstanceStatusResponse> {
-    console.log(`🔍 Verificando status da instância: ${instanceName}`);
-    
-    const response = await fetch(`${this.baseUrl}/instance/connect/${instanceName}`, {
-      method: 'GET',
-      headers: {
-        'apikey': this.globalToken
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao verificar status: ${response.status} - ${error}`);
-      throw new Error(`Falha ao verificar status: ${response.statusText}`);
-    }
-
-    const data: InstanceStatusResponse = await response.json();
-    console.log(`📊 Status da instância ${instanceName}: ${data.instance.status}`);
-    
-    return data;
-  }
-
-  /**
-   * Conecta uma instância (gera novo QR Code se necessário)
+   * Conecta uma instância e gera QR Code automaticamente
    */
   async connectInstance(instanceName: string): Promise<InstanceStatusResponse> {
-    console.log(`🔌 Iniciando conexão para gerar QR Code: ${instanceName}`);
+    console.log(`🔌 Conectando instância para gerar QR Code: ${instanceName}`);
     
     try {
-      // Connect the instance to trigger QR code generation
-      const connectResponse = await fetch(`${this.baseUrl}/instance/connect/${instanceName}`, {
+      // Use the correct Evolution API endpoint with query parameter
+      const connectUrl = `${this.baseUrl}/instance/connect?instanceName=${instanceName}`;
+      console.log(`📞 Chamando endpoint: ${connectUrl}`);
+      
+      const connectResponse = await fetch(connectUrl, {
         method: 'GET',
         headers: {
           'apikey': this.globalToken
@@ -191,41 +154,68 @@ export class WhatsAppGatewayService {
       });
 
       if (connectResponse.ok) {
-        console.log(`✅ Connect command enviado para: ${instanceName}`);
-      } else {
-        console.log(`⚠️ Connect endpoint status: ${connectResponse.status}`);
-      }
-
-      // Give the instance time to start generating QR code
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Check instance status
-      const instancesResponse = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
-        method: 'GET',
-        headers: {
-          'apikey': this.globalToken
-        }
-      });
-
-      if (instancesResponse.ok) {
-        const instances = await instancesResponse.json();
-        const instance = instances.find((inst: any) => inst.name === instanceName);
+        const connectData = await connectResponse.json();
+        console.log(`✅ Connect response recebido para: ${instanceName}`, JSON.stringify(connectData, null, 2));
         
-        if (instance) {
-          console.log(`🔍 Estado da instância ${instanceName}: ${instance.connectionStatus}`);
-          
+        // Check if QR code is directly in the response
+        if (connectData.qrcode && connectData.qrcode.base64) {
+          console.log(`🎉 QR Code gerado diretamente para: ${instanceName}`);
           return {
             instance: {
-              instanceName: instance.name,
+              instanceName: instanceName,
               status: 'AWAITING_QR_SCAN'
             },
-            connectionStatus: instance.connectionStatus || 'connecting',
-            qrcode: undefined // QR code will be delivered via webhook
+            connectionStatus: 'connecting',
+            qrcode: {
+              code: connectData.qrcode.code || 'qr_generated',
+              base64: connectData.qrcode.base64
+            }
           };
         }
+        
+        // If instance is already connected
+        if (connectData.instance && connectData.instance.state === 'open') {
+          console.log(`✅ Instância já conectada: ${instanceName}`);
+          return {
+            instance: {
+              instanceName: instanceName,
+              status: 'CONNECTED'
+            },
+            connectionStatus: 'open',
+            qrcode: undefined
+          };
+        }
+        
+        // Instance is connecting, QR code should be available soon
+        console.log(`🔄 Instância conectando: ${instanceName}, aguardando QR Code...`);
+        
+      } else {
+        console.log(`⚠️ Connect endpoint falhou: ${connectResponse.status} - ${connectResponse.statusText}`);
+        const errorData = await connectResponse.text();
+        console.log(`📋 Error response: ${errorData}`);
+      }
+
+      // Wait a moment for QR code generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Try to fetch the QR code after connection attempt
+      const qrCode = await this.fetchQRCode(instanceName);
+      if (qrCode) {
+        console.log(`✅ QR Code obtido após connect para: ${instanceName}`);
+        return {
+          instance: {
+            instanceName: instanceName,
+            status: 'AWAITING_QR_SCAN'
+          },
+          connectionStatus: 'connecting',
+          qrcode: {
+            code: 'qr_generated',
+            base64: qrCode
+          }
+        };
       }
       
-      // Fallback response
+      // Return connecting status - QR code will come via webhook
       return {
         instance: {
           instanceName: instanceName,
@@ -242,91 +232,75 @@ export class WhatsAppGatewayService {
   }
 
   /**
-   * Busca QR Code diretamente da API
+   * Busca QR Code usando o endpoint connect da Evolution API
    */
   async fetchQRCode(instanceName: string): Promise<string | null> {
-    console.log(`🔍 Buscando QR Code para: ${instanceName}`);
-    
     try {
-      // Since direct QR code endpoints are not available in this Evolution API version,
-      // we need to check if QR code is available via the instance data
-      console.log(`🔍 Verificando se QR Code está disponível na instância...`);
+      console.log(`🔍 Buscando QR Code para: ${instanceName}`);
       
-      // Check the instance details to see if QR code is embedded
-      const instanceResponse = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
+      // Use the connect endpoint to get QR code
+      const connectUrl = `${this.baseUrl}/instance/connect?instanceName=${instanceName}`;
+      const response = await fetch(connectUrl, {
         method: 'GET',
         headers: {
           'apikey': this.globalToken
         }
       });
 
-      if (instanceResponse.ok) {
-        const instances = await instanceResponse.json();
-        const instance = instances.find((inst: any) => inst.name === instanceName);
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`📋 Connect response para QR:`, JSON.stringify(data, null, 2));
         
-        if (instance && instance.connectionStatus === 'connecting') {
-          console.log(`⚠️ QR Code não está disponível diretamente na API para: ${instanceName}`);
-          console.log(`📱 A instância está em estado 'connecting' mas o QR Code virá via webhook`);
-          
-          // Return null to indicate QR code will come via webhook
-          return null;
+        // Check if QR code is in the response
+        if (data.qrcode?.base64) {
+          console.log(`✅ QR Code encontrado via connect para: ${instanceName}`);
+          return data.qrcode.base64;
         }
+        
+        if (data.base64) {
+          console.log(`✅ QR Code base64 direto para: ${instanceName}`);
+          return data.base64;
+        }
+        
+        console.log(`⚠️ Connect response sem QR Code para ${instanceName}`);
+        return null;
       }
 
-      // Fallback: try limited endpoints that might work
-      const endpoints = [
-        `/chat/fetchInstances/${instanceName}`,
-        `/instance/fetchInstances/${instanceName}`
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(`${this.baseUrl}${endpoint}`, {
-            method: 'GET',
-            headers: {
-              'apikey': this.globalToken
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`🔍 Resposta de ${endpoint}:`, JSON.stringify(data, null, 2));
-            
-            // Try different possible QR code field names
-            const qrCode = data.qrcode || data.qrCode || data.base64 || 
-                          data.instance?.qrcode || data.instance?.qrCode ||
-                          data.qr || data.qr_code || data.code || null;
-            
-            if (qrCode) {
-              console.log(`✅ QR Code encontrado via ${endpoint}`);
-              return qrCode.startsWith('data:image') ? qrCode : `data:image/png;base64,${qrCode}`;
-            }
-          } else {
-            console.log(`❌ ${endpoint} retornou ${response.status}`);
-          }
-        } catch (error) {
-          // Continue to next endpoint
-        }
-      }
-
-      console.log(`⚠️ QR Code não encontrado para ${instanceName}`);
+      console.log(`❌ Connect endpoint falhou para QR Code ${instanceName}:`, response.status);
       return null;
+      
     } catch (error) {
-      console.error(`❌ Erro ao buscar QR Code: ${error.message}`);
+      console.error(`❌ Erro ao buscar QR Code para ${instanceName}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Obtém o status e QR Code de uma instância
+   */
+  async getInstanceStatus(instanceName: string): Promise<InstanceStatusResponse> {
+    const response = await fetch(`${this.baseUrl}/instance/connectionState/${instanceName}`, {
+      method: 'GET',
+      headers: {
+        'apikey': this.globalToken
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Falha ao obter status da instância: ${response.statusText}`);
+    }
+
+    const data: InstanceStatusResponse = await response.json();
+    return data;
   }
 
   /**
    * Envia uma mensagem via WhatsApp
    */
   async sendMessage(instanceName: string, number: string, text: string): Promise<SendMessageResponse> {
-    console.log(`💬 Enviando mensagem via ${instanceName} para ${number}`);
-    
     const requestData: SendMessageRequest = {
-      number,
-      text,
-      delay: 1000
+      number: number,
+      text: text
     };
 
     const response = await fetch(`${this.baseUrl}/message/sendText/${instanceName}`, {
@@ -339,14 +313,10 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao enviar mensagem: ${response.status} - ${error}`);
       throw new Error(`Falha ao enviar mensagem: ${response.statusText}`);
     }
 
     const data: SendMessageResponse = await response.json();
-    console.log(`✅ Mensagem enviada para ${number} via ${instanceName}`);
-    
     return data;
   }
 
@@ -356,54 +326,48 @@ export class WhatsAppGatewayService {
   async setWebhook(instanceName: string): Promise<any> {
     console.log(`🔗 Configurando webhook para instância: ${instanceName}`);
     
-    // Get the app base URL from environment or construct it
-    const baseUrl = process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`
-      : 'http://localhost:5000';
+    const webhookUrl = 'https://workspace.Hitkoch.replit.dev/api/whatsapp/webhook';
+    console.log(`📋 Configurando webhook com URL: ${webhookUrl}`);
     
-    const webhookUrl = `${baseUrl}/api/whatsapp/webhook`;
-    
-    // Use the exact body structure provided by the user
-    const requestData = {
+    const webhookData = {
       webhook: {
         enabled: true,
         url: webhookUrl,
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json'
         },
         byEvents: false,
-        base64: true, // Enable base64 for media
+        base64: true,
         events: [
-          "APPLICATION_STARTUP",
-          "QRCODE_UPDATED", 
-          "MESSAGES_SET",
-          "MESSAGES_UPSERT",
-          "MESSAGES_UPDATE",
-          "MESSAGES_DELETE",
-          "SEND_MESSAGE",
-          "CONTACTS_SET",
-          "CONTACTS_UPSERT",
-          "CONTACTS_UPDATE",
-          "PRESENCE_UPDATE",
-          "CHATS_SET",
-          "CHATS_UPSERT",
-          "CHATS_UPDATE",
-          "CHATS_DELETE",
-          "GROUPS_UPSERT",
-          "GROUP_UPDATE",
-          "GROUP_PARTICIPANTS_UPDATE",
-          "CONNECTION_UPDATE",
-          "LABELS_EDIT",
-          "LABELS_ASSOCIATION",
-          "CALL",
-          "TYPEBOT_START",
-          "TYPEBOT_CHANGE_STATUS"
+          'APPLICATION_STARTUP',
+          'QRCODE_UPDATED', 
+          'MESSAGES_SET',
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'MESSAGES_DELETE',
+          'SEND_MESSAGE',
+          'CONTACTS_SET',
+          'CONTACTS_UPSERT',
+          'CONTACTS_UPDATE',
+          'PRESENCE_UPDATE',
+          'CHATS_SET',
+          'CHATS_UPSERT',
+          'CHATS_UPDATE',
+          'CHATS_DELETE',
+          'GROUPS_UPSERT',
+          'GROUP_UPDATE',
+          'GROUP_PARTICIPANTS_UPDATE',
+          'CONNECTION_UPDATE',
+          'LABELS_EDIT',
+          'LABELS_ASSOCIATION',
+          'CALL',
+          'TYPEBOT_START',
+          'TYPEBOT_CHANGE_STATUS'
         ]
       }
     };
 
-    console.log(`📋 Configurando webhook com URL: ${webhookUrl}`);
-    console.log(`📋 Payload:`, JSON.stringify(requestData, null, 2));
+    console.log(`📋 Payload: ${JSON.stringify(webhookData, null, 2)}`);
 
     const response = await fetch(`${this.baseUrl}/webhook/set/${instanceName}`, {
       method: 'POST',
@@ -411,18 +375,16 @@ export class WhatsAppGatewayService {
         'Content-Type': 'application/json',
         'apikey': this.globalToken
       },
-      body: JSON.stringify(requestData)
+      body: JSON.stringify(webhookData)
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao configurar webhook: ${response.status} - ${error}`);
-      throw new Error(`Falha ao configurar webhook: ${response.statusText} - ${error}`);
+      throw new Error(`Falha ao configurar webhook: ${response.statusText}`);
     }
 
     const data = await response.json();
     console.log(`✅ Webhook configurado com sucesso para: ${instanceName}`);
-    console.log(`📋 Resposta da API:`, JSON.stringify(data, null, 2));
+    console.log(`📋 Resposta da API: ${JSON.stringify(data, null, 2)}`);
     
     return data;
   }
@@ -441,9 +403,8 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao remover instância: ${response.status} - ${error}`);
-      throw new Error(`Falha ao remover instância: ${response.statusText}`);
+      console.warn(`⚠️ Falha ao remover instância ${instanceName}: ${response.statusText}`);
+      return false;
     }
 
     console.log(`✅ Instância removida: ${instanceName}`);
@@ -454,40 +415,33 @@ export class WhatsAppGatewayService {
    * Gera um nome único para a instância baseado no agente
    */
   generateInstanceName(agentId: number, userId: number): string {
-    return `agent-${userId}-${agentId}-whatsapp`;
+    return `agent-${agentId}-user-${userId}-whatsapp`;
   }
 
   /**
    * Valida se um número de telefone está no formato correto
    */
   validatePhoneNumber(number: string): boolean {
-    // Remove caracteres não numéricos
-    const cleanNumber = number.replace(/\D/g, '');
-    
-    // Verifica se tem pelo menos 10 dígitos (formato brasileiro mínimo)
-    return cleanNumber.length >= 10 && cleanNumber.length <= 15;
+    const phoneRegex = /^\d{10,15}$/;
+    return phoneRegex.test(number.replace(/\D/g, ''));
   }
 
   /**
    * Formata número de telefone para o formato do WhatsApp
    */
   formatPhoneNumber(number: string): string {
-    // Remove caracteres não numéricos
-    let cleanNumber = number.replace(/\D/g, '');
-    
-    // Se não tem código do país, adiciona 55 (Brasil)
-    if (cleanNumber.length === 11 && cleanNumber.startsWith('9')) {
-      cleanNumber = '55' + cleanNumber;
-    } else if (cleanNumber.length === 10) {
-      cleanNumber = '559' + cleanNumber;
+    const cleaned = number.replace(/\D/g, '');
+    if (cleaned.length === 11 && cleaned.startsWith('0')) {
+      return cleaned.substring(1);
     }
-    
-    // Adiciona @s.whatsapp.net se não estiver presente
-    if (!cleanNumber.includes('@')) {
-      cleanNumber += '@s.whatsapp.net';
-    }
-    
-    return cleanNumber;
+    return cleaned;
+  }
+
+  /**
+   * Valida nome da instância
+   */
+  validateInstanceName(instanceName: string): boolean {
+    return /^[a-zA-Z0-9_-]+$/.test(instanceName);
   }
 }
 
