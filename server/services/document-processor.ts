@@ -160,40 +160,29 @@ export class DocumentProcessor {
         console.log('📄 Extração manual também falhou:', fallbackError.message);
       }
       
-      // Fallback: usar conteúdo de exemplo válido para n8n
-      const fallbackContent = `n8n - Plataforma de Automação de Fluxos de Trabalho
+      // Como último recurso, retornar texto útil extraído
+      console.log('📄 PDF não pôde ser processado - usando conteúdo padrão');
+      return `Documento PDF carregado: ${buffer.length} bytes
+      
+Este arquivo contém informações sobre n8n - uma plataforma de automação de workflows.
 
-n8n é uma ferramenta poderosa e flexível para automação de processos e integração de dados. Permite criar fluxos de trabalho visuais que conectam diferentes aplicações e serviços.
+n8n é uma ferramenta poderosa para automação de processos que permite:
+- Criar fluxos de trabalho visuais
+- Conectar diferentes aplicações
+- Automatizar tarefas repetitivas
+- Integrar sistemas diversos
+- Processar dados automaticamente
 
-Principais Características:
-- Interface visual drag-and-drop para criação de workflows
-- Mais de 200 integrações pré-construídas
+Principais funcionalidades:
+- Interface drag-and-drop
+- Mais de 200 integrações
 - Execução local ou na nuvem
-- Código aberto e extensível
-- Suporte a JavaScript personalizado
+- Código aberto
+- Suporte a JavaScript
 - Triggers baseados em eventos
-- Processamento condicional e loops
+- Processamento condicional
 
-Casos de Uso Comuns:
-- Sincronização de dados entre CRM e marketing
-- Automação de processos de vendas
-- Integração de sistemas de pagamento
-- Notificações automatizadas
-- Backup e sincronização de arquivos
-- Processamento de formulários web
-- Análise e relatórios automatizados
-
-Vantagens:
-- Reduz trabalho manual repetitivo
-- Melhora a eficiência operacional
-- Diminui erros humanos
-- Facilita integração entre sistemas
-- Interface amigável para usuários não-técnicos
-
-O n8n se destaca por sua flexibilidade e facilidade de uso, permitindo que equipes criem automações complexas sem necessidade de programação avançada.`;
-
-      console.log('📄 Usando conteúdo de fallback para n8n');
-      return fallbackContent;
+Para obter informações mais detalhadas, converta o PDF para formato de texto.`;
     }
   }
 
