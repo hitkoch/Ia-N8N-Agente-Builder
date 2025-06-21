@@ -46,7 +46,8 @@ export default function WhatsAppManagementPage() {
     startPolling,
     stopPolling,
     instanceName,
-    lastUpdated
+    lastUpdated,
+    hasInstance
   } = useWhatsAppStatus({
     agentId: selectedAgentId,
     enabled: !!selectedAgentId,
@@ -232,6 +233,16 @@ export default function WhatsAppManagementPage() {
 
       {selectedAgentId && (
         <>
+          {/* Debug info */}
+          <div className="text-xs text-gray-500 mb-2 bg-yellow-100 p-2 rounded">
+            <strong>Debug Info:</strong><br/>
+            • selectedAgentId: {selectedAgentId}<br/>
+            • instanceLoading: {instanceLoading.toString()}<br/>
+            • hasInstance: {hasInstance?.toString()}<br/>
+            • instance: {instance ? 'exists' : 'null'}<br/>
+            • instanceError: {instanceError ? 'has error' : 'no error'}
+          </div>
+          
           {instanceLoading ? (
             <Card>
               <CardContent className="flex items-center justify-center py-8">
@@ -239,7 +250,7 @@ export default function WhatsAppManagementPage() {
                 Carregando informações da instância...
               </CardContent>
             </Card>
-          ) : instance ? (
+          ) : hasInstance ? (
             <div className="space-y-6">
               {/* Real-time Status and Activity in a 2-column layout */}
               <div className="grid gap-6 lg:grid-cols-3">
@@ -338,29 +349,47 @@ export default function WhatsAppManagementPage() {
               )}
             </div>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Nenhuma Instância Encontrada</CardTitle>
-                <CardDescription>
-                  Este agente ainda não possui uma instância WhatsApp configurada.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => createInstanceMutation.mutate(selectedAgentId)}
-                  disabled={createInstanceMutation.isPending}
-                  style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
-                  className="hover:opacity-90"
-                >
-                  {createInstanceMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Smartphone className="w-4 h-4 mr-2" />
-                  )}
-                  Criar Nova Instância WhatsApp
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Nenhuma Instância Encontrada</CardTitle>
+                  <CardDescription>
+                    Este agente ainda não possui uma instância WhatsApp configurada.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={() => createInstanceMutation.mutate(selectedAgentId)}
+                    disabled={createInstanceMutation.isPending}
+                    style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                    className="hover:opacity-90 w-full"
+                    size="lg"
+                  >
+                    {createInstanceMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Smartphone className="w-4 h-4 mr-2" />
+                    )}
+                    Criar Nova Instância WhatsApp
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="text-center text-blue-800">
+                    <Smartphone className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm font-medium">Como funciona:</p>
+                    <ol className="text-xs mt-2 space-y-1 text-left">
+                      <li>1. Clique em "Criar Nova Instância WhatsApp"</li>
+                      <li>2. Será gerado um QR Code para conexão</li>
+                      <li>3. Escaneie o QR Code com seu WhatsApp</li>
+                      <li>4. Seu agente estará conectado e funcionando</li>
+                    </ol>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </>
       )}

@@ -154,6 +154,7 @@ export function useWhatsAppStatus({
     hasQRCode: hasQRCode(),
     needsAttention: needsAttention(),
     isConnected: instance?.status === "CONNECTED",
+    hasInstance: !!instance,
     
     // Actions
     refreshStatus,
