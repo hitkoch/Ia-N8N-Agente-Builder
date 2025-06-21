@@ -266,10 +266,14 @@ export function registerRoutes(app: Express): Server {
           filename: req.file.originalname,
           originalName: req.file.originalname,
           content: content,
+          fileType: path.extname(req.file.originalname).toLowerCase(),
           fileSize: req.file.size,
           mimeType: req.file.mimetype,
           embedding: null,
-          processingStatus: 'completed'
+          processingStatus: 'completed',
+          uploadedBy: user.id,
+          chunkIndex: 0,
+          totalChunks: 1
         });
         
         console.log(`✅ Documento salvo: ${ragDocument.id}`);

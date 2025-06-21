@@ -187,6 +187,7 @@ export class DatabaseStorage implements IStorage {
       const cleanDocuments = documents.map(doc => ({
         id: doc.id,
         agentId: doc.agentId,
+        filename: doc.filename || '',
         originalName: doc.originalName || '',
         content: doc.content || '',
         fileSize: doc.fileSize || 0,

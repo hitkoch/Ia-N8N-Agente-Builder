@@ -41,14 +41,17 @@ export const ragDocuments = pgTable("rag_documents", {
   id: serial("id").primaryKey(),
   agentId: integer("agent_id").references(() => agents.id, { onDelete: "cascade" }),
   filename: varchar("filename").notNull(),
+  originalName: varchar("original_name").notNull(),
   content: text("content").notNull(),
   embedding: text("embedding"), // JSON string of embedding vector
   fileType: varchar("file_type"),
   fileSize: integer("file_size"),
+  mimeType: varchar("mime_type"),
   chunkIndex: integer("chunk_index").default(0),
   totalChunks: integer("total_chunks").default(1),
-  originalFilename: varchar("original_filename"),
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  processingStatus: varchar("processing_status").default("pending"),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 
 // Nova tabela para configurações de APIs externas
