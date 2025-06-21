@@ -389,7 +389,7 @@ export default function WhatsAppManagementPage() {
                       </DialogHeader>
                       <div className="flex justify-center p-4">
                         <img 
-                          src={`data:image/png;base64,${qrCode}`} 
+                          src={`data:image/png;base64,${instance?.qrCode}`} 
                           alt="QR Code WhatsApp" 
                           className="max-w-full h-auto border rounded-lg"
                         />
