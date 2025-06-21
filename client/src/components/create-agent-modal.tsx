@@ -53,7 +53,7 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
   const { toast } = useToast();
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState("templates");
   const [apiConfigs, setApiConfigs] = useState<Array<{name: string, url: string, authType: string}>>([]);
 
   const form = useForm<CreateAgentForm>({
@@ -144,6 +144,62 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
     ));
   };
 
+  const agentTemplates = [
+    {
+      name: "Assistente de Atendimento",
+      description: "Agente para atendimento ao cliente e SAC",
+      icon: "👥",
+      systemPrompt: "Você é um assistente virtual especializado em atendimento ao cliente. Seja cordial, profissional e prestativo. Resolva dúvidas sobre produtos/serviços e escalone questões complexas quando necessário.",
+      knowledgeBase: "Adicione informações sobre produtos, políticas de troca, horários, contatos e FAQ comum dos clientes."
+    },
+    {
+      name: "Suporte Técnico",
+      description: "Especialista em resolver problemas técnicos",
+      icon: "🔧",
+      systemPrompt: "Você é um especialista em suporte técnico. Diagnostique problemas, forneça soluções passo a passo em linguagem simples e confirme se as soluções funcionaram.",
+      knowledgeBase: "Inclua problemas técnicos comuns, soluções passo a passo, manuais de produtos e códigos de erro."
+    },
+    {
+      name: "Agendamento Médico",
+      description: "Assistente para marcar consultas médicas",
+      icon: "🩺",
+      systemPrompt: "Você é um assistente para agendamento médico. Seja empático, auxilie no agendamento de consultas/exames, informe sobre preparos e mantenha confidencialidade.",
+      knowledgeBase: "Adicione especialidades disponíveis, horários, convênios, preparos para exames e documentos necessários."
+    },
+    {
+      name: "Atendimento PetShop",
+      description: "Especialista em cuidados com pets",
+      icon: "🐕",
+      systemPrompt: "Você é um assistente especializado em petshop. Demonstre carinho pelos animais, recomende produtos adequados e oriente sobre cuidados com pets.",
+      knowledgeBase: "Inclua produtos por categoria, serviços oferecidos, calendário de vacinação e cuidados por espécie."
+    },
+    {
+      name: "Consultoria Jurídica",
+      description: "Orientações jurídicas iniciais",
+      icon: "⚖️",
+      systemPrompt: "Você é um assistente jurídico. Forneça orientações iniciais em linguagem simples, mantenha sigilo e deixe claro que não substitui consultoria de advogado.",
+      knowledgeBase: "Adicione áreas de atuação, procedimentos básicos, documentos necessários e prazos legais importantes."
+    },
+    {
+      name: "Clínica Odontológica",
+      description: "Agendamento e orientações dentárias",
+      icon: "🦷",
+      systemPrompt: "Você é um assistente de clínica odontológica. Seja tranquilizador, agende tratamentos, oriente sobre procedimentos e enfatize a importância da prevenção.",
+      knowledgeBase: "Inclua tratamentos oferecidos, dentistas, convênios, cuidados pré/pós-procedimentos e urgências."
+    }
+  ];
+
+  const applyTemplate = (template: typeof agentTemplates[0]) => {
+    form.setValue('name', template.name);
+    form.setValue('description', template.description);
+    form.setValue('systemPrompt', template.systemPrompt);
+    form.setValue('knowledgeBase', template.knowledgeBase);
+    toast({
+      title: "Template aplicado",
+      description: `Template "${template.name}" foi aplicado com sucesso!`,
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -155,7 +211,8 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="basic">Básico</TabsTrigger>
             <TabsTrigger value="tools">Ferramentas</TabsTrigger>
             <TabsTrigger value="knowledge">Base de Conhecimento</TabsTrigger>
@@ -164,6 +221,55 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              
+              {/* Aba Templates */}
+              <TabsContent value="templates" className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Escolha um Template</h3>
+                  <p className="text-muted-foreground">
+                    Selecione um template pronto para começar rapidamente
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {agentTemplates.map((template) => (
+                    <Card 
+                      key={template.name} 
+                      className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary"
+                      onClick={() => {
+                        applyTemplate(template);
+                        setActiveTab('basic');
+                      }}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-3xl">{template.icon}</span>
+                          <div>
+                            <CardTitle className="text-base">{template.name}</CardTitle>
+                            <CardDescription className="text-sm">
+                              {template.description}
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            applyTemplate(template);
+                            setActiveTab('basic');
+                          }}
+                        >
+                          Usar Template
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
               
               {/* Aba Básico */}
               <TabsContent value="basic" className="space-y-6">
