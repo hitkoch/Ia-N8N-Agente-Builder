@@ -608,13 +608,20 @@ export function registerRoutes(app: Express): Server {
       console.log(`📱 Ativando conexão para: ${instanceName}`);
       const connectResponse = await whatsappGatewayService.connectInstance(instanceName);
       
+      // Try to fetch QR code directly
+      let qrCode = connectResponse.qrcode?.base64 || null;
+      if (!qrCode && connectResponse.instance.status === 'AWAITING_QR_SCAN') {
+        console.log(`🔍 Tentando buscar QR Code diretamente...`);
+        qrCode = await whatsappGatewayService.fetchQRCode(instanceName);
+      }
+      
       // Update instance status and QR code
       const activatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
         status: "AWAITING_QR_SCAN",
-        qrCode: connectResponse.qrcode?.base64 || null
+        qrCode: qrCode
       });
       
-      console.log(`✅ Instância ativada e QR Code gerado para: ${instanceName}`);
+      console.log(`✅ Instância ativada ${qrCode ? 'com QR Code' : 'aguardando QR Code'} para: ${instanceName}`);
       res.status(200).json(activatedInstance);
       
     } catch (error: any) {
@@ -697,6 +704,44 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("❌ Erro ao verificar status da instância WhatsApp:", error);
       res.status(500).json({ message: "Falha ao verificar status", error: error.message });
+    }
+  });
+
+  // Fetch QR Code manually
+  app.get("/api/agents/:agentId/whatsapp/fetch-qr", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      console.log(`🔍 Buscando QR Code manualmente para: ${whatsappInstance.instanceName}`);
+      const qrCode = await whatsappGatewayService.fetchQRCode(whatsappInstance.instanceName);
+      
+      if (qrCode) {
+        // Update instance with QR code
+        const updatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
+          qrCode: qrCode
+        });
+        
+        console.log(`✅ QR Code encontrado e atualizado para: ${whatsappInstance.instanceName}`);
+        res.status(200).json(updatedInstance);
+      } else {
+        res.status(404).json({ message: "QR Code ainda não disponível" });
+      }
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao buscar QR Code:", error);
+      res.status(500).json({ message: "Falha ao buscar QR Code", error: error.message });
     }
   });
 

@@ -186,6 +186,36 @@ export default function WhatsAppManagementPage() {
     },
   });
 
+  const fetchQRMutation = useMutation({
+    mutationFn: async (agentId: number) => {
+      const response = await apiRequest("GET", `/api/agents/${agentId}/whatsapp/fetch-qr`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
+      if (data.qrCode) {
+        setIsQRModalOpen(true);
+        toast({
+          title: "QR Code encontrado",
+          description: "QR Code gerado com sucesso! Escaneie para conectar.",
+        });
+      } else {
+        toast({
+          title: "QR Code não disponível",
+          description: "Aguarde alguns segundos e tente novamente.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao buscar QR Code",
+        description: error.message || "QR Code ainda não está disponível",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "CONNECTED":
@@ -371,6 +401,22 @@ export default function WhatsAppManagementPage() {
                             variant="outline"
                           >
                             {isPolling ? "Verificando..." : "Iniciar Monitoramento"}
+                          </Button>
+                        )}
+
+                        {status === "AWAITING_QR_SCAN" && !instance?.qrCode && (
+                          <Button
+                            onClick={() => fetchQRMutation.mutate(selectedAgentId)}
+                            disabled={fetchQRMutation.isPending}
+                            style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                            className="hover:opacity-90"
+                          >
+                            {fetchQRMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <QrCode className="w-4 h-4 mr-2" />
+                            )}
+                            Buscar QR Code
                           </Button>
                         )}
                         

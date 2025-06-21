@@ -244,6 +244,82 @@ export class WhatsAppGatewayService {
   }
 
   /**
+   * Busca QR Code diretamente da API
+   */
+  async fetchQRCode(instanceName: string): Promise<string | null> {
+    console.log(`🔍 Buscando QR Code para: ${instanceName}`);
+    
+    try {
+      // Since direct QR code endpoints are not available in this Evolution API version,
+      // we need to check if QR code is available via the instance data
+      console.log(`🔍 Verificando se QR Code está disponível na instância...`);
+      
+      // Check the instance details to see if QR code is embedded
+      const instanceResponse = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'apikey': this.globalToken
+        }
+      });
+
+      if (instanceResponse.ok) {
+        const instances = await instanceResponse.json();
+        const instance = instances.find((inst: any) => inst.name === instanceName);
+        
+        if (instance && instance.connectionStatus === 'connecting') {
+          console.log(`⚠️ QR Code não está disponível diretamente na API para: ${instanceName}`);
+          console.log(`📱 A instância está em estado 'connecting' mas o QR Code virá via webhook`);
+          
+          // Return null to indicate QR code will come via webhook
+          return null;
+        }
+      }
+
+      // Fallback: try limited endpoints that might work
+      const endpoints = [
+        `/chat/fetchInstances/${instanceName}`,
+        `/instance/fetchInstances/${instanceName}`
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${this.baseUrl}${endpoint}`, {
+            method: 'GET',
+            headers: {
+              'apikey': this.globalToken
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`🔍 Resposta de ${endpoint}:`, JSON.stringify(data, null, 2));
+            
+            // Try different possible QR code field names
+            const qrCode = data.qrcode || data.qrCode || data.base64 || 
+                          data.instance?.qrcode || data.instance?.qrCode ||
+                          data.qr || data.qr_code || data.code || null;
+            
+            if (qrCode) {
+              console.log(`✅ QR Code encontrado via ${endpoint}`);
+              return qrCode.startsWith('data:image') ? qrCode : `data:image/png;base64,${qrCode}`;
+            }
+          } else {
+            console.log(`❌ ${endpoint} retornou ${response.status}`);
+          }
+        } catch (error) {
+          // Continue to next endpoint
+        }
+      }
+
+      console.log(`⚠️ QR Code não encontrado para ${instanceName}`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Erro ao buscar QR Code: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Envia uma mensagem via WhatsApp
    */
   async sendMessage(instanceName: string, number: string, text: string): Promise<SendMessageResponse> {
