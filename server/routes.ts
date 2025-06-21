@@ -929,16 +929,43 @@ export function registerRoutes(app: Express): Server {
             continue;
           }
           
-          // Skip non-text messages for now
-          if (!message.message?.conversation) {
-            console.log("⏭️ Ignorando mensagem não-texto");
+          const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '');
+          let messageText = "";
+          let imageBase64 = null;
+          let audioBase64 = null;
+          
+          // Extract message content based on type
+          if (message.message?.conversation) {
+            // Simple text message
+            messageText = message.message.conversation;
+            console.log(`📱 Nova mensagem de texto de ${phoneNumber}: ${messageText}`);
+          } else if (message.message?.extendedTextMessage) {
+            // Extended text (reply, link preview)
+            messageText = message.message.extendedTextMessage.text;
+            console.log(`📱 Nova mensagem estendida de ${phoneNumber}: ${messageText}`);
+          } else if (message.message?.imageMessage) {
+            // Image message
+            messageText = message.message.imageMessage.caption || "Recebi uma imagem. O que você quer que eu faça com ela?";
+            imageBase64 = message.message.imageMessage.media;
+            console.log(`🖼️ Nova imagem de ${phoneNumber} com caption: ${messageText}`);
+          } else if (message.message?.audioMessage) {
+            // Audio message
+            messageText = "Recebi um áudio. Infelizmente ainda não consigo processar áudios, mas posso ajudar com texto ou imagens.";
+            audioBase64 = message.message.audioMessage.media;
+            console.log(`🎵 Novo áudio de ${phoneNumber}`);
+          } else if (message.message?.videoMessage) {
+            // Video message
+            messageText = message.message.videoMessage.caption || "Recebi um vídeo. Infelizmente ainda não consigo processar vídeos, mas posso ajudar com texto ou imagens.";
+            console.log(`🎥 Novo vídeo de ${phoneNumber}`);
+          } else if (message.message?.documentMessage) {
+            // Document message
+            messageText = "Recebi um documento. Infelizmente ainda não consigo processar documentos via WhatsApp, mas posso ajudar com texto ou imagens.";
+            console.log(`📄 Novo documento de ${phoneNumber}`);
+          } else {
+            // Unknown message type
+            console.log("⏭️ Tipo de mensagem não suportado:", Object.keys(message.message || {}));
             continue;
           }
-          
-          const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '');
-          const messageText = message.message.conversation;
-          
-          console.log(`📱 Nova mensagem de ${phoneNumber}: ${messageText}`);
           
           // Find the agent associated with this instance
           const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
@@ -955,7 +982,15 @@ export function registerRoutes(app: Express): Server {
           
           // Generate AI response
           try {
-            const aiResponse = await agentService.testAgent(agent, messageText);
+            let aiResponse: string;
+            
+            if (imageBase64) {
+              // Process message with image using multimodal AI
+              aiResponse = await agentService.generateResponseWithImage(agent, messageText, imageBase64);
+            } else {
+              // Process text-only message
+              aiResponse = await agentService.testAgent(agent, messageText);
+            }
             
             // Send response back via WhatsApp
             await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);

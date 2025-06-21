@@ -1,0 +1,153 @@
+## Objetivo: Habilitar o Recebimento de Mídia (Imagens, Áudio) via Webhook Base64
+
+Atualize a integração com a API Evolution para que o agente de IA possa receber e processar mídias, como imagens e áudios, enviadas pelos usuários no WhatsApp. Isso será feito habilitando a opção de envio de dados de mídia em formato Base64 no webhook.
+
+---
+
+### **PARTE 1: ATUALIZAÇÃO DA CONFIGURAÇÃO DO WEBHOOK**
+
+**Ação:** Modifique a função `setWebhook` no serviço `src/services/evolutionApiService.js`.
+
+1.  **Habilite o Envio de Base64:**
+    *   No payload JSON que é enviado para o endpoint `/webhook/set/{instanceName}`, adicione a propriedade `"base64": true`.
+    *   Isso instruirá a instância da API Evolution a incluir os dados da mídia, codificados em Base64, diretamente no corpo do webhook sempre que um arquivo for recebido.
+
+*   **Implementação de Exemplo no `evolutionApiService.js`:**
+    ```javascript
+    async function setWebhook(instanceName) {
+      const myAppBaseUrl = process.env.MY_APP_BASE_URL; 
+      const webhookUrl = `${myAppBaseUrl}/api/whatsapp/webhook`;
+
+      const payload = {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          // --- MUDANÇA PRINCIPAL AQUI ---
+          base64: true, // Habilita o envio de mídia em base64
+          events: [
+            "MESSAGES_UPSERT",
+            "CONNECTION_UPDATE"
+          ]
+        }
+      };
+
+      try {
+        // ... (código existente para fazer a requisição POST) ...
+      } catch (error) {
+        // ... (código de tratamento de erro existente) ...
+      }
+    }
+    ```
+
+---
+
+### **PARTE 2: ATUALIZAÇÃO DO PROCESSAMENTO DO WEBHOOK NO BACKEND**
+
+**Ação:** Modifique a função `handleWebhook` no controlador `src/controllers/whatsappController.js`.
+
+1.  **Detecte e Processe Mensagens com Mídia:**
+    *   O corpo do webhook para uma mensagem com mídia será diferente de uma mensagem de texto simples. Precisamos verificar a presença de dados de mídia.
+    *   A API da Evolution geralmente envia a mídia dentro do objeto `message`. Precisamos verificar tipos como `imageMessage`, `audioMessage`, `videoMessage`, etc.
+
+*   **Lógica Atualizada para o `handleWebhook`:**
+    ```javascript
+    // Em src/controllers/whatsappController.js
+
+    exports.handleWebhook = async (req, res) => {
+      const eventData = req.body;
+
+      // Ignore eventos que não são de novas mensagens
+      if (!eventData.data || eventData.event !== 'messages.upsert') {
+        return res.status(200).send('Evento ignorado.');
+      }
+
+      // Ignore mensagens do próprio bot
+      if (eventData.data.key.fromMe) {
+        return res.status(200).send('Mensagem própria ignorada.');
+      }
+      
+      const instanceName = eventData.instance;
+      const messageData = eventData.data.message;
+      const remoteJid = eventData.data.key.remoteJid;
+
+      let userQuery = "";
+      let imageBase64 = null;
+
+      // 1. EXTRAIR O CONTEÚDO DA MENSAGEM (TEXTO OU IMAGEM)
+      if (messageData.imageMessage) {
+        // Se for uma imagem, pegamos o caption como texto e a imagem como base64
+        userQuery = messageData.imageMessage.caption || "Recebi uma imagem. O que você quer que eu faça com ela?";
+        // O base64 já vem no campo 'media' se habilitado no webhook
+        imageBase64 = messageData.imageMessage.media;
+      } else if (messageData.conversation) {
+        // Se for texto simples
+        userQuery = messageData.conversation;
+      } else if (messageData.extendedTextMessage) {
+        // Se for uma resposta ou texto com preview de link
+        userQuery = messageData.extendedTextMessage.text;
+      } else {
+        // Outros tipos de mensagem (áudio, vídeo, etc.)
+        userQuery = "Recebi um tipo de mídia que ainda não consigo processar. Por favor, envie texto ou imagem.";
+        // Adicionar lógica para outros tipos de mídia aqui se necessário
+      }
+
+      try {
+        // 2. ENCONTRAR O AGENTE CORRESPONDENTE
+        // (Lógica existente para encontrar o agente pelo instanceName)
+        const agent = ... ; 
+        if (!agent) throw new Error(`Agente para a instância ${instanceName} não encontrado.`);
+
+        // 3. CHAMAR A IA COM CAPACIDADE MULTIMODAL
+        // A chamada para a API da OpenAI agora precisa ser diferente para incluir a imagem.
+        // Use um modelo que suporte visão, como 'gpt-4-vision-preview' ou 'gpt-4o'.
+        
+        const openAIPayload = {
+          model: "gpt-4o", // ou gpt-4-vision-preview
+          messages: [
+            { role: "system", content: agent.systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userQuery },
+              ]
+            }
+          ]
+        };
+
+        // Adiciona a imagem ao payload se ela existir
+        if (imageBase64) {
+          openAIPayload.messages[1].content.push({
+            type: "image_url",
+            image_url: {
+              "url": `data:image/jpeg;base64,${imageBase64}`
+            }
+          });
+        }
+        
+        // Fazer a chamada para a API da OpenAI com o novo payload
+        const completion = await openai.chat.completions.create(openAIPayload);
+        const responseText = completion.choices[0].message.content;
+
+        // 4. ENVIAR A RESPOSTA
+        await evolutionApiService.sendMessage(instanceName, remoteJid, responseText);
+
+        res.status(200).send('Resposta enviada.');
+
+      } catch (error) {
+        console.error("Erro no processamento do webhook:", error);
+        res.status(500).send('Erro interno do servidor.');
+      }
+    };
+    ```
+
+---
+
+### **Instruções Finais para a IA:**
+
+1.  Modifique a função `setWebhook` em `evolutionApiService.js` para adicionar a propriedade `"base64": true` ao payload.
+2.  Refatore completamente a função `handleWebhook` em `whatsappController.js` para seguir a nova lógica:
+    *   Detectar se a mensagem recebida é de texto ou de imagem.
+    *   Extrair o `caption` e o `media` (base64) de mensagens de imagem.
+    *   Construir um payload multimodal para a API da OpenAI (usando o modelo `gpt-4o`).
+    *   Enviar a requisição para a OpenAI e a resposta para o usuário.
+3.  Garanta que a chamada para a OpenAI use um modelo que suporte visão, como `gpt-4o`.
