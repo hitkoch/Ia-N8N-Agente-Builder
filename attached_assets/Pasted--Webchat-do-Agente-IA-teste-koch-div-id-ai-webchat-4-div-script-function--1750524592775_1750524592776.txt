@@ -1,0 +1,207 @@
+
+<!-- Webchat do Agente IA: teste koch -->
+<div id="ai-webchat-4"></div>
+<script>
+(function() {
+  const agentId = 4;
+  const baseUrl = 'https://2c2fba71-5662-4346-a0fd-6a18acbd81f9-00-19ouk1snh5yj5.picard.replit.dev';
+  const agentName = 'teste koch';
+  
+  // Estilos do webchat
+  const styles = `
+    .ai-webchat {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      height: 500px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      z-index: 10000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .ai-webchat-header {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      padding: 16px;
+      border-radius: 12px 12px 0 0;
+      font-weight: 600;
+    }
+    .ai-webchat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      background: #f8fafc;
+    }
+    .ai-webchat-message {
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .ai-webchat-user {
+      background: #3b82f6;
+      color: white;
+      margin-left: auto;
+    }
+    .ai-webchat-agent {
+      background: white;
+      border: 1px solid #e2e8f0;
+    }
+    .ai-webchat-input {
+      display: flex;
+      padding: 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .ai-webchat-input input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      outline: none;
+    }
+    .ai-webchat-input button {
+      margin-left: 8px;
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .ai-webchat-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 50%;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10001;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    @media (max-width: 768px) {
+      .ai-webchat {
+        width: 100%;
+        height: 100%;
+        bottom: 0;
+        right: 0;
+        border-radius: 0;
+      }
+    }
+  `;
+  
+  // Criar elementos
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+  
+  const container = document.getElementById('ai-webchat-' + agentId);
+  let isOpen = false;
+  
+  function createWebchat() {
+    container.innerHTML = `
+      <button class="ai-webchat-toggle" onclick="toggleWebchat()">💬</button>
+      <div class="ai-webchat" style="display: none;">
+        <div class="ai-webchat-header">
+          ${agentName}
+          <button onclick="toggleWebchat()" style="float: right; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
+        </div>
+        <div class="ai-webchat-messages" id="messages-${agentId}">
+          <div class="ai-webchat-message ai-webchat-agent">
+            Olá! Sou ${agentName}. Como posso ajudá-lo hoje?
+          </div>
+        </div>
+        <div class="ai-webchat-input">
+          <input type="text" id="input-${agentId}" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
+          <button onclick="sendMessage()">Enviar</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  window.toggleWebchat = function() {
+    const webchat = container.querySelector('.ai-webchat');
+    const toggle = container.querySelector('.ai-webchat-toggle');
+    isOpen = !isOpen;
+    webchat.style.display = isOpen ? 'flex' : 'none';
+    toggle.style.display = isOpen ? 'none' : 'block';
+  };
+  
+  window.handleKeyPress = function(event) {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
+  };
+  
+  window.sendMessage = function() {
+    const input = document.getElementById('input-' + agentId);
+    const messages = document.getElementById('messages-' + agentId);
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Adicionar mensagem do usuário
+    const userMessage = document.createElement('div');
+    userMessage.className = 'ai-webchat-message ai-webchat-user';
+    userMessage.textContent = message;
+    messages.appendChild(userMessage);
+    
+    input.value = '';
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Mostrar digitando...
+    const typingMessage = document.createElement('div');
+    typingMessage.className = 'ai-webchat-message ai-webchat-agent';
+    typingMessage.textContent = 'Digitando...';
+    typingMessage.id = 'typing-' + agentId;
+    messages.appendChild(typingMessage);
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Enviar para API
+    fetch(baseUrl + '/api/public/agents/' + agentId + '/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: message }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Remover mensagem de digitando
+      const typingEl = document.getElementById('typing-' + agentId);
+      if (typingEl) typingEl.remove();
+      
+      // Adicionar resposta do agente
+      const agentMessage = document.createElement('div');
+      agentMessage.className = 'ai-webchat-message ai-webchat-agent';
+      agentMessage.textContent = data.response || 'Desculpe, não consegui processar sua mensagem.';
+      messages.appendChild(agentMessage);
+      messages.scrollTop = messages.scrollHeight;
+    })
+    .catch(error => {
+      // Remover mensagem de digitando
+      const typingEl = document.getElementById('typing-' + agentId);
+      if (typingEl) typingEl.remove();
+      
+      // Mostrar erro
+      const errorMessage = document.createElement('div');
+      errorMessage.className = 'ai-webchat-message ai-webchat-agent';
+      errorMessage.textContent = 'Desculpe, ocorreu um erro. Tente novamente.';
+      messages.appendChild(errorMessage);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  };
+  
+  // Inicializar
+  createWebchat();
+})();
+</script>
+<!-- Fim do Webchat -->

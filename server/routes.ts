@@ -395,24 +395,29 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API pública para webchat (sem autenticação)
-  app.post("/api/public/agents/:id/chat", async (req, res) => {
-    const agentId = parseInt(req.params.id);
-    const { message } = req.body;
-    
+  // Public webchat endpoint - no authentication required
+  app.post("/api/webchat/:agentId/chat", async (req, res) => {
     try {
-      // Buscar agente público (apenas agentes ativos)
-      const agents = await storage.getAgentsByOwner(1); // Assumindo que admin tem ID 1
-      const publicAgent = agents.find(a => a.id === agentId && a.status === 'active');
-      
-      if (!publicAgent) {
-        return res.status(404).json({ message: "Agente não encontrado ou inativo" });
+      const { agentId } = req.params;
+      const { message } = req.body;
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Mensagem é obrigatória" });
       }
+
+      // Get agent without owner restriction for public access
+      const agents = await storage.getAgentsByOwner(1); // Get from admin user
+      const agent = agents.find(a => a.id === parseInt(agentId));
       
-      const response = await agentService.testAgent(publicAgent, message);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      console.log(`🤖 Webchat público: processando mensagem para agente ${agent.name}`);
+      const response = await agentService.testAgent(agent, message);
       res.json({ response });
     } catch (error: any) {
-      console.error("Erro no chat público:", error);
+      console.error("Erro no webchat:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
