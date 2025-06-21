@@ -118,7 +118,7 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
   });
 
   useEffect(() => {
-    if (agent) {
+    if (agent && isOpen) {
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
@@ -131,26 +131,42 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
       // Carregar ferramentas selecionadas
       if (agent.tools) {
         setSelectedTools(agent.tools.split(',').filter(Boolean));
+      } else {
+        setSelectedTools([]);
       }
       
       // Carregar Google Services selecionados
       if (agent.googleServices) {
         setSelectedGoogleServices(agent.googleServices.split(',').filter(Boolean));
+      } else {
+        setSelectedGoogleServices([]);
       }
     }
-  }, [agent, form]);
+  }, [agent?.id, isOpen]);
 
   useEffect(() => {
-    if (documents) {
+    if (documents && isOpen) {
       setRagDocuments(documents);
     }
-  }, [documents]);
+  }, [documents, isOpen]);
 
   useEffect(() => {
-    if (configs) {
+    if (configs && isOpen) {
       setApiConfigs(configs);
     }
-  }, [configs]);
+  }, [configs, isOpen]);
+
+  // Reset states when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedTools([]);
+      setSelectedGoogleServices([]);
+      setRagDocuments([]);
+      setApiConfigs([]);
+      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
+      form.reset();
+    }
+  }, [isOpen, form]);
 
   const onSubmit = (data: UpdateAgentForm) => {
     const updateData = {
