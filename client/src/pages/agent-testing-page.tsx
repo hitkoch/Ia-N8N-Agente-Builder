@@ -341,7 +341,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                     </h2>
                     <div className="flex items-center space-x-1">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#b8ec00' }}></div>
-                      <span className="text-sm text-gray-500">Online</span>
+                      <span className="text-sm text-gray-500">Conectado</span>
                     </div>
                   </div>
                 </div>
@@ -376,11 +376,23 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 >
                   <div className={`p-2 rounded-full ${
                     message.role === 'user' 
-                      ? 'bg-gray-100' 
+                      ? 'border' 
                       : message.isTyping 
                         ? 'bg-yellow-100' 
-                        : 'bg-blue-50'
-                  }`}>
+                        : 'border'
+                  }`}
+                  style={{
+                    backgroundColor: message.role === 'user' 
+                      ? 'rgba(2, 43, 68, 0.1)' 
+                      : message.isTyping 
+                        ? '#fef3c7' 
+                        : 'rgba(184, 236, 0, 0.1)',
+                    borderColor: message.role === 'user' 
+                      ? '#022b44' 
+                      : message.isTyping 
+                        ? '#fbbf24'
+                        : '#b8ec00'
+                  }}>
                     {message.role === 'user' ? (
                       <User className="h-4 w-4 text-gray-600" />
                     ) : (
@@ -389,13 +401,14 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                   </div>
                   
                   <div className={`max-w-2xl ${message.role === 'user' ? 'text-right' : ''}`}>
-                    <div className={`inline-block p-4 rounded-2xl shadow-sm ${
+                    <div className={`inline-block p-4 rounded-2xl shadow-sm border ${
                       message.role === 'user'
                         ? 'text-white'
-                        : 'bg-white border border-gray-200'
+                        : 'bg-white'
                     }`}
                     style={{
-                      backgroundColor: message.role === 'user' ? '#022b44' : undefined
+                      backgroundColor: message.role === 'user' ? '#022b44' : '#ffffff',
+                      borderColor: message.role === 'user' ? '#022b44' : '#e5e7eb'
                     }}
                     >
                       {message.isTyping ? (
@@ -412,8 +425,8 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                       )}
                     </div>
                     
-                    <div className={`mt-1 text-xs text-gray-500 ${message.role === 'user' ? 'text-right' : ''}`}>
-                      {message.timestamp.toLocaleTimeString()}
+                    <div className={`mt-1 text-xs ${message.role === 'user' ? 'text-right' : ''}`} style={{ color: '#6b7280' }}>
+                      {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
@@ -422,7 +435,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
             </div>
 
             {/* Input de Mensagem */}
-            <div className="bg-white border-t border-gray-200 p-6">
+            <div className="bg-white border-t p-6" style={{ borderColor: '#e5e7eb' }}>
               <div className="flex items-end space-x-3">
                 <div className="flex-1">
                   <textarea
@@ -430,14 +443,14 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Digite sua mensagem..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:border-transparent"
+                    className="w-full px-4 py-3 border rounded-2xl resize-none focus:outline-none transition-all"
                     style={{ 
-                      outline: 'none',
-                      boxShadow: inputMessage ? '0 0 0 2px rgba(2, 43, 68, 0.2)' : 'none'
+                      borderColor: '#d1d5db',
+                      outline: 'none'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#022b44';
-                      e.target.style.boxShadow = '0 0 0 2px rgba(2, 43, 68, 0.2)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(2, 43, 68, 0.1)';
                     }}
                     onBlur={(e) => {
                       e.target.style.borderColor = '#d1d5db';
@@ -546,12 +559,30 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 variant="outline" 
                 onClick={() => setIsWebchatModalOpen(false)}
                 style={{ borderColor: '#022b44', color: '#022b44' }}
+                className="transition-all"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
               >
                 Fechar
               </Button>
               <Button
                 onClick={() => window.open('/docs/webchat', '_blank')}
                 style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                className="transition-all"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b8ec00';
+                  e.currentTarget.style.color = '#022b44';
+                }}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Ver Documentação
