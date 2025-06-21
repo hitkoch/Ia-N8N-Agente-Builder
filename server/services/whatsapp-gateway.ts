@@ -65,6 +65,31 @@ export class WhatsAppGatewayService {
   }
 
   /**
+   * Busca detalhes de uma instância específica
+   */
+  async fetchInstance(instanceName: string): Promise<InstanceStatusResponse> {
+    console.log(`🔍 Buscando detalhes da instância: ${instanceName}`);
+    
+    const response = await fetch(`${this.baseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+      method: 'GET',
+      headers: {
+        'apikey': this.globalToken
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`❌ Erro ao buscar instância: ${response.status} - ${error}`);
+      throw new Error(`Falha ao buscar instância: ${response.statusText}`);
+    }
+
+    const data: InstanceStatusResponse = await response.json();
+    console.log(`📊 Detalhes da instância ${instanceName}: ${data.instance.status}`);
+    
+    return data;
+  }
+
+  /**
    * Cria uma nova instância do WhatsApp
    */
   async createInstance(instanceName: string): Promise<CreateInstanceResponse> {

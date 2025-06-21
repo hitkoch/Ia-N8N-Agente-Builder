@@ -89,6 +89,16 @@ export const conversations = pgTable("conversations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const whatsappInstances = pgTable("whatsapp_instances", {
+  id: serial("id").primaryKey(),
+  instanceName: text("instance_name").unique().notNull(),
+  status: text("status").default("PENDING").notNull(),
+  qrCode: text("qr_code"),
+  agentId: integer("agent_id").references(() => agents.id, { onDelete: "cascade" }).unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   agents: many(agents),
   evolutionInstances: many(evolutionInstances),
@@ -100,6 +110,17 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
     references: [users.id],
   }),
   conversations: many(conversations),
+  whatsappInstance: one(whatsappInstances, {
+    fields: [agents.id],
+    references: [whatsappInstances.agentId],
+  }),
+}));
+
+export const whatsappInstancesRelations = relations(whatsappInstances, ({ one }) => ({
+  agent: one(agents, {
+    fields: [whatsappInstances.agentId],
+    references: [agents.id],
+  }),
 }));
 
 export const evolutionInstancesRelations = relations(evolutionInstances, ({ one }) => ({
@@ -156,6 +177,12 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
   createdAt: true,
 });
 
+export const insertWhatsappInstanceSchema = createInsertSchema(whatsappInstances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Agent = typeof agents.$inferSelect;
@@ -168,3 +195,7 @@ export type EvolutionInstance = typeof evolutionInstances.$inferSelect;
 export type InsertEvolutionInstance = z.infer<typeof insertEvolutionInstanceSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type WhatsappInstance = typeof whatsappInstances.$inferSelect;
+export type InsertWhatsappInstance = z.infer<typeof insertWhatsappInstanceSchema>;
+export type WhatsappInstance = typeof whatsappInstances.$inferSelect;
+export type InsertWhatsappInstance = z.infer<typeof insertWhatsappInstanceSchema>;

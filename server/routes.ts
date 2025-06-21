@@ -607,12 +607,19 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Check status via gateway
-      const gatewayResponse = await whatsappGatewayService.getInstanceStatus(whatsappInstance.instanceName);
+      const gatewayResponse = await whatsappGatewayService.fetchInstance(whatsappInstance.instanceName);
+      
+      // If status is close/disconnected, generate new QR code
+      let qrCode = whatsappInstance.qrCode;
+      if (gatewayResponse.instance.status === 'close') {
+        const connectResponse = await whatsappGatewayService.connectInstance(whatsappInstance.instanceName);
+        qrCode = connectResponse.qrcode?.base64 || null;
+      }
       
       // Update database with current status
       const updatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
         status: gatewayResponse.instance.status,
-        qrCode: gatewayResponse.qrcode?.base64 || whatsappInstance.qrCode
+        qrCode: qrCode
       });
       
       console.log(`📊 Status verificado para ${whatsappInstance.instanceName}: ${gatewayResponse.instance.status}`);
@@ -660,6 +667,95 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Webhook endpoint to receive messages from Evolution API Gateway
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      console.log('📨 Webhook recebido do gateway WhatsApp:', JSON.stringify(req.body, null, 2));
+      
+      const { event, data, instance } = req.body;
+      
+      // Processar apenas mensagens recebidas
+      if (event === 'messages.upsert') {
+        const message = data.message;
+        const key = data.key;
+        
+        // Ignorar mensagens do próprio bot
+        if (key.fromMe) {
+          console.log('📤 Ignorando mensagem própria');
+          return res.status(200).json({ status: 'ignored' });
+        }
+        
+        // Extrair texto da mensagem
+        const messageText = message.conversation || 
+                           message.extendedTextMessage?.text || 
+                           'Mensagem não suportada';
+        
+        const remoteJid = key.remoteJid;
+        
+        console.log(`💬 Mensagem recebida na instância ${instance}: ${messageText} de ${remoteJid}`);
+        
+        // Buscar agente pela instância
+        const agents = await storage.getAgentsByOwner(1); // Buscar em todos os usuários
+        let targetAgent = null;
+        
+        for (const agent of agents) {
+          const whatsappInstance = await storage.getWhatsappInstance(agent.id);
+          if (whatsappInstance && whatsappInstance.instanceName === instance) {
+            targetAgent = agent;
+            break;
+          }
+        }
+        
+        // Se não encontrar no usuário 1, buscar em outros usuários
+        if (!targetAgent) {
+          for (let userId = 2; userId <= 10; userId++) {
+            try {
+              const userAgents = await storage.getAgentsByOwner(userId);
+              for (const agent of userAgents) {
+                const whatsappInstance = await storage.getWhatsappInstance(agent.id);
+                if (whatsappInstance && whatsappInstance.instanceName === instance) {
+                  targetAgent = agent;
+                  break;
+                }
+              }
+              if (targetAgent) break;
+            } catch (error) {
+              // Continue procurando
+            }
+          }
+        }
+        
+        if (!targetAgent) {
+          console.log(`❌ Agente não encontrado para a instância: ${instance}`);
+          return res.status(200).json({ status: 'agent_not_found' });
+        }
+        
+        console.log(`🤖 Processando mensagem para agente: ${targetAgent.name}`);
+        
+        // Gerar resposta usando o serviço do agente
+        const responseText = await agentService.testAgent(targetAgent, messageText);
+        
+        // Formatar número para envio
+        const phoneNumber = whatsappGatewayService.formatPhoneNumber(remoteJid);
+        
+        // Enviar resposta via WhatsApp
+        await whatsappGatewayService.sendMessage(instance, phoneNumber, responseText);
+        
+        console.log(`✅ Resposta enviada para ${remoteJid}: ${responseText.substring(0, 100)}...`);
+        
+        return res.status(200).json({ status: 'processed' });
+      }
+      
+      // Outros tipos de eventos
+      console.log(`📋 Evento não processado: ${event}`);
+      res.status(200).json({ status: 'received' });
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao processar webhook WhatsApp:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Serve test page for webchat debugging
   app.get("/test-webchat", (req, res) => {
     const testHtml = `
@@ -691,6 +787,11 @@ export function registerRoutes(app: Express): Server {
   // Serve debug page for external domain testing
   app.get("/debug-cors", (req, res) => {
     res.sendFile('debug_cors.html', { root: process.cwd() });
+  });
+
+  // Serve webhook test page
+  app.get("/test-webhook", (req, res) => {
+    res.sendFile('test-webhook.html', { root: process.cwd() });
   });
 
   const httpServer = createServer(app);

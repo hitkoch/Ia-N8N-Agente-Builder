@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/sidebar";
 import ChatInterface from "@/components/chat-interface";
+import WhatsAppIntegration from "@/components/whatsapp-integration";
 
 interface EditAgentPageProps {
   agentId: string;

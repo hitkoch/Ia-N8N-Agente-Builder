@@ -1,4 +1,10 @@
-import { users, agents, evolutionInstances, conversations, ragDocuments, type User, type InsertUser, type Agent, type InsertAgent, type EvolutionInstance, type InsertEvolutionInstance, type Conversation, type InsertConversation } from "@shared/schema";
+import { 
+  users, agents, evolutionInstances, conversations, ragDocuments, whatsappInstances,
+  type User, type InsertUser, type Agent, type InsertAgent, 
+  type EvolutionInstance, type InsertEvolutionInstance, 
+  type Conversation, type InsertConversation,
+  type WhatsappInstance, type InsertWhatsappInstance
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import session from "express-session";
@@ -245,6 +251,45 @@ export class DatabaseStorage implements IStorage {
   async deleteExternalApiConfig(id: number, agentId: number): Promise<boolean> {
     // Will be implemented when external API configs table is properly migrated
     return true;
+  }
+
+  async getWhatsappInstance(agentId: number): Promise<WhatsappInstance | undefined> {
+    const [instance] = await db
+      .select()
+      .from(whatsappInstances)
+      .where(eq(whatsappInstances.agentId, agentId));
+    return instance || undefined;
+  }
+
+  async createWhatsappInstance(instance: InsertWhatsappInstance): Promise<WhatsappInstance> {
+    const [newInstance] = await db
+      .insert(whatsappInstances)
+      .values(instance)
+      .returning();
+    return newInstance;
+  }
+
+  async updateWhatsappInstance(agentId: number, updates: Partial<InsertWhatsappInstance>): Promise<WhatsappInstance | undefined> {
+    const [updatedInstance] = await db
+      .update(whatsappInstances)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(whatsappInstances.agentId, agentId))
+      .returning();
+    return updatedInstance || undefined;
+  }
+
+  async deleteWhatsappInstance(agentId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(whatsappInstances)
+        .where(eq(whatsappInstances.agentId, agentId))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Erro ao excluir instância WhatsApp:", error);
+      return false;
+    }
   }
 }
 

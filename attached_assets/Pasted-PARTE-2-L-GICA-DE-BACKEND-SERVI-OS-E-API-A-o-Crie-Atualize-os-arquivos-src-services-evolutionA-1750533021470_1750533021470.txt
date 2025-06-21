@@ -1,0 +1,55 @@
+PARTE 2: LÓGICA DE BACKEND (SERVIÇOS E API)
+Ação: Crie/Atualize os arquivos src/services/evolutionApiService.js, src/controllers/whatsappController.js, e src/routes/whatsappRoutes.js.
+2.1. Crie o Serviço evolutionApiService.js:
+Este serviço fará a interface com o gateway apizap.ecomtools.com.br.
+Configuração Base:
+Use axios para as requisições.
+Crie uma instância do axios pré-configurada com o cabeçalho de autorização:
+Generated javascript
+const apiClient = axios.create({
+  baseURL: process.env.EVOLUTION_GATEWAY_URL,
+  headers: { 'apikey': process.env.EVOLUTION_GATEWAY_TOKEN }
+});
+Use code with caution.
+JavaScript
+Funções do Serviço:
+createInstance(instanceName):
+Faz uma chamada POST para /instance/create.
+Corpo da requisição: { instanceName, qrcode: true }.
+Retorna a resposta da API (que deve conter os dados da instância e o QR Code inicial).
+fetchInstance(instanceName):
+Faz uma chamada GET para /instance/fetchInstances?instanceName=${instanceName}.
+Retorna os detalhes da instância, incluindo o status da conexão.
+connectInstance(instanceName):
+Faz uma chamada GET para /instance/connect?instanceName=${instanceName}.
+Retorna os dados da conexão, incluindo o QR Code em base64 se estiver desconectado.
+sendMessage(instanceName, number, text):
+Faz uma chamada POST para /message/sendText/${instanceName}.
+Corpo da requisição: { number, textMessage: { text } }.
+2.2. Crie/Atualize o Controlador whatsappController.js:
+createInstance(req, res):
+Gera um instanceName único (ex: agent-${req.params.agentId}).
+Chama evolutionApiService.createInstance(instanceName).
+A resposta da API Evolution já vem com o primeiro QR Code.
+Salva os dados no banco: instanceName, status: 'CREATED', qrCode (do resultado da API) e agentId.
+Retorna os dados da nova instância para o frontend, incluindo o QR Code.
+getInstanceDetails(req, res):
+Busca o instanceName no banco de dados com base no agentId.
+Chama evolutionApiService.fetchInstance(instanceName) para obter o status atual.
+Se o status for close, chama evolutionApiService.connectInstance(instanceName) para gerar um novo QR Code.
+Atualiza o status e o qrCode no banco.
+Retorna os detalhes completos para o frontend.
+handleWebhook(req, res):
+Recebe notificações do gateway. O corpo do webhook conterá o instance que originou o evento.
+Verifique o evento. Se for messages.upsert:
+a. Extraia o texto (data.message.conversation), o ID do remetente (data.key.remoteJid) e o instance.
+b. Ignore mensagens do próprio bot (data.key.fromMe === true).
+c. Use o instance para encontrar o agentId correspondente no seu banco.
+d. Recupere o systemPrompt do agente.
+e. Chame a API da OpenAI para gerar a resposta.
+f. Chame evolutionApiService.sendMessage(instance, remoteJid, responseText) para enviar a resposta.
+Responda com status 200 OK.
+2.3. Crie/Atualize as Rotas em whatsappRoutes.js:
+POST /:agentId/instance: Aponta para whatsappController.createInstance. (Protegida)
+GET /:agentId/instance: Aponta para whatsappController.getInstanceDetails. (Protegida)
+POST /webhook: Rota PÚBLICA para receber os webhooks do gateway. O gateway deve ser configurado para enviar todos os eventos para esta única rota.
