@@ -47,9 +47,6 @@ const googleServices = [
 export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
 
   const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
@@ -58,6 +55,17 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
       return await res.json();
     },
     enabled: isOpen && !!agentId,
+  });
+
+  // Estados locais inicializados quando o modal abre
+  const [selectedTools, setSelectedTools] = useState<string[]>(() => {
+    if (!agent?.tools) return [];
+    return agent.tools.split(',').filter(Boolean);
+  });
+  
+  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>(() => {
+    if (!agent?.googleServices) return [];
+    return agent.googleServices.split(',').filter(Boolean);
   });
 
   const form = useForm<UpdateAgentForm>({
@@ -72,21 +80,23 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     },
   });
 
-  // Initialize selections when modal opens and agent is loaded
+  // Atualiza os estados quando o agente é carregado
   React.useEffect(() => {
-    if (!isOpen) {
-      setInitialized(false);
-      setSelectedTools([]);
-      setSelectedGoogleServices([]);
-      return;
-    }
-
-    if (agent && !initialized) {
+    if (agent) {
       setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
       setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
-      setInitialized(true);
+      
+      // Atualiza o formulário apenas uma vez
+      form.reset({
+        name: agent.name || "",
+        description: agent.description || "",
+        systemPrompt: agent.systemPrompt || "",
+        model: agent.model || "gpt-4o",
+        temperature: agent.temperature || 0.7,
+        status: agent.status || "draft",
+      });
     }
-  }, [isOpen, agent, initialized]);
+  }, [agent?.id]); // Dependência apenas do ID do agente
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateAgentForm) => {
