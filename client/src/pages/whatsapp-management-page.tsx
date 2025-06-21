@@ -231,14 +231,14 @@ export default function WhatsAppManagementPage() {
 
       {selectedAgentId && (
         <>
-          {instanceLoading ? (
+          {instanceLoading && !error ? (
             <Card>
               <CardContent className="flex items-center justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin mr-2" />
                 Carregando informações da instância...
               </CardContent>
             </Card>
-          ) : instance ? (
+          ) : instance && !error ? (
             <div className="space-y-6">
               {/* Real-time Status and Activity in a 2-column layout */}
               <div className="grid gap-6 lg:grid-cols-3">
@@ -325,9 +325,18 @@ export default function WhatsAppManagementPage() {
                     <strong>Atenção!</strong> A conexão WhatsApp foi perdida. Clique em "Atualizar Status" para gerar um novo QR Code.
                   </AlertDescription>
                 </Alert>
-              ) : null}
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pronto para Configurar</CardTitle>
+                    <CardDescription>
+                      Instância configurada mas aguardando conexão. Escaneie o QR Code quando disponível.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
             </div>
-          ) : (
+          ) : (!instance || error) ? (
             <Card>
               <CardHeader>
                 <CardTitle>Nenhuma Instância Encontrada</CardTitle>
@@ -351,7 +360,7 @@ export default function WhatsAppManagementPage() {
                 </Button>
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </>
       )}
     </div>
