@@ -552,33 +552,71 @@ export function registerRoutes(app: Express): Server {
       // Generate unique instance name using phone number
       const instanceName = `whatsapp-${phoneNumber}`;
       
-      // Create instance via gateway
+      // Only create the basic instance structure - no webhook, no QR code
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
       
-      // Configure webhook immediately after instance creation
-      console.log(`🔗 Configurando webhook automaticamente para: ${instanceName}`);
-      try {
-        const webhookResult = await whatsappGatewayService.setWebhook(instanceName);
-        console.log(`✅ Webhook configurado automaticamente para: ${instanceName}`);
-      } catch (webhookError) {
-        console.error(`❌ Falha ao configurar webhook automaticamente:`, webhookError);
-        // Continue with instance creation even if webhook fails
-      }
-      
-      // Save to database
+      // Save to database with PENDING status
       const whatsappInstance = await storage.createWhatsappInstance({
         instanceName,
-        status: gatewayResponse.instance.status,
-        qrCode: gatewayResponse.qrcode?.base64 || null,
+        status: "PENDING", // Mark as pending activation
+        qrCode: null, // No QR code yet
         agentId: parseInt(agentId)
       });
       
-      console.log(`✅ Instância WhatsApp criada para agente ${agentId}: ${instanceName}`);
+      console.log(`✅ Estrutura da instância WhatsApp criada para agente ${agentId}: ${instanceName}`);
       res.status(201).json(whatsappInstance);
       
     } catch (error: any) {
-      console.error("❌ Erro ao criar instância WhatsApp:", error);
-      res.status(500).json({ message: "Falha ao criar instância WhatsApp", error: error.message });
+      console.error("❌ Erro ao criar estrutura da instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao criar estrutura da instância", error: error.message });
+    }
+  });
+
+  // Step 2: Activate WhatsApp instance (configure webhook + generate QR code)
+  app.post("/api/agents/:agentId/whatsapp/activate-instance", requireAuth, agentOwnershipMiddleware, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      // Get the pending instance
+      const pendingInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!pendingInstance) {
+        return res.status(404).json({ message: "Nenhuma instância encontrada para ativar" });
+      }
+      
+      if (pendingInstance.status !== "PENDING") {
+        return res.status(400).json({ message: "Instância já foi ativada" });
+      }
+      
+      const instanceName = pendingInstance.instanceName;
+      
+      // Step 1: Configure webhook
+      console.log(`🔗 Configurando webhook para ativação: ${instanceName}`);
+      await whatsappGatewayService.setWebhook(instanceName);
+      console.log(`✅ Webhook configurado para: ${instanceName}`);
+      
+      // Step 2: Connect instance and get QR code
+      console.log(`📱 Ativando conexão para: ${instanceName}`);
+      const connectResponse = await whatsappGatewayService.connectInstance(instanceName);
+      
+      // Update instance status and QR code
+      const activatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
+        status: "AWAITING_QR_SCAN",
+        qrCode: connectResponse.qrcode?.base64 || null
+      });
+      
+      console.log(`✅ Instância ativada e QR Code gerado para: ${instanceName}`);
+      res.status(200).json(activatedInstance);
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao ativar instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao ativar instância", error: error.message });
     }
   });
 
