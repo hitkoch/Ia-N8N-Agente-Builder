@@ -199,8 +199,8 @@ export default function AgentEditNew({ agentId }: AgentEditProps) {
       {/* Sidebar */}
       <Sidebar onSectionChange={handleSectionChange} />
       
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Content Area - com margin-left para não sobrepor o sidebar */}
+      <div className="flex-1 flex flex-col overflow-hidden ml-64">
         {/* Top Navigation Bar */}
         <div className="bg-white border-b shadow-sm flex-shrink-0">
           <div className="px-6 py-4">
