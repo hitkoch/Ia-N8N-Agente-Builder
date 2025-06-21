@@ -1,0 +1,93 @@
+## Objetivo: Criar uma Interface de Usuário Completa para Gerenciamento de WhatsApp
+
+Atualize a interface da plataforma para incluir uma seção dedicada ao gerenciamento da integração com o WhatsApp. Isso envolve adicionar um novo item de menu na sidebar e criar uma nova página de gerenciamento com todos os recursos necessários, como criação de instâncias, visualização de QR Code, status da conexão e estatísticas.
+
+---
+
+### **PARTE 1: ATUALIZAÇÃO DA SIDEBAR DE NAVEGAÇÃO**
+
+**Ação:** Modifique o `public/dashboard.html` (ou o arquivo que contém a sidebar principal).
+
+1.  **Adicione um Novo Item de Menu:**
+    *   Na lista de navegação da sidebar, adicione um novo link chamado **"WhatsApp"**.
+    *   Este link deve apontar para uma nova página: `<a href="/whatsapp.html">WhatsApp</a>`.
+    *   Adicione um ícone apropriado (pode ser da Font Awesome ou um emoji 📱).
+
+---
+
+### **PARTE 2: CRIAÇÃO DA PÁGINA DE GERENCIAMENTO (`whatsapp.html`)**
+
+**Ação:** Crie um novo conjunto de arquivos: `public/whatsapp.html`, e adicione os estilos em `public/css/style.css` e a lógica em `public/js/whatsapp-manager.js`.
+
+**2.1. Estrutura do `public/whatsapp.html`:**
+Esta página será o hub central para tudo relacionado ao WhatsApp.
+
+*   **Layout:** Use o mesmo layout do `dashboard.html` (com a sidebar e a área de conteúdo principal) para manter a consistência.
+*   **Cabeçalho da Página:** Título `<h1>` "Gerenciador de Conexão - WhatsApp".
+*   **Seleção de Agente:**
+    *   No topo, adicione um menu suspenso (`<select id="agent-selector">`) com o texto "Selecione um Agente para Gerenciar". Este é o primeiro passo para o usuário.
+*   **Área de Gerenciamento Principal (`<div id="management-area" class="hidden">`):**
+    *   Esta área deve ficar escondida (`display: none;`) até que um agente seja selecionado.
+    *   **Estado 1: Sem Conexão (Padrão)**
+        *   Mostre um card ou uma seção com um título "Nenhuma conexão encontrada para este agente."
+        *   Um botão grande e chamativo: **`+ Criar Nova Instância do WhatsApp`** com o ID `create-instance-btn`.
+    *   **Estado 2: Com Conexão (Exibido dinamicamente)**
+        *   Esta seção deve substituir o Estado 1 quando uma instância existir.
+        *   Use um layout de grid ou cards para exibir as seguintes informações:
+            *   **Card de Status:**
+                *   Título: "Status da Conexão"
+                *   Elemento de status com ID `connection-status`: (ex: `<span class="status-dot disconnected"></span> Desconectado`).
+                *   Nome da Instância: `<span>` com ID `instance-name`.
+            *   **Card do QR Code:**
+                *   Título: "Escanear para Conectar"
+                *   Uma área de placeholder (`<div id="qrcode-container">`) que conterá a imagem do QR Code (`<img>`) ou uma mensagem de "Conectado".
+                *   Um botão "Gerar Novo QR Code" com ID `refresh-qrcode-btn`.
+            *   **Card de Estatísticas (Placeholders):**
+                *   Título: "Uso (Últimos 30 dias)"
+                *   "Mensagens Recebidas": `<span>` com ID `stats-received`.
+                *   "Mensagens Enviadas": `<span>` com ID `stats-sent`.
+            *   **Card de Ações:**
+                *   Título: "Gerenciamento da Instância"
+                *   Botão "Editar Instância" (pode abrir um modal com configurações).
+                *   Botão **"Desconectar e Excluir Instância"** (com uma cor de perigo, como vermelho).
+
+**2.2. Estilos no `style.css`:**
+*   Adicione estilos para a nova página `whatsapp.html`.
+*   Crie uma classe `.status-dot` que pode ter modificadores `.connected` (cor verde) e `.disconnected` (cor vermelha).
+*   Estilize os cards de gerenciamento para que fiquem limpos e organizados.
+*   Adicione um estilo para a classe `.hidden` (`display: none !important;`).
+
+**2.3. Lógica Completa em `public/js/whatsapp-manager.js`:**
+Este script orquestrará toda a interatividade da página.
+
+*   **Inicialização (`window.onload`):**
+    1.  Verifique o token JWT. Se não existir, redirecione para o login.
+    2.  Faça um `fetch` para `GET /api/agents` para buscar todos os agentes do usuário.
+    3.  Popule o menu suspenso `#agent-selector` com os agentes retornados.
+
+*   **Evento `change` no `#agent-selector`:**
+    1.  Quando um agente é selecionado, pegue o `agentId`.
+    2.  Mostre a `#management-area`.
+    3.  Chame uma função `fetchInstanceDetails(agentId)` para buscar os dados da conexão daquele agente.
+
+*   **Função `fetchInstanceDetails(agentId)`:**
+    1.  Faça um `fetch` para `GET /api/whatsapp/${agentId}/instance`.
+    2.  **Se a resposta for 404 (sem instância):** mostre o "Estado 1" (botão "Criar Instância").
+    3.  **Se a resposta for 200 (instância existe):**
+        *   Mostre o "Estado 2" (cards de gerenciamento).
+        *   Chame uma função `updateUI(data)` para preencher todos os campos: status, nome da instância, estatísticas (placeholders por enquanto).
+        *   Se `data.qrCode` existir, exiba a imagem do QR Code. Caso contrário, mostre uma mensagem "Conectado".
+
+*   **Evento `click` no `#create-instance-btn`:**
+    1.  Pegue o `agentId` selecionado.
+    2.  Faça um `fetch` para `POST /api/whatsapp/${agentId}/instance`.
+    3.  Após o sucesso, chame `fetchInstanceDetails(agentId)` novamente para atualizar a UI para o "Estado 2" e exibir o primeiro QR Code.
+    4.  Inicie um loop de polling (usando `setInterval`) que chama `fetchInstanceDetails(agentId)` a cada 10 segundos para verificar se o status mudou para "Conectado".
+
+*   **Evento `click` no `#refresh-qrcode-btn`:**
+    *   Pode simplesmente chamar `fetchInstanceDetails(agentId)` novamente, pois a lógica do backend para gerar um novo QR Code já está no endpoint GET se a instância estiver desconectada.
+
+*   **Função `updateUI(data)`:**
+    *   Uma função central que recebe os dados da instância e atualiza todos os elementos do DOM (`#connection-status`, `#instance-name`, `#qrcode-container`, etc.). Isso evita repetição de código.
+
+---

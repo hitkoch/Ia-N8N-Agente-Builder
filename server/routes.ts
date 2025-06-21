@@ -837,9 +837,19 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('client/public/dashboard.html', { root: process.cwd() });
   });
 
+  // Serve WhatsApp management page
+  app.get("/whatsapp.html", (req, res) => {
+    res.sendFile('client/public/whatsapp.html', { root: process.cwd() });
+  });
+
   // Serve test dashboard
   app.get("/test-dashboard", (req, res) => {
     res.sendFile('test-whatsapp-dashboard.html', { root: process.cwd() });
+  });
+
+  // Serve test interface
+  app.get("/test-interface", (req, res) => {
+    res.sendFile('test-whatsapp-interface.html', { root: process.cwd() });
   });
 
   const httpServer = createServer(app);
