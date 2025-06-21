@@ -17,6 +17,14 @@ app.use(cors({
   optionsSuccessStatus: 200  // Some legacy browsers choke on 204
 }));
 
+// Ensure webhooks work externally - explicit route handling
+app.use('/api/whatsapp/webhook', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
