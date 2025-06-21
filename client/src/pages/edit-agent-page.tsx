@@ -60,31 +60,22 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const form = useForm<UpdateAgentForm>({
     resolver: zodResolver(updateAgentSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      systemPrompt: "",
-      model: "gpt-4o",
-      temperature: 0.7,
-      status: "draft",
+      name: agent?.name || "",
+      description: agent?.description || "",
+      systemPrompt: agent?.systemPrompt || "",
+      model: agent?.model || "gpt-4o",
+      temperature: agent?.temperature || 0.7,
+      status: agent?.status || "draft",
     },
   });
 
-  // Atualiza o formulário quando o agente é carregado
+  // Inicializa selections apenas uma vez quando o agente é carregado
   React.useEffect(() => {
-    if (agent) {
-      form.reset({
-        name: agent.name || "",
-        description: agent.description || "",
-        systemPrompt: agent.systemPrompt || "",
-        model: agent.model || "gpt-4o",
-        temperature: agent.temperature || 0.7,
-        status: agent.status || "draft",
-      });
-      
+    if (agent && selectedTools.length === 0 && selectedGoogleServices.length === 0) {
       setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
       setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
     }
-  }, [agent, form]);
+  }, [agent]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateAgentForm) => {
