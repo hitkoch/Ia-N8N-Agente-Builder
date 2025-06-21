@@ -192,6 +192,9 @@
     chatIframe.setAttribute('allow', 'clipboard-write');
     chatIframe.setAttribute('title', 'Chat com ' + agentConfig.agentName);
     
+    console.log('Webchat iframe criado:', chatIframe.src);
+    console.log('Parâmetros:', Object.fromEntries(params));
+    
     document.body.appendChild(chatIframe);
   }
 

@@ -476,6 +476,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Serve test page for webchat debugging
+  app.get("/test-webchat", (req, res) => {
+    const testHtml = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Webchat</title>
+</head>
+<body>
+    <h1>Página de Teste do Webchat</h1>
+    <p>Esta página simula um site externo com o webchat incorporado.</p>
+    <p>Abra o console do navegador (F12) para ver os logs detalhados.</p>
+    
+    <!-- Código do webchat -->
+    <script 
+        src="/js/webchat-loader.js"
+        data-agent-id="2"
+        data-agent-name="teste 900"
+        data-primary-color="#022b44"
+        data-accent-color="#b8ec00">
+    </script>
+</body>
+</html>`;
+    res.send(testHtml);
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
