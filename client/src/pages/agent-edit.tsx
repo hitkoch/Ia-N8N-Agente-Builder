@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, TestTube, Upload, FileText, Trash2, Settings, Database, Smartphone, Bot } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import Sidebar from "@/components/sidebar";
 
 interface AgentEditProps {
@@ -22,6 +23,18 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [currentTab, setCurrentTab] = useState("basic");
+  const { user, isLoading: authLoading } = useAuth();
+
+  // Debug logs
+  console.log('AgentEdit - agentId:', agentId);
+  console.log('AgentEdit - user:', user);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setLocation("/auth");
+    }
+  }, [authLoading, user, setLocation]);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -34,15 +47,17 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
   });
 
   // Fetch agent
-  const { data: agent, isLoading } = useQuery({
+  const { data: agent, isLoading, error } = useQuery({
     queryKey: [`/api/agents/${agentId}`],
-    enabled: !!agentId,
+    enabled: !!agentId && !!user,
+    retry: false,
   });
 
   // Fetch documents
   const { data: documents = [] } = useQuery({
     queryKey: [`/api/agents/${agentId}/documents`],
-    enabled: !!agentId,
+    enabled: !!agentId && !!agent && !!user,
+    retry: false,
   });
 
   // Update form when agent loads
@@ -147,26 +162,35 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
     setLocation("/");
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen">
-        <Sidebar onSectionChange={handleSectionChange} />
-        <div className="flex-1 flex items-center justify-center">
-          <Bot className="h-12 w-12 animate-pulse text-blue-500" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!agent) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex h-screen">
         <Sidebar onSectionChange={handleSectionChange} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-600">Agente não encontrado</p>
+            <Bot className="h-12 w-12 mx-auto mb-4 animate-pulse text-blue-500" />
+            <p className="text-gray-600">Carregando agente...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
+
+  if (error || (!isLoading && !agent)) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar onSectionChange={handleSectionChange} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 mb-2">Agente não encontrado</p>
+            <p className="text-sm text-gray-500 mb-4">ID: {agentId}</p>
             <Button onClick={() => setLocation("/")} className="mt-4">
-              Voltar
+              Voltar ao Dashboard
             </Button>
           </div>
         </div>
