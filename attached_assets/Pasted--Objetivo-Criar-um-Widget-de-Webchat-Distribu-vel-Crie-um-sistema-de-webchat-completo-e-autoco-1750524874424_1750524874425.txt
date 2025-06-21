@@ -1,0 +1,82 @@
+## Objetivo: Criar um Widget de Webchat Distribuível
+
+Crie um sistema de webchat completo e autocontido que nossos clientes possam incorporar em seus próprios sites. O sistema será composto por duas partes principais: um script de incorporação (o "loader") e a interface de chat real, que será carregada dentro de um `iframe`.
+
+O design deve ser limpo, moderno e personalizável via parâmetros de URL.
+
+---
+
+### **PARTE 1: A Interface do Chat (A Página no `iframe`)**
+
+**Ação:** Crie um novo arquivo `public/chat.html` e seus estilos em `public/css/chat.css`.
+
+**1.1. Estrutura do `public/chat.html`:**
+*   Deve ser uma página HTML completa, mas projetada para caber em uma pequena janela de chat (ex: 350px de largura por 500px de altura).
+*   **Layout:**
+    *   Um **cabeçalho** (`<header>`) com o nome do agente e um botão para fechar o chat.
+    *   Uma **área de mensagens** (`<main>`) que será preenchida com as bolhas de chat. Use o ID `chat-messages`.
+    *   Um **rodapé** (`<footer>`) com um campo de texto (`<input type="text">`) para o usuário digitar e um botão de "Enviar".
+
+**1.2. Estilo do `public/css/chat.css`:**
+*   Crie um estilo moderno para uma janela de chat.
+*   **Bolhas de Mensagem:** Estilize as mensagens do usuário (ex: alinhadas à direita, com fundo azul) e as mensagens do agente (alinhadas à esquerda, com fundo cinza).
+*   **Personalização:** Use variáveis CSS para as cores principais (ex: `--primary-color`, `--agent-bubble-color`) para que possam ser facilmente alteradas no futuro.
+
+**1.3. Lógica em `public/js/chat-interface.js`:**
+*   Este script será incluído em `chat.html` e controlará a interface do chat.
+*   **Funções:**
+    1.  **Obter Parâmetros:** Ao carregar, leia os parâmetros da URL do `iframe`, como `agentId` e `primaryColor`. Use `URLSearchParams`.
+    2.  **Enviar Mensagem:**
+        *   Quando o usuário clica em "Enviar", pegue o texto do input.
+        *   Chame a função `addMessageToUI(text, 'user')` para exibir a mensagem do usuário imediatamente.
+        *   Faça uma requisição `fetch` para o endpoint do backend: `POST /api/chat/${agentId}` com a mensagem do usuário no corpo.
+        *   Mostre um indicador de "digitando..." na interface.
+        *   Quando a resposta da API chegar, remova o indicador de "digitando..." e chame `addMessageToUI(responseText, 'agent')`.
+    3.  **Adicionar Mensagem à UI:**
+        *   Crie a função `addMessageToUI(text, senderType)` que cria dinamicamente os elementos HTML para uma nova bolha de mensagem (`div` com classes `message`, `user-message` ou `agent-message`) e a anexa à área de mensagens `#chat-messages`.
+    4.  **Comunicação com a Janela Pai:** Use `window.parent.postMessage(...)` para enviar eventos para o script do loader (ex: para fechar o chat).
+
+---
+
+### **PARTE 2: O Script de Incorporação (O "Loader")**
+
+Esta é a parte mais importante, o código que o seu cliente irá copiar e colar.
+
+**Ação:** Crie um novo arquivo `public/js/webchat-loader.js`.
+
+**2.1. Lógica do `webchat-loader.js`:**
+*   O script deve ser envolvido em uma **IIFE (Immediately Invoked Function Expression)** para evitar conflitos de variáveis com o site do cliente. `(function() { ... })();`
+*   **Lógica Principal:**
+    1.  **Encontrar o Script:** O script precisa encontrar a si mesmo no DOM para ler seus próprios atributos de dados (como o `agentId`).
+        ```javascript
+        const self = document.querySelector('script[data-agent-id]');
+        const agentId = self.getAttribute('data-agent-id');
+        ```
+    2.  **Criar o Botão de Chat:**
+        *   Crie dinamicamente um botão flutuante (`<button>`) com um ícone de chat. Use o ID `chat-toggle-button`.
+        *   Adicione CSS para posicioná-lo no canto inferior direito da página (`position: fixed;`). Injete este CSS dinamicamente em uma tag `<style>` na cabeça do documento.
+    3.  **Criar o `iframe` do Chat:**
+        *   Crie dinamicamente um `<iframe>` com o ID `chat-iframe`.
+        *   Defina seu `src` para a página de chat na sua plataforma: `src="https://[SUA_URL_REPLIT]/chat.html?agentId=${agentId}"`.
+        *   Adicione estilos para posicioná-lo acima do botão e mantenha-o escondido por padrão (`display: none;`).
+    4.  **Adicionar Elementos ao DOM:** Anexe o botão e o `iframe` ao `<body>` do site do cliente.
+    5.  **Adicionar Event Listeners:**
+        *   Adicione um `click` listener ao botão de chat (`#chat-toggle-button`) que alterna a visibilidade do `iframe` (muda `display` de `none` para `block` e vice-versa).
+        *   Adicione um `message` listener na `window` (`window.addEventListener('message', ...)`). Este listener receberá mensagens do `iframe` (ex: para fechar o chat).
+
+---
+
+### **PARTE 3: Instruções para o Cliente**
+
+**Ação:** Na sua página de dashboard (`public/dashboard.html`), para cada agente, gere e exiba o snippet de código que o cliente deve copiar.
+
+**Exemplo do Snippet a ser Exibido:**
+*   Para um agente com ID `xyz-123`, exiba o seguinte bloco de código:
+
+```html
+<!-- Cole este código antes do fechamento da tag </body> do seu site -->
+<script 
+  src="https://[SUA_URL_REPLIT]/js/webchat-loader.js" 
+  data-agent-id="xyz-123" 
+  defer>
+</script>
