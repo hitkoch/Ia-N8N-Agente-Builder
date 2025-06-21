@@ -14,6 +14,7 @@ import AgentsPage from "./agents-page";
 import TemplatesPage from "./templates-page";
 import EvolutionPage from "./evolution-page";
 import TestingPage from "./testing-page";
+import AgentTestingPage from "./agent-testing-page";
 import SettingsPage from "./settings-page";
 
 interface DashboardStats {
