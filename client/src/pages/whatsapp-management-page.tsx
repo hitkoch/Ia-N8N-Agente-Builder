@@ -75,14 +75,14 @@ export default function WhatsAppManagementPage() {
 
   // Auto-open QR modal when QR code becomes available
   useEffect(() => {
-    if (hasQRCode && instance?.qrCode && !isConnected) {
+    if (hasQRCode && instance?.qrCode && !isConnected && instance?.status === "AWAITING_QR_SCAN") {
       setIsQRModalOpen(true);
     }
-  }, [hasQRCode, instance?.qrCode, isConnected]);
+  }, [hasQRCode, instance?.qrCode, isConnected, instance?.status]);
 
   const createInstanceMutation = useMutation({
     mutationFn: async ({ agentId, phoneNumber }: { agentId: number; phoneNumber: string }) => {
-      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/create`, {
+      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/create-instance`, {
         phoneNumber: phoneNumber
       });
       return response.json();
@@ -90,17 +90,39 @@ export default function WhatsAppManagementPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
       toast({
-        title: "Instância criada",
-        description: "Instância WhatsApp criada com sucesso. Escaneie o QR Code para conectar.",
+        title: "Estrutura da instância criada",
+        description: "Agora clique em 'Ativar Conexão' para gerar o QR Code.",
       });
       setIsCreateDialogOpen(false);
       setPhoneNumber("");
-      startPolling();
+      // Don't start polling yet - wait for activation
     },
     onError: (error: any) => {
       toast({
         title: "Erro ao criar instância",
-        description: error.message || "Falha ao criar instância WhatsApp",
+        description: error.message || "Falha ao criar estrutura da instância",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activateInstanceMutation = useMutation({
+    mutationFn: async (agentId: number) => {
+      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/activate-instance`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
+      toast({
+        title: "Conexão ativada",
+        description: "QR Code gerado! Escaneie para conectar.",
+      });
+      startPolling();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao ativar conexão",
+        description: error.message || "Falha ao ativar a instância",
         variant: "destructive",
       });
     },
@@ -433,7 +455,7 @@ export default function WhatsAppManagementPage() {
                         size="lg"
                       >
                         <Smartphone className="w-4 h-4 mr-2" />
-                        Criar Nova Instância WhatsApp
+                        Criar Estrutura da Instância
                       </Button>
                     </DialogTrigger>
                     <DialogContent>

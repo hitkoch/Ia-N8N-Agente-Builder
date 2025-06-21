@@ -1,0 +1,65 @@
+## Objetivo: Refatorar a Criação de Instância do WhatsApp em um Processo de 2 Etapas
+
+Vamos redesenhar a funcionalidade de criação de instâncias do WhatsApp para ser mais robusta e clara, separando-a em duas ações distintas para o usuário: 1) Criar a Estrutura da Instância, 2) Ativar a Instância e Configurar o Webhook.
+
+Isso tornará o processo mais confiável e fácil de depurar.
+
+---
+
+### **PARTE 1: ATUALIZAÇÃO DO FRONTEND (`whatsapp.html` e `whatsapp-manager.js`)**
+
+**Ação:** Modifique a interface e a lógica do cliente para seguir o novo fluxo de 2 etapas.
+
+**1.1. Modifique `public/whatsapp.html`:**
+*   A interface inicial (quando não há instância) permanece a mesma: um botão `+ Criar Estrutura da Instância` (ID: `create-instance-btn`).
+*   **NOVO ESTADO DA UI:** Quando a instância é criada, mas ainda não ativada, a UI deve mudar para:
+    *   Um card de status mostrando: "Status: **Pendente de Ativação**".
+    *   O nome da instância (ex: `agent-123-whatsapp`).
+    *   Um novo botão grande e chamativo: **`Ativar Conexão e Gerar QR Code`** (ID: `activate-instance-btn`).
+    *   A área do QR Code e as estatísticas devem permanecer escondidas.
+
+**1.2. Refatore `public/js/whatsapp-manager.js`:**
+*   **Evento `click` em `#create-instance-btn`:**
+    *   Esta função agora só faz uma coisa: chama a rota `POST /api/whatsapp/:agentId/create-instance`.
+    *   Ao receber a resposta de sucesso, ela **NÃO** inicia o polling. Apenas atualiza a UI para o novo "Estado Pendente de Ativação".
+*   **NOVO Evento `click` em `#activate-instance-btn`:**
+    *   Esta é a nova etapa crucial.
+    *   Ao ser clicado, ele chama uma **NOVA ROTA** da API: `POST /api/whatsapp/:agentId/activate-instance`.
+    *   Após o sucesso, ele recebe o primeiro QR Code e o status, e só então inicia o loop de polling para verificar a conexão, como fazia antes.
+
+---
+
+### **PARTE 2: ATUALIZAÇÃO DO BACKEND (CONTROLADORES E ROTAS)**
+
+**Ação:** Separe a lógica do backend em duas rotas distintas.
+
+**2.1. Refatore `whatsappController.js` e `whatsappRoutes.js`:**
+*   **Modifique a Rota de Criação:**
+    *   Renomeie a rota `POST /:agentId/instance` para `POST /:agentId/create-instance`.
+    *   **Controlador `createInstance`:** Esta função agora é muito mais simples. Ela **APENAS** faz:
+        1.  Chama `evolutionApiService.createInstance(instanceName)`.
+        2.  Salva a instância no banco de dados com `status: 'PENDING'`.
+        3.  **NÃO** chama `setWebhook`.
+        4.  Retorna uma resposta de sucesso.
+
+*   **Crie a NOVA Rota de Ativação:**
+    *   Crie uma nova rota: `POST /:agentId/activate-instance`.
+    *   **Novo Controlador `activateInstance`:**
+        1.  Busca a instância `PENDING` no banco de dados para o `agentId`. Se não encontrar, retorna um erro.
+        2.  **Chama `evolutionApiService.setWebhook(instanceName)`**. Este é o trabalho principal desta função.
+        3.  Após configurar o webhook, chama `evolutionApiService.connectInstance(instanceName)` para obter o primeiro QR Code.
+        4.  Atualiza a instância no banco: muda o `status` para `'AWAITING_QR_SCAN'` e salva o `qrCode`.
+        5.  Retorna os detalhes da instância ativada (incluindo o QR Code) para o frontend.
+
+**2.2. Atualize `evolutionApiService.js`:**
+*   A IA deve garantir que este serviço tenha as três funções necessárias, separadas e funcionais: `createInstance`, `setWebhook`, e `connectInstance`. O prompt anterior já detalhava isso, mas reforce a necessidade de estarem bem definidas.
+
+---
+
+### **Instruções Finais para a IA:**
+
+1.  Primeiro, modifique o frontend (`whatsapp.html` e `whatsapp-manager.js`) para introduzir o novo fluxo de 2 botões: "Criar Estrutura" e depois "Ativar Conexão".
+2.  Em seguida, refatore o backend. Divida a lógica do controlador `whatsappController.js` em duas funções e rotas separadas: `createInstance` e `activateInstance`.
+3.  A função `createInstance` NÃO DEVE mais chamar a função `setWebhook`.
+4.  A nova função `activateInstance` DEVE chamar `setWebhook` e depois `connectInstance` para buscar o QR Code.
+5.  Garanta que o `evolutionApiService.js` exporta todas as funções necessárias.
