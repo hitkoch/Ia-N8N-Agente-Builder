@@ -276,6 +276,37 @@ export default function WhatsAppManagementPage() {
                       )}
                       Atualizar Status
                     </Button>
+                    
+                    <Button
+                      onClick={async () => {
+                        try {
+                          console.log('Configurando webhook...');
+                          const response = await fetch(`/api/agents/${selectedAgentId}/whatsapp/configure-webhook`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          
+                          if (response.ok) {
+                            const result = await response.json();
+                            console.log('Webhook configurado:', result);
+                            alert('Webhook configurado com sucesso!');
+                            refreshStatusMutation.mutate(selectedAgentId);
+                          } else {
+                            const error = await response.json();
+                            console.error('Erro ao configurar webhook:', error);
+                            alert('Erro ao configurar webhook: ' + error.message);
+                          }
+                        } catch (error) {
+                          console.error('Erro:', error);
+                          alert('Erro na requisição: ' + error.message);
+                        }
+                      }}
+                      variant="outline"
+                      className="bg-blue-50 border-blue-200"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configurar Webhook
+                    </Button>
                     <Button
                       onClick={() => deleteInstanceMutation.mutate(selectedAgentId)}
                       disabled={deleteInstanceMutation.isPending}

@@ -909,6 +909,46 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('debug-whatsapp.js', { root: process.cwd() });
   });
 
+  // Force webhook reconfiguration endpoint
+  app.post("/api/agents/:agentId/whatsapp/configure-webhook", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      console.log(`🔧 Forçando configuração de webhook para: ${whatsappInstance.instanceName}`);
+      
+      // Configure webhook with detailed logging
+      const webhookResult = await whatsappGatewayService.setWebhook(whatsappInstance.instanceName);
+      
+      console.log(`✅ Webhook configurado manualmente para: ${whatsappInstance.instanceName}`);
+      
+      res.status(200).json({ 
+        message: "Webhook configurado com sucesso",
+        instanceName: whatsappInstance.instanceName,
+        webhookConfig: webhookResult
+      });
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao configurar webhook:", error);
+      res.status(500).json({ 
+        message: "Falha ao configurar webhook", 
+        error: error.message,
+        details: error.toString()
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WhatsApp webhook endpoint to receive messages
