@@ -130,40 +130,17 @@ export class AgentService {
         console.log('❌ Busca semântica não encontrou resultado relevante');
       }
       
-      // Para teste: usar conteúdo válido do n8n já que os embeddings estão salvos corretamente
-      console.log('📄 Usando fallback: retornando conteúdo processado');
-      const fallbackContent = `n8n - Plataforma de Automação de Fluxos de Trabalho
-
-n8n é uma ferramenta poderosa e flexível para automação de processos e integração de dados. Permite criar fluxos de trabalho visuais que conectam diferentes aplicações e serviços.
-
-Principais Características:
-- Interface visual drag-and-drop para criação de workflows
-- Mais de 200 integrações pré-construídas
-- Execução local ou na nuvem
-- Código aberto e extensível
-- Suporte a JavaScript personalizado
-- Triggers baseados em eventos
-- Processamento condicional e loops
-
-Casos de Uso Comuns:
-- Sincronização de dados entre CRM e marketing
-- Automação de processos de vendas
-- Integração de sistemas de pagamento
-- Notificações automatizadas
-- Backup e sincronização de arquivos
-- Processamento de formulários web
-- Análise e relatórios automatizados
-
-Vantagens:
-- Reduz trabalho manual repetitivo
-- Melhora a eficiência operacional
-- Diminui erros humanos
-- Facilita integração entre sistemas
-- Interface amigável para usuários não-técnicos
-
-O n8n se destaca por sua flexibilidade e facilidade de uso, permitindo que equipes criem automações complexas sem necessidade de programação avançada.`;
+      // Usar busca por palavras-chave como fallback
+      console.log('📄 Usando fallback: buscando por palavras-chave');
+      const keywordContext = await this.getKeywordContext(ragDocs, userMessage);
       
-      return fallbackContent;
+      if (keywordContext) {
+        console.log('✅ Contexto por palavras-chave encontrado');
+        return keywordContext;
+      }
+      
+      console.log('📄 Nenhum contexto encontrado, retornando null');
+      return null;
       
     } catch (error) {
       console.error('❌ Erro ao buscar contexto da base de conhecimento:', error);
