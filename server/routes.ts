@@ -295,6 +295,31 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update agent
+  app.put("/api/agents/:agentId", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const updatedAgent = await storage.updateAgent(agentId, user.id, req.body);
+      
+      if (updatedAgent) {
+        res.json(updatedAgent);
+      } else {
+        res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao atualizar agente:', error);
+      res.status(500).json({ message: "Erro ao atualizar agente", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
