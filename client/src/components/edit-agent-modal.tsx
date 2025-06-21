@@ -111,7 +111,86 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
   });
 
   const onSubmit = (data: UpdateAgentForm) => {
-    updateMutation.mutate(data);
+    const updateData = {
+      ...data,
+      tools: selectedTools.join(','),
+      googleServices: selectedGoogleServices.join(','),
+    };
+    updateMutation.mutate(updateData);
+  };
+
+  const handleToolToggle = (toolId: string) => {
+    setSelectedTools(prev => 
+      prev.includes(toolId) 
+        ? prev.filter(id => id !== toolId)
+        : [...prev, toolId]
+    );
+  };
+
+  const handleGoogleServiceToggle = (serviceId: string) => {
+    setSelectedGoogleServices(prev => 
+      prev.includes(serviceId) 
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Simular upload de arquivo
+      const newDoc = {
+        id: Date.now(),
+        filename: file.name,
+        originalName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        content: `Conteúdo do arquivo ${file.name}`,
+      };
+      setRagDocuments(prev => [...prev, newDoc]);
+      
+      toast({
+        title: "Arquivo adicionado",
+        description: `${file.name} foi adicionado à base de conhecimento.`,
+      });
+    }
+  };
+
+  const removeDocument = (docId: number) => {
+    setRagDocuments(prev => prev.filter(doc => doc.id !== docId));
+    
+    toast({
+      title: "Arquivo removido",
+      description: "O arquivo foi removido da base de conhecimento.",
+    });
+  };
+
+  const addApiConfig = () => {
+    if (newApiConfig.name && newApiConfig.baseUrl) {
+      const config = {
+        id: Date.now(),
+        ...newApiConfig,
+        authConfig: "{}",
+        endpoints: "[]",
+        isActive: true,
+      };
+      setApiConfigs(prev => [...prev, config]);
+      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
+      
+      toast({
+        title: "API adicionada",
+        description: `Configuração da API ${config.name} foi adicionada.`,
+      });
+    }
+  };
+
+  const removeApiConfig = (configId: number) => {
+    setApiConfigs(prev => prev.filter(config => config.id !== configId));
+    
+    toast({
+      title: "API removida",
+      description: "A configuração da API foi removida.",
+    });
   };
 
   const handleDelete = () => {
