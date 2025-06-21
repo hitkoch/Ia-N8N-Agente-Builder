@@ -45,7 +45,7 @@ export const ragDocuments = pgTable("rag_documents", {
   fileSize: integer("file_size").notNull(),
   mimeType: text("mime_type").notNull(),
   content: text("content"), // Extracted text content
-  embedding: text("embedding"), // Vector embeddings for similarity search
+  embedding: text("embedding"), // JSON string of vector embeddings for similarity search
   uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
