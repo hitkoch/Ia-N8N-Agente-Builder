@@ -14,8 +14,9 @@ export class EmbeddingService {
       const limitedText = text.length > maxLength ? text.substring(0, maxLength) : text;
       
       const response = await openai.embeddings.create({
-        model: "text-embedding-3-small", // Modelo mais eficiente e econômico
+        model: "text-embedding-3-small", // Modelo mais moderno e eficiente
         input: limitedText,
+        dimensions: 1536, // Dimensões específicas para melhor qualidade
       });
       
       console.log('✅ Embedding criado com sucesso');
