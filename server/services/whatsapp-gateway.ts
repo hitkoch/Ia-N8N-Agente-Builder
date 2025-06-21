@@ -56,7 +56,7 @@ export interface SendMessageResponse {
 
 export class WhatsAppGatewayService {
   private readonly baseUrl = 'https://apizap.ecomtools.com.br';
-  private readonly globalToken = process.env.WHATSAPP_GATEWAY_TOKEN || '';
+  private readonly globalToken = process.env.WHATSAPP_GATEWAY_TOKEN || '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx';
 
   constructor() {
     if (!this.globalToken) {

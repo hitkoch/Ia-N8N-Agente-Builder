@@ -233,17 +233,7 @@ export default function WhatsAppManagementPage() {
 
       {selectedAgentId && (
         <>
-          {/* Debug info */}
-          <div className="text-xs text-gray-500 mb-2 bg-yellow-100 p-2 rounded">
-            <strong>Debug Info:</strong><br/>
-            • selectedAgentId: {selectedAgentId}<br/>
-            • instanceLoading: {instanceLoading.toString()}<br/>
-            • hasInstance: {hasInstance?.toString()}<br/>
-            • instance: {instance ? 'exists' : 'null'}<br/>
-            • instanceError: {instanceError ? instanceError.message : 'no error'}<br/>
-            • Should show create button: {(!hasInstance).toString()}<br/>
-            • Raw instance data: {JSON.stringify(instance)}
-          </div>
+
           
           {instanceLoading ? (
             <Card>
