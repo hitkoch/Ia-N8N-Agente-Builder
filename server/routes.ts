@@ -9,6 +9,7 @@ interface MulterRequest extends Request {
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { agentService } from "./services/agent";
+import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import type { Agent } from "@shared/schema";
 
