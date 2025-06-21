@@ -301,16 +301,34 @@ export function registerRoutes(app: Express): Server {
     const agentId = parseInt(req.params.agentId);
     
     try {
+      console.log(`📝 Atualizando agente ${agentId} para usuário ${user.id}`);
+      console.log(`📋 Dados recebidos:`, req.body);
+      
       const agent = await storage.getAgent(agentId, user.id);
       if (!agent) {
+        console.log(`❌ Agente ${agentId} não encontrado`);
         return res.status(404).json({ message: "Agente não encontrado" });
       }
 
       const updatedAgent = await storage.updateAgent(agentId, user.id, req.body);
       
       if (updatedAgent) {
-        res.json(updatedAgent);
+        console.log(`✅ Agente ${agentId} atualizado com sucesso`);
+        res.setHeader('Content-Type', 'application/json');
+        res.json({
+          id: updatedAgent.id,
+          name: updatedAgent.name,
+          description: updatedAgent.description,
+          systemPrompt: updatedAgent.systemPrompt,
+          knowledgeBase: updatedAgent.knowledgeBase,
+          model: updatedAgent.model,
+          temperature: updatedAgent.temperature,
+          status: updatedAgent.status,
+          ownerId: updatedAgent.ownerId,
+          createdAt: updatedAgent.createdAt
+        });
       } else {
+        console.log(`❌ Falha ao atualizar agente ${agentId}`);
         res.status(404).json({ message: "Agente não encontrado" });
       }
       

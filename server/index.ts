@@ -63,25 +63,8 @@ app.use((req, res, next) => {
   // Setup webhook routes with ABSOLUTE PRIORITY
   setupWebhookRoutes(app);
   
-  // Register other API routes
+  // Register API routes with absolute priority
   const server = await registerRoutes(app);
-
-  // Error handler for API routes
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // CRITICAL: API routes must be processed before Vite catch-all
-  // Add explicit API route priority middleware
-  app.use('/api/*', (req, res, next) => {
-    // Ensure API routes bypass Vite middleware
-    res.setHeader('X-API-Route', 'true');
-    next();
-  });
 
   // Setup Vite/static serving AFTER API routes
   if (app.get("env") === "development") {
@@ -91,6 +74,15 @@ app.use((req, res, next) => {
     serveStatic(app);
     setTimeout(() => seedDatabase(), 1000);
   }
+
+  // Error handler for API routes
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    throw err;
+  });
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
