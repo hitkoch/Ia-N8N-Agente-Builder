@@ -657,7 +657,11 @@ export function registerRoutes(app: Express): Server {
       
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       if (!whatsappInstance) {
-        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+        return res.json({ 
+          hasInstance: false,
+          agentId: parseInt(agentId),
+          message: "Nenhuma instância WhatsApp configurada para este agente"
+        });
       }
       
       // Connect via gateway
@@ -670,7 +674,10 @@ export function registerRoutes(app: Express): Server {
       });
       
       console.log(`🔌 Conectando instância WhatsApp ${whatsappInstance.instanceName}`);
-      res.json(updatedInstance);
+      res.json({ 
+        hasInstance: true,
+        ...updatedInstance
+      });
       
     } catch (error: any) {
       console.error("❌ Erro ao conectar instância WhatsApp:", error);
@@ -692,7 +699,12 @@ export function registerRoutes(app: Express): Server {
       
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       if (!whatsappInstance) {
-        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+        return res.json({ 
+          hasInstance: false,
+          agentId: parseInt(agentId),
+          message: "Nenhuma instância WhatsApp configurada para este agente",
+          status: "NOT_CONFIGURED"
+        });
       }
       
       // Check status via gateway
@@ -712,7 +724,10 @@ export function registerRoutes(app: Express): Server {
       });
       
       console.log(`📊 Status verificado para ${whatsappInstance.instanceName}: ${gatewayResponse.connectionStatus}`);
-      res.json(updatedInstance);
+      res.json({ 
+        hasInstance: true,
+        ...updatedInstance
+      });
       
     } catch (error: any) {
       console.error("❌ Erro ao verificar status da instância WhatsApp:", error);
@@ -734,7 +749,12 @@ export function registerRoutes(app: Express): Server {
       
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       if (!whatsappInstance) {
-        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+        return res.json({ 
+          hasInstance: false,
+          agentId: parseInt(agentId),
+          message: "Nenhuma instância WhatsApp configurada para este agente",
+          qrCode: null
+        });
       }
       
       console.log(`🔍 Buscando QR Code manualmente para: ${whatsappInstance.instanceName}`);
@@ -747,7 +767,10 @@ export function registerRoutes(app: Express): Server {
         });
         
         console.log(`✅ QR Code encontrado e atualizado para: ${whatsappInstance.instanceName}`);
-        res.status(200).json(updatedInstance);
+        res.status(200).json({ 
+          hasInstance: true,
+          ...updatedInstance
+        });
       } else {
         res.status(404).json({ message: "QR Code ainda não disponível" });
       }

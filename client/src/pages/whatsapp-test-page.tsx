@@ -199,19 +199,28 @@ export default function WhatsAppTestPage() {
   const fetchQRMutation = useMutation({
     mutationFn: async () => {
       const startTime = Date.now();
-      const response = await apiRequest("GET", `/api/agents/${selectedAgentId}/whatsapp/fetch-qr`);
+      const response = await apiRequest("GET", `/api/agents/${selectedAgentId}/whatsapp/status`);
       const duration = Date.now() - startTime;
       const data = await response.json();
       return { data, duration };
     },
     onMutate: () => {
-      addTestResult("Buscar QR Code", "pending", {});
+      addTestResult("Buscar Status/QR", "pending", {});
     },
     onSuccess: ({ data, duration }) => {
-      addTestResult("Buscar QR Code", "success", data, duration);
+      const status = data.hasInstance !== false ? 'success' : 'error';
+      addTestResult("Buscar Status/QR", status, data, duration);
+      
+      if (data.hasInstance === false) {
+        toast({
+          title: "Instância não encontrada",
+          description: "Configure uma instância WhatsApp primeiro.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
-      addTestResult("Buscar QR Code", "error", { error: error.message });
+      addTestResult("Buscar Status/QR", "error", { error: error.message });
     },
   });
 
@@ -389,7 +398,7 @@ export default function WhatsAppTestPage() {
                   className="w-full"
                 >
                   <QrCode className="w-4 h-4 mr-2" />
-                  Buscar QR Code
+                  Buscar Status/QR
                 </Button>
 
                 <Button
