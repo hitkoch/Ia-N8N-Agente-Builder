@@ -486,6 +486,180 @@ export function registerRoutes(app: Express): Server {
     res.status(200).end();
   });
 
+  // WhatsApp Integration Routes
+  
+  // Get WhatsApp instance for agent
+  app.get("/api/agents/:agentId/whatsapp", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      res.json(whatsappInstance);
+    } catch (error: any) {
+      console.error("❌ Erro ao buscar instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao buscar instância WhatsApp", error: error.message });
+    }
+  });
+
+  // Create WhatsApp instance for agent
+  app.post("/api/agents/:agentId/whatsapp/create", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      // Check if instance already exists
+      const existingInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (existingInstance) {
+        return res.status(400).json({ message: "Instância WhatsApp já existe para este agente" });
+      }
+      
+      // Generate unique instance name
+      const instanceName = whatsappGatewayService.generateInstanceName(parseInt(agentId), user.id);
+      
+      // Create instance via gateway
+      const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
+      
+      // Save to database
+      const whatsappInstance = await storage.createWhatsappInstance({
+        instanceName,
+        status: gatewayResponse.instance.status,
+        qrCode: gatewayResponse.qrcode?.base64 || null,
+        agentId: parseInt(agentId)
+      });
+      
+      console.log(`✅ Instância WhatsApp criada para agente ${agentId}: ${instanceName}`);
+      res.status(201).json(whatsappInstance);
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao criar instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao criar instância WhatsApp", error: error.message });
+    }
+  });
+
+  // Connect WhatsApp instance (generate new QR code)
+  app.post("/api/agents/:agentId/whatsapp/connect", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      // Connect via gateway
+      const gatewayResponse = await whatsappGatewayService.connectInstance(whatsappInstance.instanceName);
+      
+      // Update database with new status and QR code
+      const updatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
+        status: gatewayResponse.instance.status,
+        qrCode: gatewayResponse.qrcode?.base64 || null
+      });
+      
+      console.log(`🔌 Conectando instância WhatsApp ${whatsappInstance.instanceName}`);
+      res.json(updatedInstance);
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao conectar instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao conectar instância WhatsApp", error: error.message });
+    }
+  });
+
+  // Check WhatsApp instance status
+  app.get("/api/agents/:agentId/whatsapp/status", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      // Check status via gateway
+      const gatewayResponse = await whatsappGatewayService.getInstanceStatus(whatsappInstance.instanceName);
+      
+      // Update database with current status
+      const updatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
+        status: gatewayResponse.instance.status,
+        qrCode: gatewayResponse.qrcode?.base64 || whatsappInstance.qrCode
+      });
+      
+      console.log(`📊 Status verificado para ${whatsappInstance.instanceName}: ${gatewayResponse.instance.status}`);
+      res.json(updatedInstance);
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao verificar status da instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao verificar status", error: error.message });
+    }
+  });
+
+  // Delete WhatsApp instance
+  app.delete("/api/agents/:agentId/whatsapp", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      // Verify agent ownership
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      
+      const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
+      if (!whatsappInstance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+      
+      // Delete from gateway
+      await whatsappGatewayService.deleteInstance(whatsappInstance.instanceName);
+      
+      // Delete from database
+      const deleted = await storage.deleteWhatsappInstance(parseInt(agentId));
+      
+      if (deleted) {
+        console.log(`🗑️ Instância WhatsApp removida: ${whatsappInstance.instanceName}`);
+        res.status(200).json({ message: "Instância removida com sucesso" });
+      } else {
+        res.status(500).json({ message: "Falha ao remover instância do banco de dados" });
+      }
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao remover instância WhatsApp:", error);
+      res.status(500).json({ message: "Falha ao remover instância WhatsApp", error: error.message });
+    }
+  });
+
   // Serve test page for webchat debugging
   app.get("/test-webchat", (req, res) => {
     const testHtml = `

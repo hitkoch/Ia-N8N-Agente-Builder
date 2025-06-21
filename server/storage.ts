@@ -38,6 +38,12 @@ export interface IStorage {
   updateExternalApiConfig?(id: number, agentId: number, updates: any): Promise<any>;
   deleteExternalApiConfig?(id: number, agentId: number): Promise<boolean>;
   
+  // WhatsApp Instances management
+  getWhatsappInstance(agentId: number): Promise<WhatsappInstance | undefined>;
+  createWhatsappInstance(instance: InsertWhatsappInstance): Promise<WhatsappInstance>;
+  updateWhatsappInstance(agentId: number, updates: Partial<InsertWhatsappInstance>): Promise<WhatsappInstance | undefined>;
+  deleteWhatsappInstance(agentId: number): Promise<boolean>;
+  
   sessionStore: any;
 }
 
