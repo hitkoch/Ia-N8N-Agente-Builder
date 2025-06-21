@@ -67,6 +67,9 @@ export class DocumentProcessor {
     // Se o processamento foi bem-sucedido e não é um PDF com problema, criar embedding
     if (result.processingStatus === 'success' && result.content.length > 50 && !result.content.includes('[PDF DETECTADO:')) {
       try {
+        // Limpar texto antes de criar embeddings
+        result.content = this.cleanTextForDatabase(result.content);
+        
         console.log('🔮 Criando embeddings para o documento');
         const chunks = await embeddingService.processDocumentForRAG(result.content);
         result.embedding = JSON.stringify(chunks);
@@ -198,6 +201,16 @@ Informações do arquivo:
     } catch (error) {
       throw new Error(`Erro ao processar Excel: ${error.message}`);
     }
+  }
+
+  private cleanTextForDatabase(text: string): string {
+    // Remover caracteres nulos e outros caracteres de controle problemáticos para PostgreSQL
+    return text
+      .replace(/\x00/g, '') // Remove null bytes
+      .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove outros caracteres de controle
+      .replace(/\uFFFD/g, '') // Remove replacement character
+      .replace(/\s+/g, ' ') // Normalizar espaços em branco
+      .trim();
   }
 }
 
