@@ -117,8 +117,13 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     },
   });
 
+  // Separate ref to track if we've already loaded the agent data
+  const loadedAgentIdRef = React.useRef<number | null>(null);
+
   useEffect(() => {
-    if (agent && isOpen) {
+    if (agent && isOpen && agent.id !== loadedAgentIdRef.current) {
+      loadedAgentIdRef.current = agent.id;
+      
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
@@ -129,20 +134,16 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
       });
       
       // Carregar ferramentas selecionadas
-      if (agent.tools) {
-        setSelectedTools(agent.tools.split(',').filter(Boolean));
-      } else {
-        setSelectedTools([]);
-      }
+      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
       
       // Carregar Google Services selecionados
-      if (agent.googleServices) {
-        setSelectedGoogleServices(agent.googleServices.split(',').filter(Boolean));
-      } else {
-        setSelectedGoogleServices([]);
-      }
+      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
     }
-  }, [agent?.id, isOpen]);
+    
+    if (!isOpen) {
+      loadedAgentIdRef.current = null;
+    }
+  }, [agent, isOpen]);
 
   useEffect(() => {
     if (documents && isOpen) {
@@ -164,9 +165,16 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
       setRagDocuments([]);
       setApiConfigs([]);
       setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
-      form.reset();
+      form.reset({
+        name: "",
+        description: "",
+        systemPrompt: "",
+        model: "gpt-4o",
+        temperature: 0.7,
+        status: "draft",
+      });
     }
-  }, [isOpen, form]);
+  }, [isOpen]);
 
   const onSubmit = (data: UpdateAgentForm) => {
     const updateData = {
