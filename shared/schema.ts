@@ -26,7 +26,7 @@ export const agents = pgTable("agents", {
   capabilities: text("capabilities").array(), // Array of capabilities like "web_search", "image_analysis", etc.
   tools: text("tools").array(), // Array of enabled tools
   knowledgeBase: text("knowledge_base"), // Custom knowledge/context
-  ragDocuments: text("rag_documents"), // Uploaded documents for RAG (JSON string)
+  ragDocuments: text("rag_documents"), // Array of document IDs from rag_documents table
   googleServices: text("google_services").array(), // Google integrations: calendar, drive, sheets, docs
   externalApis: text("external_apis"), // JSON string of API configurations
   responseStyle: text("response_style").default("professional"), // professional, casual, technical, creative
