@@ -241,6 +241,27 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="knowledgeBase"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Base de Conhecimento</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente..."
+                          rows={4}
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-slate-500">
+                        Conhecimento específico e contexto que o agente deve usar nas suas respostas.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}

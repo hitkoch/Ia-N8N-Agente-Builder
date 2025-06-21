@@ -63,6 +63,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         name: agent.name || "",
         description: agent.description || "",
         systemPrompt: agent.systemPrompt || "",
+        knowledgeBase: agent.knowledgeBase || "",
         model: agent.model || "gpt-4o",
         temperature: agent.temperature || 0.7,
         status: agent.status || "draft",
@@ -315,6 +316,20 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
                     placeholder="Instruções para o comportamento do agente"
                     rows={4}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Base de Conhecimento</label>
+                  <textarea
+                    value={formData.knowledgeBase || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, knowledgeBase: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente"
+                    rows={4}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Conhecimento específico e contexto que o agente deve usar nas suas respostas.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

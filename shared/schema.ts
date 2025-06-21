@@ -128,6 +128,8 @@ export const insertAgentSchema = createInsertSchema(agents).omit({
   ownerId: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  knowledgeBase: z.string().optional(),
 });
 
 export const insertRagDocumentSchema = createInsertSchema(ragDocuments).omit({
