@@ -10,6 +10,8 @@ interface HeaderProps {
 const sectionTitles = {
   dashboard: { title: "Dashboard Overview", subtitle: "Manage your AI agents and integrations" },
   agents: { title: "AI Agents", subtitle: "Create and manage your intelligent assistants" },
+  whatsapp: { title: "WhatsApp Management", subtitle: "Manage WhatsApp instances and connections" },
+  "whatsapp-test": { title: "WhatsApp Tests", subtitle: "Test WhatsApp functionality and integrations" },
   evolution: { title: "Evolution API", subtitle: "Configure webhooks and API integrations" },
   testing: { title: "Agent Testing", subtitle: "Test your AI agents in real-time" },
   settings: { title: "Settings", subtitle: "Manage your account and preferences" },

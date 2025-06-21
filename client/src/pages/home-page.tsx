@@ -17,6 +17,7 @@ import TestingPage from "./testing-page";
 import AgentTestingPage from "./agent-testing-page";
 import SettingsPage from "./settings-page";
 import WhatsAppManagementPage from "./whatsapp-management-page";
+import WhatsAppTestPage from "./whatsapp-test-page";
 
 interface DashboardStats {
   totalAgents: number;
@@ -284,6 +285,8 @@ export default function HomePage() {
         return <AgentsPage onTest={handleTestAgent} />;
       case "whatsapp":
         return <WhatsAppManagementPage />;
+      case "whatsapp-test":
+        return <WhatsAppTestPage />;
       case "templates":
         return <TemplatesPage />;
       case "evolution":

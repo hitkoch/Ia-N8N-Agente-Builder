@@ -14,6 +14,7 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
     { id: "dashboard", name: "Dashboard", icon: BarChart3 },
     { id: "agents", name: "Agentes IA", icon: Bot },
     { id: "whatsapp", name: "WhatsApp", icon: MessageSquare },
+    { id: "whatsapp-test", name: "Testes WhatsApp", icon: TestTube },
     { id: "templates", name: "Modelos", icon: FileText },
     { id: "evolution", name: "API Evolution", icon: Webhook },
     { id: "testing", name: "Teste de Agentes", icon: TestTube },
