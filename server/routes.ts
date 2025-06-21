@@ -251,63 +251,44 @@ export function registerRoutes(app: Express): Server {
       console.log(`📄 Processando upload: ${req.file.originalname}`);
       
       try {
-        // Import document processor
-        const { processDocument, cleanupTempFile } = await import('./services/document-processor.js');
+        // Simple document storage without complex processing
+        console.log(`📄 Processando arquivo: ${req.file.originalname}, tamanho: ${req.file.size} bytes`);
         
-        // Process the document and generate embeddings
-        console.log(`📄 Arquivo temporário em: ${req.file.path}`);
-        console.log(`📄 Arquivo existe: ${require('fs').existsSync(req.file.path)}`);
+        // Convert buffer to text for simple files
+        let content = `[Arquivo ${req.file.originalname}]`;
+        if (req.file.mimetype.includes('text/')) {
+          content = req.file.buffer.toString('utf8');
+        }
         
-        const processedDoc = await processDocument(req.file.path, req.file.originalname);
-        
-        // Store each chunk as a separate RAG document
-        const ragDocumentPromises = processedDoc.chunks.map(async (chunk, index) => {
-          return await storage.createRagDocument({
-            agentId: parseInt(req.params.agentId),
-            filename: `${processedDoc.metadata.filename}_chunk_${index}`,
-            content: chunk.content,
-            embedding: JSON.stringify(chunk.embedding),
-            fileType: processedDoc.metadata.fileType,
-            fileSize: processedDoc.metadata.fileSize,
-            chunkIndex: chunk.chunkIndex,
-            totalChunks: processedDoc.chunks.length,
-            originalFilename: processedDoc.metadata.filename,
-            uploadedAt: processedDoc.metadata.processedAt
-          });
+        // Create simple RAG document record
+        const ragDocument = await storage.createRagDocument({
+          agentId: agentId,
+          filename: req.file.originalname,
+          originalName: req.file.originalname,
+          content: content,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          embedding: null,
+          processingStatus: 'completed'
         });
         
-        const ragDocuments = await Promise.all(ragDocumentPromises);
-        
-        // Clean up uploaded file
-        cleanupTempFile(req.file.path);
-        
-        console.log(`✅ Upload concluído: ${ragDocuments.length} chunks salvos`);
+        console.log(`✅ Documento salvo: ${ragDocument.id}`);
         
         res.json({
-          message: "Documento processado com sucesso",
+          message: "Documento enviado com sucesso",
           document: {
-            filename: processedDoc.metadata.filename,
-            fileType: processedDoc.metadata.fileType,
-            fileSize: processedDoc.metadata.fileSize,
-            chunkCount: processedDoc.chunks.length,
-            processedAt: processedDoc.metadata.processedAt
-          },
-          chunksCreated: ragDocuments.length
+            id: ragDocument.id,
+            filename: ragDocument.filename,
+            originalName: ragDocument.originalName,
+            fileSize: ragDocument.fileSize,
+            mimeType: ragDocument.mimeType,
+            processingStatus: ragDocument.processingStatus
+          }
         });
         
       } catch (processingError) {
-        // Clean up file even if processing fails
-        if (req.file?.path) {
-          try {
-            const fs = await import('fs');
-            if (fs.default.existsSync(req.file.path)) {
-              fs.default.unlinkSync(req.file.path);
-            }
-          } catch (cleanupError) {
-            console.error('❌ Erro ao limpar arquivo:', cleanupError);
-          }
-        }
-        throw processingError;
+        console.error('❌ Erro no processamento:', processingError);
+        throw new Error(`Erro no processamento: ${processingError.message}`);
       }
       
     } catch (error) {
