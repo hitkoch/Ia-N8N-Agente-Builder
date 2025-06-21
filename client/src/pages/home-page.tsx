@@ -157,7 +157,7 @@ export default function HomePage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setLocation(`/edit-agent/${agent.id}`)}
+                          onClick={() => setLocation(`/agents/${agent.id}/edit`)}
                           className="h-8 w-8 p-0 transition-all"
                           style={{ color: '#022b44' }}
                           onMouseEnter={(e) => {
