@@ -457,7 +457,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
                         Modelo
@@ -478,6 +478,35 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
                         <option value="gpt-4o">GPT-4 Omni</option>
                         <option value="gpt-4">GPT-4</option>
                         <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                        Idioma
+                      </label>
+                      <select
+                        value={formData.language || 'pt-BR'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#022b44';
+                          e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="pt-BR">Português (Brasil)</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="it">Italiano</option>
+                        <option value="ja">日本語</option>
+                        <option value="ko">한국어</option>
+                        <option value="zh">中文</option>
                       </select>
                     </div>
 
