@@ -90,6 +90,23 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get single agent
+  app.get("/api/agents/:agentId", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+      res.json(agent);
+    } catch (error) {
+      console.error('Error fetching agent:', error);
+      res.status(500).json({ message: "Erro ao buscar agente" });
+    }
+  });
+
   // Multimedia processing endpoints
   app.post("/api/agents/:agentId/multimedia/audio", requireAuth, upload.single('audio'), async (req: MulterRequest, res) => {
     const user = getAuthenticatedUser(req);

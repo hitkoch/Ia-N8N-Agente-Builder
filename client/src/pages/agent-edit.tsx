@@ -25,9 +25,7 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
   const [currentTab, setCurrentTab] = useState("basic");
   const { user, isLoading: authLoading } = useAuth();
 
-  // Debug logs
-  console.log('AgentEdit - agentId:', agentId);
-  console.log('AgentEdit - user:', user);
+
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -46,11 +44,12 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
     status: "draft"
   });
 
-  // Fetch agent
+  // Fetch agent with custom query function to debug
   const { data: agent, isLoading, error } = useQuery({
     queryKey: [`/api/agents/${agentId}`],
     enabled: !!agentId && !!user,
     retry: false,
+
   });
 
   // Fetch documents
@@ -59,6 +58,8 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
     enabled: !!agentId && !!agent && !!user,
     retry: false,
   });
+
+
 
   // Update form when agent loads
   useEffect(() => {
