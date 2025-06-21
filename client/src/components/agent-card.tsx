@@ -17,6 +17,7 @@ interface AgentCardProps {
 export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [isWebchatModalOpen, setIsWebchatModalOpen] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
