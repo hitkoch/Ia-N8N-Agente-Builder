@@ -142,8 +142,16 @@
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message: message }),
-        mode: 'cors', // Explicitly set CORS mode
+        mode: 'cors',
+        credentials: 'omit', // Don't send credentials for external sites
       });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
       const data = await response.json();
       
@@ -158,9 +166,27 @@
         addMessageToUI(data.message || 'Desculpe, ocorreu um erro. Tente novamente.', 'agent');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Erro detalhado ao enviar mensagem:', error);
+      console.error('URL tentativa:', `${config.apiUrl}/webchat/${config.agentId}/chat`);
+      console.error('Config completa:', config);
+      console.error('Tipo do erro:', error.name);
+      console.error('Mensagem do erro:', error.message);
+      
       hideTypingIndicator();
-      addMessageToUI('Desculpe, não foi possível conectar com o servidor. Verifique sua conexão.', 'agent');
+      
+      let errorMessage = 'Desculpe, não foi possível conectar com o servidor.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = `Erro de conexão: ${error.message}. Verificando URL: ${config.apiUrl}/webchat/${config.agentId}/chat`;
+      } else if (error.message.includes('CORS')) {
+        errorMessage = 'Erro de CORS: O servidor não permite requisições desta origem.';
+      } else if (error.message.includes('404')) {
+        errorMessage = 'Erro 404: Endpoint da API não encontrado.';
+      } else if (error.message.includes('500')) {
+        errorMessage = 'Erro 500: Problema interno do servidor.';
+      }
+      
+      addMessageToUI(errorMessage, 'agent');
     } finally {
       isLoading = false;
       elements.messageInput.focus();
