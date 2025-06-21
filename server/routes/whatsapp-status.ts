@@ -79,6 +79,69 @@ export function registerWhatsAppStatusRoutes(app: Express) {
     }
   });
 
+  // Get WhatsApp instance status for a specific agent
+  app.get("/api/agents/:agentId/whatsapp/status", async (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Não autenticado" });
+    }
+
+    try {
+      const userId = req.user.id;
+      const agentId = parseInt(req.params.agentId);
+      
+      // Verify ownership
+      const agent = await storage.getAgent(agentId, userId);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const instance = await storage.getWhatsappInstance(agentId);
+      if (!instance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+
+      try {
+        // Get status from Evolution API
+        const gatewayStatus = await whatsappGatewayService.getInstanceStatus(instance.instanceName);
+        
+        // Map Evolution API states to our system states
+        const mappedStatus = gatewayStatus.connectionStatus === 'open' ? 'CONNECTED' : 
+                            gatewayStatus.connectionStatus === 'close' ? 'DISCONNECTED' : 
+                            gatewayStatus.connectionStatus || 'UNKNOWN';
+
+        // Update local database with fresh status
+        const updatedInstance = await storage.updateWhatsappInstanceByName(instance.instanceName, {
+          status: mappedStatus,
+          qrCode: gatewayStatus.qrcode?.base64 || null
+        });
+
+        res.json({
+          instanceName: instance.instanceName,
+          status: mappedStatus,
+          connectionStatus: gatewayStatus.connectionStatus,
+          qrCode: gatewayStatus.qrcode?.base64,
+          ownerJid: gatewayStatus.ownerJid,
+          profileName: gatewayStatus.profileName,
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (gatewayError) {
+        console.error(`❌ Erro ao obter status do gateway:`, gatewayError);
+        
+        // Return cached status if gateway fails
+        res.json({
+          instanceName: instance.instanceName,
+          status: instance.status || 'UNKNOWN',
+          qrCode: instance.qrCode,
+          error: 'Falha ao conectar com gateway',
+          lastUpdated: instance.updatedAt
+        });
+      }
+    } catch (error) {
+      console.error("❌ Erro ao obter status da instância:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Server-Sent Events endpoint for real-time updates
   app.get("/api/agents/:agentId/whatsapp/events", (req: any, res) => {
     if (!req.isAuthenticated()) {

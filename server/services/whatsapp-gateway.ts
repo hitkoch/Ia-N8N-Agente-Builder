@@ -27,10 +27,11 @@ export interface CreateInstanceResponse {
 export interface InstanceStatusResponse {
   instance: {
     instanceName: string;
-    status: string;
+    status?: string;
+    state?: string;
     instanceId?: string;
   };
-  connectionStatus: string;
+  connectionStatus?: string;
   qrcode?: {
     code: string;
     base64: string;
@@ -305,11 +306,44 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      throw new Error(`Falha ao obter status da instância: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Erro ao obter status da instância:`, errorText);
+      throw new Error(`Falha ao obter status da instância: ${response.statusText} - ${errorText}`);
     }
 
-    const data: InstanceStatusResponse = await response.json();
-    return data;
+    let rawData: any;
+    try {
+      const responseText = await response.text();
+      console.log(`📋 Raw status response:`, responseText);
+      
+      const cleanedResponse = responseText.replace(/<!DOCTYPE[^>]*>/gi, '').replace(/<html[^>]*>.*<\/html>/gis, '').trim();
+      
+      if (!cleanedResponse.startsWith('{')) {
+        throw new Error(`Resposta de status não é JSON válido: ${cleanedResponse.substring(0, 200)}`);
+      }
+      
+      rawData = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error(`❌ Erro ao fazer parse da resposta de status:`, parseError);
+      throw new Error(`Resposta de status não é JSON válido: ${parseError.message}`);
+    }
+    
+    // Transform the actual API response to our expected format
+    const normalizedResponse: InstanceStatusResponse = {
+      instance: {
+        instanceName: rawData.instance?.instanceName || instanceName,
+        status: rawData.instance?.state || rawData.instance?.status || 'unknown',
+        state: rawData.instance?.state,
+        instanceId: rawData.instance?.instanceId
+      },
+      connectionStatus: rawData.instance?.state || rawData.connectionStatus || 'unknown',
+      qrcode: rawData.qrcode,
+      ownerJid: rawData.ownerJid,
+      profileName: rawData.profileName
+    };
+    
+    console.log(`📱 Normalized status for ${instanceName}:`, normalizedResponse.connectionStatus);
+    return normalizedResponse;
   }
 
   /**
@@ -331,10 +365,28 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      throw new Error(`Falha ao enviar mensagem: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Erro ao enviar mensagem:`, errorText);
+      throw new Error(`Falha ao enviar mensagem: ${response.statusText} - ${errorText}`);
     }
 
-    const data: SendMessageResponse = await response.json();
+    let data: SendMessageResponse;
+    try {
+      const responseText = await response.text();
+      console.log(`📋 Raw send message response:`, responseText);
+      
+      const cleanedResponse = responseText.replace(/<!DOCTYPE[^>]*>/gi, '').replace(/<html[^>]*>.*<\/html>/gis, '').trim();
+      
+      if (!cleanedResponse.startsWith('{')) {
+        throw new Error(`Resposta de envio não é JSON válido: ${cleanedResponse.substring(0, 200)}`);
+      }
+      
+      data = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error(`❌ Erro ao fazer parse da resposta de envio:`, parseError);
+      throw new Error(`Resposta de envio não é JSON válido: ${parseError.message}`);
+    }
+    
     return data;
   }
 
