@@ -16,6 +16,7 @@ import EvolutionPage from "./evolution-page";
 import TestingPage from "./testing-page";
 import AgentTestingPage from "./agent-testing-page";
 import SettingsPage from "./settings-page";
+import WhatsAppManagementPage from "./whatsapp-management-page";
 
 interface DashboardStats {
   totalAgents: number;
