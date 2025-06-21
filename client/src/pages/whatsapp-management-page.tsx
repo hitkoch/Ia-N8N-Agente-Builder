@@ -8,6 +8,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Smartphone, QrCode, CheckCircle, XCircle, RefreshCw, Trash2, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useWhatsAppStatus } from "@/hooks/use-whatsapp-status";
+import WhatsAppStatusIndicator from "@/components/whatsapp-status-indicator";
+import WhatsAppActivityMonitor from "@/components/whatsapp-activity-monitor";
 import type { Agent } from "@shared/schema";
 
 interface WhatsAppInstance {
@@ -22,7 +25,6 @@ interface WhatsAppInstance {
 
 export default function WhatsAppManagementPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -30,10 +32,37 @@ export default function WhatsAppManagementPage() {
     queryKey: ["/api/agents"],
   });
 
-  const { data: instance, isLoading: instanceLoading } = useQuery<WhatsAppInstance>({
-    queryKey: ["/api/agents", selectedAgentId, "whatsapp"],
+  const {
+    instance,
+    isLoading: instanceLoading,
+    status,
+    statusDisplay,
+    isPolling,
+    isConnected,
+    hasQRCode,
+    needsAttention,
+    refreshStatus,
+    startPolling,
+    stopPolling,
+    instanceName,
+    lastUpdated
+  } = useWhatsAppStatus({
+    agentId: selectedAgentId,
     enabled: !!selectedAgentId,
-    retry: false,
+    onStatusChange: (oldStatus, newStatus) => {
+      if (newStatus === "CONNECTED") {
+        toast({
+          title: "WhatsApp Conectado!",
+          description: "Seu agente está pronto para receber mensagens.",
+        });
+      } else if (oldStatus === "CONNECTED" && newStatus !== "CONNECTED") {
+        toast({
+          title: "Conexão perdida",
+          description: "O WhatsApp foi desconectado. Verifique a conexão.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   const createInstanceMutation = useMutation({
@@ -86,7 +115,7 @@ export default function WhatsAppManagementPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
+      refreshStatus();
       toast({
         title: "Status atualizado",
         description: "Status da instância atualizado com sucesso.",
@@ -101,36 +130,7 @@ export default function WhatsAppManagementPage() {
     },
   });
 
-  const startPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-    }
-    
-    const interval = setInterval(() => {
-      if (selectedAgentId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
-      }
-    }, 10000); // Poll every 10 seconds
-    
-    setPollingInterval(interval);
-  };
 
-  const stopPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-  };
-
-  useEffect(() => {
-    if (instance?.status === "CONNECTED") {
-      stopPolling();
-    } else if (instance?.status && instance.status !== "CONNECTED") {
-      startPolling();
-    }
-    
-    return () => stopPolling();
-  }, [instance?.status]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -231,33 +231,40 @@ export default function WhatsAppManagementPage() {
               </CardContent>
             </Card>
           ) : instance ? (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              {/* Real-time Status and Activity in a 2-column layout */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-1">
+                  <WhatsAppStatusIndicator
+                    status={status}
+                    instanceName={instanceName}
+                    lastActivity={lastUpdated}
+                    isPolling={isPolling}
+                  />
+                </div>
+                
+                <div className="lg:col-span-2">
+                  <WhatsAppActivityMonitor
+                    agentId={selectedAgentId}
+                    status={status}
+                  />
+                </div>
+              </div>
+
+              {/* Action buttons */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Smartphone className="w-5 h-5" />
-                      Status da Instância
-                    </span>
-                    {getStatusBadge(instance.status)}
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Gerenciamento da Instância
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Nome da Instância</label>
-                    <p className="font-mono text-sm">{instance.instanceName}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Última Atualização</label>
-                    <p className="text-sm">{new Date(instance.updatedAt).toLocaleString('pt-BR')}</p>
-                  </div>
-                  
-                  <div className="flex gap-2">
+                <CardContent>
+                  <div className="flex flex-wrap gap-3">
                     <Button
                       onClick={() => refreshStatusMutation.mutate(selectedAgentId)}
                       disabled={refreshStatusMutation.isPending}
                       variant="outline"
-                      size="sm"
                     >
                       {refreshStatusMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -267,11 +274,20 @@ export default function WhatsAppManagementPage() {
                       Atualizar Status
                     </Button>
                     
+                    {!isConnected && (
+                      <Button
+                        onClick={startPolling}
+                        disabled={isPolling}
+                        variant="outline"
+                      >
+                        {isPolling ? "Verificando..." : "Iniciar Monitoramento"}
+                      </Button>
+                    )}
+                    
                     <Button
                       onClick={() => deleteInstanceMutation.mutate(selectedAgentId)}
                       disabled={deleteInstanceMutation.isPending}
                       variant="destructive"
-                      size="sm"
                     >
                       {deleteInstanceMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -284,23 +300,24 @@ export default function WhatsAppManagementPage() {
                 </CardContent>
               </Card>
 
-              {instance.status === "CONNECTED" ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-green-700">WhatsApp Conectado!</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Alert>
-                      <CheckCircle className="w-4 h-4" />
-                      <AlertDescription>
-                        Seu agente está conectado e pronto para receber mensagens automaticamente.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ) : (
+              {/* QR Code or Connection Status */}
+              {isConnected ? (
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>WhatsApp Conectado!</strong> Seu agente está pronto para receber mensagens automaticamente.
+                  </AlertDescription>
+                </Alert>
+              ) : hasQRCode ? (
                 renderQRCode()
-              )}
+              ) : needsAttention ? (
+                <Alert variant="destructive">
+                  <XCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    <strong>Atenção!</strong> A conexão WhatsApp foi perdida. Clique em "Atualizar Status" para gerar um novo QR Code.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
             </div>
           ) : (
             <Card>

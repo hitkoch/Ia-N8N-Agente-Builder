@@ -11,6 +11,7 @@ import { storage } from "./storage";
 import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
+import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
 import type { Agent } from "@shared/schema";
 
 function requireAuth(req: any, res: any, next: any) {
