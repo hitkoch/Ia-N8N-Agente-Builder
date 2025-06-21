@@ -34,8 +34,27 @@ export function useWhatsAppStatus({
     isLoading, 
     error,
     refetch 
-  } = useQuery<WhatsAppInstance>({
+  } = useQuery<WhatsAppInstance | null>({
     queryKey: ["/api/agents", agentId, "whatsapp"],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/agents/${agentId}/whatsapp`, {
+          credentials: "include",
+        });
+        if (response.status === 404) {
+          return null; // Return null for 404, this is expected when no instance exists
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('404')) {
+          return null;
+        }
+        throw error;
+      }
+    },
     enabled: enabled && !!agentId,
     retry: false,
     retryOnMount: false,
@@ -154,7 +173,7 @@ export function useWhatsAppStatus({
     hasQRCode: hasQRCode(),
     needsAttention: needsAttention(),
     isConnected: instance?.status === "CONNECTED",
-    hasInstance: !!instance,
+    hasInstance: !isLoading && !!instance,
     
     // Actions
     refreshStatus,

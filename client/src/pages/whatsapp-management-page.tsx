@@ -240,7 +240,9 @@ export default function WhatsAppManagementPage() {
             • instanceLoading: {instanceLoading.toString()}<br/>
             • hasInstance: {hasInstance?.toString()}<br/>
             • instance: {instance ? 'exists' : 'null'}<br/>
-            • instanceError: {instanceError ? 'has error' : 'no error'}
+            • instanceError: {instanceError ? instanceError.message : 'no error'}<br/>
+            • Should show create button: {(!hasInstance).toString()}<br/>
+            • Raw instance data: {JSON.stringify(instance)}
           </div>
           
           {instanceLoading ? (
