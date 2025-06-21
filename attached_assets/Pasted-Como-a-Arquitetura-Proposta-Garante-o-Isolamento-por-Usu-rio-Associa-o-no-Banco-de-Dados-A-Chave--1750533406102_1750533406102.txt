@@ -1,0 +1,54 @@
+Como a Arquitetura Proposta Garante o Isolamento por Usuário
+Associação no Banco de Dados (A Chave de Tudo):
+No schema.prisma, o modelo WhatsAppInstance tem uma relação direta e única com o modelo Agent, que por sua vez pertence a um User.
+Generated prisma
+model WhatsAppInstance {
+  // ...
+  agentId      Int      @unique // <-- Uma instância por agente
+  agent        Agent    @relation(fields: [agentId], references: [id])
+}
+Use code with caution.
+Prisma
+Isso cria uma corrente: User -> Agent -> WhatsAppInstance. É impossível que uma instância exista sem estar ligada a um agente de um usuário específico.
+APIs Protegidas e Conscientes do Usuário:
+Todas as rotas de gerenciamento (/api/whatsapp/:agentId/instance) são protegidas pelo authMiddleware.js.
+Esse middleware verifica o token JWT e nos diz qual userId está fazendo a requisição (req.user.id).
+No controlador (whatsappController.js), antes de executar qualquer ação, fazemos uma verificação de propriedade: "O agentId fornecido na URL realmente pertence ao userId que está logado?". Isso impede que o Usuário A tente criar ou ver os detalhes da instância do Usuário B.
+Nomes de Instância Únicos e Previsíveis:
+Quando um usuário cria uma instância, nós geramos um instanceName único, como agent-123-whatsapp (onde 123 é o agentId).
+Isso nos permite, no webhook, identificar facilmente a qual agente a mensagem se destina, simplesmente lendo o campo instance que a API Evolution envia.
+Isolamento no Gateway da API Evolution:
+O gateway (apizap.ecomtools.com.br) já foi projetado para lidar com múltiplas instâncias nomeadas. Ao fazer uma chamada para /message/sendText/agent-123-whatsapp, ele sabe exatamente para qual conexão do WhatsApp enviar a mensagem. Sua plataforma simplesmente atua como o "cérebro" que decide o que dizer, enquanto o gateway cuida da "voz".
+Reforçando o Conceito no Prompt (Para Garantir que a IA Entenda)
+Podemos adicionar uma nota explícita no prompt para enfatizar essa lógica de isolamento e segurança. Não é uma mudança de arquitetura, mas sim uma diretriz clara para a IA na implementação dos controladores.
+Aqui está um trecho que podemos adicionar ou usar para refinar o whatsappController.js no prompt anterior:
+Trecho Adicional para o Prompt (Ênfase em Segurança e Multi-Tenancy)
+Generated prompt
+### **Instruções de Segurança e Multi-Tenancy para o `whatsappController.js`**
+
+Ao implementar os controladores, é **CRUCIAL** garantir o isolamento total entre os usuários. Siga estritamente estas regras de segurança:
+
+1.  **Verificação de Propriedade (Ownership Check):**
+    *   Em **TODAS** as funções do controlador que usam `agentId` (como `createInstance` e `getInstanceDetails`), o primeiro passo deve ser verificar se o agente pertence ao usuário logado.
+    *   **Exemplo de Lógica:**
+        ```javascript
+        const agentId = parseInt(req.params.agentId);
+        const userId = req.user.id; // Vindo do middleware de autenticação
+
+        const agent = await prisma.agent.findUnique({
+          where: { id: agentId },
+        });
+
+        if (!agent || agent.ownerId !== userId) {
+          return res.status(403).json({ error: 'Acesso não autorizado a este agente.' });
+        }
+        // Se a verificação passar, continue com a lógica da função...
+        ```
+
+2.  **Isolamento no Webhook:**
+    *   O endpoint de webhook (`/api/whatsapp/webhook`) é público, mas a lógica interna deve ser segura.
+    *   A única informação confiável para identificar o destinatário é o `instance` (nome da instância) que vem no corpo do webhook.
+    *   Use o `instance` para encontrar a `WhatsAppInstance` no banco e, a partir dela, o `agent` e o `systemPrompt` corretos. **Nunca** use outros dados que possam ser falsificados.
+
+3.  **Criptografia de Dados Sensíveis:**
+    *   Embora o token do gateway seja global neste caso, se futuramente cada usuário tiver sua própria `apiKey` para a instância, ela **DEVE** ser criptografada no banco de dados usando o helper `crypto.js` antes de ser salva.

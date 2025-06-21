@@ -9,6 +9,7 @@ interface MulterRequest extends Request {
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { agentService } from "./services/agent";
+import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import type { Agent } from "@shared/schema";
 
 function requireAuth(req: any, res: any, next: any) {
@@ -514,7 +515,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Create WhatsApp instance for agent
-  app.post("/api/agents/:agentId/whatsapp/create", requireAuth, async (req, res) => {
+  app.post("/api/agents/:agentId/whatsapp/create", requireAuth, agentOwnershipMiddleware, async (req, res) => {
     try {
       const { agentId } = req.params;
       const user = getAuthenticatedUser(req);
@@ -632,7 +633,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Delete WhatsApp instance
-  app.delete("/api/agents/:agentId/whatsapp", requireAuth, async (req, res) => {
+  app.delete("/api/agents/:agentId/whatsapp", requireAuth, agentOwnershipMiddleware, async (req, res) => {
     try {
       const { agentId } = req.params;
       const user = getAuthenticatedUser(req);
@@ -668,11 +669,30 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Webhook endpoint to receive messages from Evolution API Gateway
-  app.post("/api/whatsapp/webhook", async (req, res) => {
+  app.post("/api/whatsapp/webhook", webhookRateLimiter, validateWebhookData, async (req, res) => {
     try {
-      console.log('📨 Webhook recebido do gateway WhatsApp:', JSON.stringify(req.body, null, 2));
+      console.log('📨 Webhook recebido do gateway WhatsApp');
+      console.log(`📋 Event: ${req.body.event}, Instance: ${req.body.instance}`);
       
       const { event, data, instance } = req.body;
+      
+      // SECURITY: Validate webhook data structure
+      if (!event || !instance || typeof instance !== 'string') {
+        console.warn('⚠️ Webhook malformado recebido:', req.body);
+        return res.status(400).json({ 
+          status: 'invalid_webhook',
+          message: 'Missing required fields'
+        });
+      }
+      
+      // SECURITY: Validate instance name format
+      if (!whatsappGatewayService.validateInstanceName(instance)) {
+        console.warn(`⚠️ Nome de instância inválido recebido: ${instance}`);
+        return res.status(400).json({ 
+          status: 'invalid_instance_name',
+          message: 'Instance name does not match expected format'
+        });
+      }
       
       // Processar apenas mensagens recebidas
       if (event === 'messages.upsert') {
@@ -694,56 +714,74 @@ export function registerRoutes(app: Express): Server {
         
         console.log(`💬 Mensagem recebida na instância ${instance}: ${messageText} de ${remoteJid}`);
         
-        // Buscar agente pela instância
-        const agents = await storage.getAgentsByOwner(1); // Buscar em todos os usuários
+        // SECURITY: Secure agent lookup by instance name
+        // Only trust the instance name from the webhook - this is the primary security boundary
+        console.log(`🔍 Procurando agente para instância: ${instance}`);
+        
         let targetAgent = null;
+        let targetAgentOwner = null;
         
-        for (const agent of agents) {
-          const whatsappInstance = await storage.getWhatsappInstance(agent.id);
-          if (whatsappInstance && whatsappInstance.instanceName === instance) {
-            targetAgent = agent;
-            break;
-          }
-        }
-        
-        // Se não encontrar no usuário 1, buscar em outros usuários
-        if (!targetAgent) {
-          for (let userId = 2; userId <= 10; userId++) {
-            try {
-              const userAgents = await storage.getAgentsByOwner(userId);
-              for (const agent of userAgents) {
-                const whatsappInstance = await storage.getWhatsappInstance(agent.id);
-                if (whatsappInstance && whatsappInstance.instanceName === instance) {
-                  targetAgent = agent;
-                  break;
-                }
+        // Search through all users (this is safe because we only trust the instance name)
+        // The instance name format agent-{userId}-{agentId}-whatsapp ensures proper isolation
+        for (let userId = 1; userId <= 100; userId++) {
+          try {
+            const userAgents = await storage.getAgentsByOwner(userId);
+            for (const agent of userAgents) {
+              const whatsappInstance = await storage.getWhatsappInstance(agent.id);
+              if (whatsappInstance && whatsappInstance.instanceName === instance) {
+                targetAgent = agent;
+                targetAgentOwner = userId;
+                console.log(`✅ Agente encontrado: ${agent.name} (ID: ${agent.id}, Dono: ${userId})`);
+                break;
               }
-              if (targetAgent) break;
-            } catch (error) {
-              // Continue procurando
             }
+            if (targetAgent) break;
+          } catch (error) {
+            // Continue searching - user might not exist
           }
         }
         
         if (!targetAgent) {
-          console.log(`❌ Agente não encontrado para a instância: ${instance}`);
-          return res.status(200).json({ status: 'agent_not_found' });
+          console.warn(`❌ Agente não encontrado para a instância: ${instance} - possível tentativa de ataque`);
+          return res.status(200).json({ 
+            status: 'agent_not_found',
+            message: 'Instance not found'
+          });
         }
         
-        console.log(`🤖 Processando mensagem para agente: ${targetAgent.name}`);
+        console.log(`🤖 Processando mensagem para agente: ${targetAgent.name} (Dono: ${targetAgentOwner})`);
         
-        // Gerar resposta usando o serviço do agente
+        // Generate response using the correct agent's configuration
         const responseText = await agentService.testAgent(targetAgent, messageText);
         
-        // Formatar número para envio
+        // Validate response before sending
+        if (!responseText || responseText.trim().length === 0) {
+          console.warn(`⚠️ Resposta vazia gerada para agente ${targetAgent.id}`);
+          return res.status(200).json({ 
+            status: 'empty_response',
+            message: 'No response generated'
+          });
+        }
+        
+        // Format phone number and send response
         const phoneNumber = whatsappGatewayService.formatPhoneNumber(remoteJid);
         
-        // Enviar resposta via WhatsApp
-        await whatsappGatewayService.sendMessage(instance, phoneNumber, responseText);
-        
-        console.log(`✅ Resposta enviada para ${remoteJid}: ${responseText.substring(0, 100)}...`);
-        
-        return res.status(200).json({ status: 'processed' });
+        try {
+          await whatsappGatewayService.sendMessage(instance, phoneNumber, responseText);
+          console.log(`✅ Resposta enviada para ${remoteJid}: ${responseText.substring(0, 100)}...`);
+          
+          return res.status(200).json({ 
+            status: 'processed',
+            agentId: targetAgent.id,
+            responseLength: responseText.length
+          });
+        } catch (sendError) {
+          console.error(`❌ Erro ao enviar mensagem via WhatsApp:`, sendError);
+          return res.status(200).json({ 
+            status: 'send_failed',
+            error: sendError.message
+          });
+        }
       }
       
       // Outros tipos de eventos
