@@ -46,8 +46,6 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
 
   const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
@@ -55,6 +53,15 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       const res = await apiRequest("GET", `/api/agents/${agentId}`);
       return await res.json();
     },
+  });
+
+  // Estados inicializados com os dados do agente (sem useEffect)
+  const [selectedTools, setSelectedTools] = useState<string[]>(() => {
+    return agent?.tools ? agent.tools.split(',').filter(Boolean) : [];
+  });
+  
+  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>(() => {
+    return agent?.googleServices ? agent.googleServices.split(',').filter(Boolean) : [];
   });
 
   const form = useForm<UpdateAgentForm>({
@@ -68,14 +75,6 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       status: agent?.status || "draft",
     },
   });
-
-  // Inicializa selections apenas uma vez quando o agente é carregado
-  React.useEffect(() => {
-    if (agent && selectedTools.length === 0 && selectedGoogleServices.length === 0) {
-      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
-      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
-    }
-  }, [agent]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateAgentForm) => {
