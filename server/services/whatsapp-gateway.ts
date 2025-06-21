@@ -142,8 +142,8 @@ export class WhatsAppGatewayService {
     console.log(`🔌 Conectando instância para gerar QR Code: ${instanceName}`);
     
     try {
-      // Use the correct Evolution API endpoint with query parameter
-      const connectUrl = `${this.baseUrl}/instance/connect?instanceName=${instanceName}`;
+      // Use the correct Evolution API endpoint - path parameter format
+      const connectUrl = `${this.baseUrl}/instance/connect/${instanceName}`;
       console.log(`📞 Chamando endpoint: ${connectUrl}`);
       
       const connectResponse = await fetch(connectUrl, {
@@ -239,7 +239,7 @@ export class WhatsAppGatewayService {
       console.log(`🔍 Buscando QR Code para: ${instanceName}`);
       
       // Use the connect endpoint to get QR code
-      const connectUrl = `${this.baseUrl}/instance/connect?instanceName=${instanceName}`;
+      const connectUrl = `${this.baseUrl}/instance/connect/${instanceName}`;
       const response = await fetch(connectUrl, {
         method: 'GET',
         headers: {
