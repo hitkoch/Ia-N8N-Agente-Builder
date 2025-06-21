@@ -1,6 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import path from "path";
 import { documentProcessor } from "./services/document-processor";
 
 interface MulterRequest extends Request {
@@ -831,6 +832,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Serve webhook test page from public directory
+  app.get("/webhook-test", (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'webhook-test.html'));
+  });
+
   // GET endpoint to show webhook information
   app.get("/api/whatsapp/webhook", (req, res) => {
     res.json({
@@ -1089,14 +1095,16 @@ export function registerRoutes(app: Express): Server {
             // Save conversation to database
             await storage.createConversation({
               agentId: agent.id,
-              userMessage: messageText,
-              agentResponse: aiResponse,
-              platform: 'whatsapp',
-              metadata: {
-                phoneNumber: phoneNumber,
-                instanceName: instance,
-                messageId: message.key?.id
-              }
+              contactId: phoneNumber,
+              messages: [{
+                role: 'user',
+                content: messageText,
+                timestamp: new Date()
+              }, {
+                role: 'assistant', 
+                content: aiResponse,
+                timestamp: new Date()
+              }]
             });
             
             console.log(`💾 Conversa salva no banco de dados`);

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Webhook WhatsApp</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 12px 24px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 10px; padding: 15px; background: #f8f9fa; white-space: pre-wrap; border-radius: 5px; font-family: monospace; font-size: 12px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        h1 { color: #333; text-align: center; }
+        h3 { color: #555; margin-top: 0; }
+        .url-info { background: #e9ecef; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Teste Webhook WhatsApp Evolution API</h1>
+        
+        <div class="url-info">
+            <strong>Endpoint:</strong> /api/whatsapp/webhook<br>
+            <strong>Domain:</strong> workspace.hitkoch.replit.dev<br>
+            <strong>Status:</strong> <span id="status">Verificando...</span>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 Teste GET - Informações do Webhook</h3>
+            <p>Verifica se o endpoint está respondendo e retorna informações de configuração.</p>
+            <button onclick="testWebhookGet()">🔍 Testar GET</button>
+            <div id="get-result" class="result info">Clique no botão para testar...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📨 Teste POST - Simular Mensagem WhatsApp</h3>
+            <p>Simula o recebimento de uma mensagem do WhatsApp via webhook.</p>
+            <button onclick="testWebhookPost()">📤 Testar POST</button>
+            <div id="post-result" class="result info">Clique no botão para testar...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Teste de Conectividade</h3>
+            <p>Verifica conectividade básica com diferentes métodos.</p>
+            <button onclick="testConnectivity()">🌐 Testar Conectividade</button>
+            <div id="connectivity-result" class="result info">Clique no botão para testar...</div>
+        </div>
+    </div>
+
+    <script>
+        // Verificar status inicial
+        window.onload = function() {
+            updateStatus();
+        };
+        
+        async function updateStatus() {
+            const statusElement = document.getElementById('status');
+            try {
+                const response = await fetch('/api/whatsapp/webhook');
+                if (response.ok) {
+                    statusElement.textContent = '✅ Online';
+                    statusElement.style.color = '#28a745';
+                } else {
+                    statusElement.textContent = '❌ Erro ' + response.status;
+                    statusElement.style.color = '#dc3545';
+                }
+            } catch (error) {
+                statusElement.textContent = '❌ Offline';
+                statusElement.style.color = '#dc3545';
+            }
+        }
+        
+        async function testWebhookGet() {
+            const resultDiv = document.getElementById('get-result');
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = '⏳ Testando endpoint GET...';
+            
+            try {
+                const response = await fetch('/api/whatsapp/webhook', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ GET Successful!\n\nStatus: ${response.status} ${response.statusText}\nTimestamp: ${new Date().toLocaleString()}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                updateStatus();
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ GET Failed!\n\nError: ${error.message}\nTimestamp: ${new Date().toLocaleString()}`;
+            }
+        }
+        
+        async function testWebhookPost() {
+            const resultDiv = document.getElementById('post-result');
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = '⏳ Enviando dados de teste via POST...';
+            
+            const testData = {
+                event: "MESSAGES_UPSERT",
+                instance: "whatsapp-41988470604",
+                data: {
+                    messages: [{
+                        key: {
+                            remoteJid: "5541999887766@s.whatsapp.net",
+                            fromMe: false,
+                            id: "browser-test-" + Date.now()
+                        },
+                        message: {
+                            conversation: "Teste via navegador web - " + new Date().toLocaleString()
+                        },
+                        messageTimestamp: Math.floor(Date.now() / 1000).toString()
+                    }]
+                }
+            };
+            
+            try {
+                const response = await fetch('/api/whatsapp/webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ POST Successful!\n\nStatus: ${response.status} ${response.statusText}\nTimestamp: ${new Date().toLocaleString()}\n\nSent Data:\n${JSON.stringify(testData, null, 2)}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ POST Failed!\n\nError: ${error.message}\nTimestamp: ${new Date().toLocaleString()}\n\nSent Data:\n${JSON.stringify(testData, null, 2)}`;
+            }
+        }
+        
+        async function testConnectivity() {
+            const resultDiv = document.getElementById('connectivity-result');
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = '⏳ Testando conectividade...';
+            
+            const tests = [
+                { name: 'Ping Endpoint', url: '/api/whatsapp/webhook', method: 'HEAD' },
+                { name: 'Health Check', url: '/api/user', method: 'GET' },
+                { name: 'Options Check', url: '/api/whatsapp/webhook', method: 'OPTIONS' }
+            ];
+            
+            let results = [];
+            
+            for (const test of tests) {
+                try {
+                    const response = await fetch(test.url, { method: test.method });
+                    results.push(`✅ ${test.name}: ${response.status} ${response.statusText}`);
+                } catch (error) {
+                    results.push(`❌ ${test.name}: ${error.message}`);
+                }
+            }
+            
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = `🔍 Connectivity Test Results:\n\n${results.join('\n')}\n\nTimestamp: ${new Date().toLocaleString()}`;
+        }
+    </script>
+</body>
+</html>
