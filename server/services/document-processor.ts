@@ -1,6 +1,7 @@
 import * as mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { embeddingService } from './embeddings';
+import * as pdfParse from 'pdf-parse';
 
 export interface ProcessedDocument {
   filename: string;
@@ -85,30 +86,14 @@ export class DocumentProcessor {
     try {
       console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
       
-      // Usar dynamic import para pdfjs-dist
-      const pdfjsLib = await import('pdfjs-dist');
+      const data = await pdfParse(buffer);
+      console.log('📄 PDF processado:', data.text.length, 'caracteres extraídos');
       
-      const loadingTask = pdfjsLib.getDocument({ data: buffer });
-      const pdf = await loadingTask.promise;
-      
-      let fullText = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n';
-      }
-      
-      console.log('📄 PDF processado:', fullText.length, 'caracteres extraídos');
-      
-      if (!fullText || fullText.trim().length < 10) {
+      if (!data.text || data.text.trim().length < 10) {
         throw new Error('PDF não contém texto extraível suficiente');
       }
       
-      const cleanedText = this.cleanTextForDatabase(fullText);
+      const cleanedText = this.cleanTextForDatabase(data.text);
       
       if (cleanedText.length < 20) {
         throw new Error('Texto extraído muito curto após limpeza');
