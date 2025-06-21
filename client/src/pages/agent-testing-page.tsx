@@ -289,8 +289,16 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 onClick={() => setIsWebchatModalOpen(true)}
                 variant="outline"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start transition-all"
                 style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
               >
                 <Code className="h-4 w-4 mr-2" />
                 Código Webchat
@@ -300,24 +308,54 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 onClick={exportChat}
                 variant="outline"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start transition-all"
                 disabled={messages.filter(m => !m.isTyping).length <= 1}
-                style={{ borderColor: '#022b44', color: '#022b44' }}
+                style={{ 
+                  borderColor: '#022b44', 
+                  color: messages.filter(m => !m.isTyping).length <= 1 ? '#94a3b8' : '#022b44'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#022b44';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#022b44';
+                  }
+                }}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Exportar Chat
+                Exportar Conversa
               </Button>
               
               <Button
                 onClick={clearChat}
                 variant="outline"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start transition-all"
                 disabled={messages.filter(m => !m.isTyping).length <= 1}
-                style={{ borderColor: '#022b44', color: '#022b44' }}
+                style={{ 
+                  borderColor: '#022b44', 
+                  color: messages.filter(m => !m.isTyping).length <= 1 ? '#94a3b8' : '#022b44'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#022b44';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#022b44';
+                  }
+                }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Chat
+                Limpar Conversa
               </Button>
             </div>
           </div>
@@ -360,7 +398,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                   }}
                 >
                   <Zap className="h-4 w-4 mr-2" />
-                  Testando
+                  Ativo
                 </Button>
               </div>
             </div>
@@ -394,9 +432,9 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                         : '#b8ec00'
                   }}>
                     {message.role === 'user' ? (
-                      <User className="h-4 w-4 text-gray-600" />
+                      <User className="h-4 w-4" style={{ color: '#022b44' }} />
                     ) : (
-                      <Bot className={`h-4 w-4 ${message.isTyping ? 'text-yellow-600' : 'text-blue-600'}`} />
+                      <Bot className="h-4 w-4" style={{ color: message.isTyping ? '#fbbf24' : '#022b44' }} />
                     )}
                   </div>
                   
