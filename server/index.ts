@@ -1,9 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { seedDatabase } from "./seed";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// CORS configuration for webchat
+app.use(cors({
+  origin: true, // Allow all origins for webchat
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
