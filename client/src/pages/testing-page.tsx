@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Agent } from "@shared/schema";
-import { Bot, User, Send, Trash2, Download, Share, BarChart } from "lucide-react";
+import { Bot, User, Send, Trash2, Download, Share, BarChart, Copy, Code, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ChatInterface from "@/components/chat-interface";
+import Sidebar from "@/components/sidebar";
 
 interface TestingPageProps {
   selectedAgentId?: number | null;
@@ -19,6 +21,7 @@ export default function TestingPage({ selectedAgentId }: TestingPageProps) {
   const [currentAgentId, setCurrentAgentId] = useState<number | null>(selectedAgentId || null);
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [isWebchatModalOpen, setIsWebchatModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,7 +46,7 @@ export default function TestingPage({ selectedAgentId }: TestingPageProps) {
     },
     onError: (error: Error) => {
       toast({
-        title: "Test failed",
+        title: "Teste falhou",
         description: error.message,
         variant: "destructive",
       });
