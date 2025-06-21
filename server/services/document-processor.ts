@@ -27,7 +27,7 @@ export class DocumentProcessor {
       
       if (mimeType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
         result.content = await this.processPDF(fileBuffer);
-        result.processingStatus = 'success';
+        result.processingStatus = result.content.includes('[PDF DETECTADO:') ? 'unsupported' : 'success';
       } 
       else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
                filename.toLowerCase().endsWith('.docx')) {
@@ -67,14 +67,13 @@ export class DocumentProcessor {
 
   private async processPDF(buffer: Buffer): Promise<string> {
     try {
-      console.log('📄 Iniciando processamento de PDF com pdfjs-dist, tamanho:', buffer.length);
+      console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
       
-      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+      const pdfjsLib = await import('pdfjs-dist');
       console.log('📄 pdfjs-dist importado com sucesso');
       
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(buffer),
-        useSystemFonts: true,
       });
       
       const pdf = await loadingTask.promise;
@@ -98,7 +97,21 @@ export class DocumentProcessor {
       return fullText.trim() || '[PDF sem texto extraível - pode ser um PDF de imagens]';
     } catch (error) {
       console.error('❌ Erro detalhado ao processar PDF:', error);
-      throw new Error(`Erro ao processar PDF: ${error.message}`);
+      
+      // Fallback: retornar conteúdo processável ao invés de falhar
+      return `[PDF DETECTADO: ${buffer.length} bytes]
+
+Este é um arquivo PDF que foi carregado no sistema.
+O processamento automático de texto não está disponível no momento.
+
+Para usar este conteúdo:
+1. Extraia o texto manualmente do PDF
+2. Cole o conteúdo relevante em um arquivo TXT
+3. Faça upload do arquivo TXT
+
+Informações do arquivo:
+- Tamanho: ${(buffer.length / 1024).toFixed(1)} KB
+- Formato: PDF`;
     }
   }
 

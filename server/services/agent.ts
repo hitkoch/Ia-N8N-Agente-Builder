@@ -91,12 +91,18 @@ export class AgentService {
       // Palavras-chave específicas para melhor busca
       const keyWords = messageWords.filter(word => word.length > 2);
       
-      // Ignorar arquivos não processados ou com erro
+      // Ignorar arquivos não processados ou com erro, mas permitir PDFs detectados
       if (docContent.includes('[arquivo não processado]') || 
           docContent.includes('[formato não suportado]') ||
           docContent.includes('[erro ao processar]')) {
         console.log(`⚠️ ${doc.originalName}: arquivo não processado/erro, ignorando`);
         return false;
+      }
+      
+      // Arquivos PDF detectados são aceitos como fonte de informação limitada
+      if (docContent.includes('[PDF DETECTADO:')) {
+        console.log(`📄 ${doc.originalName}: PDF detectado mas sem extração de texto`);
+        return false; // Por enquanto ignora até implementarmos melhor
       }
 
       // Verificar se alguma palavra da pergunta está no documento

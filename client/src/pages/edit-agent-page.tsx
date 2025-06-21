@@ -152,8 +152,8 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         });
       } else if (processedDoc.processingStatus === 'unsupported') {
         toast({
-          title: "Formato não suportado",
-          description: `${file.name} foi salvo mas o formato não é suportado completamente.`,
+          title: "Processamento limitado",
+          description: `${file.name} foi salvo mas requer extração manual de texto.`,
           variant: "destructive",
         });
       } else {
