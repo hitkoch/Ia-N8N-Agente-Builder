@@ -128,9 +128,9 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descrição</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brief description of your agent's purpose" {...field} />
+                    <Input placeholder="Breve descrição do propósito do seu agente" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,16 +142,16 @@ export default function CreateAgentModal({ isOpen, onClose }: CreateAgentModalPr
               name="systemPrompt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>System Prompt</FormLabel>
+                  <FormLabel>Prompt do Sistema</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Define your agent's personality, role, and instructions..."
+                      placeholder="Defina a personalidade, função e instruções do seu agente..."
                       rows={6}
                       {...field}
                     />
                   </FormControl>
                   <p className="text-xs text-slate-500">
-                    This prompt defines how your AI agent will behave and respond to users.
+                    Este prompt define como seu agente de IA irá se comportar e responder aos usuários.
                   </p>
                   <FormMessage />
                 </FormItem>

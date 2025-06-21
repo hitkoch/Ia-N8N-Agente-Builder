@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { seedDatabase } from "./seed";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -52,8 +53,12 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
+    // Seed database in development
+    setTimeout(() => seedDatabase(), 1000);
   } else {
     serveStatic(app);
+    // Seed database in production
+    setTimeout(() => seedDatabase(), 1000);
   }
 
   // ALWAYS serve the app on port 5000
