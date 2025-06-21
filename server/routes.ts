@@ -624,18 +624,18 @@ export function registerRoutes(app: Express): Server {
       
       // If status is close/disconnected, generate new QR code
       let qrCode = whatsappInstance.qrCode;
-      if (gatewayResponse.instance.status === 'close') {
+      if (gatewayResponse.connectionStatus === 'close') {
         const connectResponse = await whatsappGatewayService.connectInstance(whatsappInstance.instanceName);
         qrCode = connectResponse.qrcode?.base64 || null;
       }
       
       // Update database with current status
       const updatedInstance = await storage.updateWhatsappInstance(parseInt(agentId), {
-        status: gatewayResponse.instance.status,
+        status: gatewayResponse.connectionStatus,
         qrCode: qrCode
       });
       
-      console.log(`📊 Status verificado para ${whatsappInstance.instanceName}: ${gatewayResponse.instance.status}`);
+      console.log(`📊 Status verificado para ${whatsappInstance.instanceName}: ${gatewayResponse.connectionStatus}`);
       res.json(updatedInstance);
       
     } catch (error: any) {

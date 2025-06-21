@@ -28,11 +28,15 @@ export interface InstanceStatusResponse {
   instance: {
     instanceName: string;
     status: string;
+    instanceId?: string;
   };
+  connectionStatus: string;
   qrcode?: {
     code: string;
     base64: string;
   };
+  ownerJid?: string;
+  profileName?: string;
 }
 
 export interface SendMessageRequest {
@@ -70,23 +74,47 @@ export class WhatsAppGatewayService {
   async fetchInstance(instanceName: string): Promise<InstanceStatusResponse> {
     console.log(`🔍 Buscando detalhes da instância: ${instanceName}`);
     
-    const response = await fetch(`${this.baseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
-      method: 'GET',
-      headers: {
-        'apikey': this.globalToken
+    try {
+      const response = await fetch(`${this.baseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': this.globalToken
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error(`❌ Erro ao buscar instância: ${response.status} - ${error}`);
+        throw new Error(`Falha ao buscar instância: ${response.statusText}`);
       }
-    });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao buscar instância: ${response.status} - ${error}`);
-      throw new Error(`Falha ao buscar instância: ${response.statusText}`);
+      const data = await response.json();
+      console.log(`📊 Resposta da API:`, JSON.stringify(data, null, 2));
+      
+      // Evolution API returns array with instance data
+      const instanceData = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      
+      if (!instanceData) {
+        throw new Error('Instância não encontrada');
+      }
+      
+      const status = instanceData.connectionStatus || 'close';
+      console.log(`📊 Status da instância ${instanceName}: ${status}`);
+      
+      return {
+        instance: {
+          instanceName: instanceData.name,
+          status: status,
+          instanceId: instanceData.id
+        },
+        connectionStatus: status,
+        ownerJid: instanceData.ownerJid,
+        profileName: instanceData.profileName
+      } as InstanceStatusResponse;
+    } catch (error) {
+      console.error(`❌ Erro ao buscar instância ${instanceName}:`, error);
+      throw error;
     }
-
-    const data: InstanceStatusResponse = await response.json();
-    console.log(`📊 Detalhes da instância ${instanceName}: ${data.instance.status}`);
-    
-    return data;
   }
 
   /**
