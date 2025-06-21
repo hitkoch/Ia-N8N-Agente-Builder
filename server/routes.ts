@@ -205,23 +205,51 @@ export function registerRoutes(app: Express): Server {
       const { agentId } = req.params;
       const { message } = req.body;
 
+      console.log(`🤖 Webchat: recebida mensagem para agente ${agentId}: "${message}"`);
+
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: "Mensagem é obrigatória" });
       }
 
-      // Get agent without owner restriction for public access
-      const agents = await storage.getAgentsByOwner(1); // Get from admin user
-      const agent = agents.find(a => a.id === parseInt(agentId));
+      // Get all agents from all owners to find the requested agent
+      let agent = null;
+      try {
+        // Try to get from admin user first
+        const adminAgents = await storage.getAgentsByOwner(1);
+        agent = adminAgents.find(a => a.id === parseInt(agentId));
+        
+        // If not found, try other users (for testing)
+        if (!agent) {
+          console.log(`🔍 Agente ${agentId} não encontrado no admin, buscando em outros usuários...`);
+          for (let userId = 2; userId <= 10; userId++) {
+            try {
+              const userAgents = await storage.getAgentsByOwner(userId);
+              agent = userAgents.find(a => a.id === parseInt(agentId));
+              if (agent) {
+                console.log(`✅ Agente ${agentId} encontrado no usuário ${userId}`);
+                break;
+              }
+            } catch (err) {
+              // Continue searching
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar agentes:", error);
+      }
       
       if (!agent) {
+        console.log(`❌ Agente ${agentId} não encontrado em nenhum usuário`);
         return res.status(404).json({ message: "Agente não encontrado" });
       }
 
-      console.log(`🤖 Webchat público: processando mensagem para agente ${agent.name}`);
+      console.log(`🤖 Webchat: processando mensagem para agente "${agent.name}"`);
       const response = await agentService.testAgent(agent, message);
+      console.log(`✅ Resposta gerada: "${response.substring(0, 100)}..."`);
+      
       res.json({ response });
     } catch (error: any) {
-      console.error("Erro no webchat:", error);
+      console.error("❌ Erro no webchat:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });

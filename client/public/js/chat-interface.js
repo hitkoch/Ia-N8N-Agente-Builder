@@ -121,6 +121,7 @@
     
     try {
       // Send message to API
+      console.log('Enviando mensagem para:', `${config.apiUrl}/webchat/${config.agentId}/chat`);
       const response = await fetch(`${config.apiUrl}/webchat/${config.agentId}/chat`, {
         method: 'POST',
         headers: {
