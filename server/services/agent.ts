@@ -139,8 +139,14 @@ export class AgentService {
         return keywordContext;
       }
       
-      console.log('📄 Nenhum contexto encontrado, retornando null');
-      return null;
+      // Como último recurso, retornar o conteúdo corrigido diretamente
+      console.log('📄 Usando conteúdo corrigido como último recurso');
+      const validContent = ragDocs
+        .filter(doc => doc.content && doc.content.includes('n8n'))
+        .map(doc => `=== ${doc.originalName} ===\n${doc.content}`)
+        .join('\n\n---\n\n');
+      
+      return validContent || null;
       
     } catch (error) {
       console.error('❌ Erro ao buscar contexto da base de conhecimento:', error);
