@@ -1,4 +1,4 @@
-import { users, agents, evolutionInstances, conversations, type User, type InsertUser, type Agent, type InsertAgent, type EvolutionInstance, type InsertEvolutionInstance, type Conversation, type InsertConversation } from "@shared/schema";
+import { users, agents, evolutionInstances, conversations, ragDocuments, type User, type InsertUser, type Agent, type InsertAgent, type EvolutionInstance, type InsertEvolutionInstance, type Conversation, type InsertConversation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import session from "express-session";
@@ -28,10 +28,10 @@ export interface IStorage {
   getConversationsByAgent(agentId: number): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   
-  // Placeholder for future RAG and API features
-  getRagDocumentsByAgent?(agentId: number): Promise<any[]>;
-  createRagDocument?(document: any): Promise<any>;
-  deleteRagDocument?(id: number, ownerId: number): Promise<boolean>;
+  // RAG document management
+  getRagDocumentsByAgent(agentId: number): Promise<any[]>;
+  createRagDocument(document: any): Promise<any>;
+  deleteRagDocument(id: number, ownerId: number): Promise<boolean>;
   
   getExternalApiConfigsByAgent?(agentId: number): Promise<any[]>;
   createExternalApiConfig?(config: any): Promise<any>;
@@ -158,20 +158,37 @@ export class DatabaseStorage implements IStorage {
     return newConversation;
   }
 
-  // Future implementations for RAG and API features
   async getRagDocumentsByAgent(agentId: number): Promise<any[]> {
-    // Will be implemented when RAG documents table is properly migrated
-    return [];
+    try {
+      const documents = await db.select().from(ragDocuments).where(eq(ragDocuments.agentId, agentId));
+      console.log(`📄 Encontrados ${documents.length} documentos para o agente ${agentId}`);
+      return documents;
+    } catch (error) {
+      console.error('❌ Erro ao buscar documentos RAG:', error);
+      return [];
+    }
   }
 
   async createRagDocument(document: any): Promise<any> {
-    // Will be implemented when RAG documents table is properly migrated
-    return document;
+    try {
+      const [created] = await db.insert(ragDocuments).values(document).returning();
+      console.log(`📄 Documento RAG criado: ${created.originalName}`);
+      return created;
+    } catch (error) {
+      console.error('❌ Erro ao criar documento RAG:', error);
+      throw error;
+    }
   }
 
   async deleteRagDocument(id: number, ownerId: number): Promise<boolean> {
-    // Will be implemented when RAG documents table is properly migrated
-    return true;
+    try {
+      const result = await db.delete(ragDocuments)
+        .where(and(eq(ragDocuments.id, id), eq(ragDocuments.uploadedBy, ownerId)));
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('❌ Erro ao deletar documento RAG:', error);
+      return false;
+    }
   }
 
   async getExternalApiConfigsByAgent(agentId: number): Promise<any[]> {

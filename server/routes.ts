@@ -490,9 +490,79 @@ export function registerRoutes(app: Express): Server {
       );
 
       console.log('✅ Documento processado com sucesso:', processedDoc.processingStatus);
-      res.json(processedDoc);
+      
+      // Retornar apenas os dados básicos (sem embeddings) para o frontend
+      const responseDoc = {
+        filename: processedDoc.filename,
+        originalName: processedDoc.originalName,
+        content: processedDoc.content,
+        fileSize: processedDoc.fileSize,
+        mimeType: processedDoc.mimeType,
+        processingStatus: processedDoc.processingStatus,
+        error: processedDoc.error
+      };
+      
+      res.json(responseDoc);
     } catch (error: any) {
       console.error("❌ Erro ao processar documento:", error);
+      res.status(500).json({ message: "Falha ao processar documento", error: error.message });
+    }
+  });
+
+  // Endpoint para processar e salvar documento na base de conhecimento do agente
+  app.post("/api/agents/:agentId/upload-document", requireAuth, upload.single('document'), async (req: MulterRequest, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+      }
+
+      // Verificar se o agente pertence ao usuário
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      console.log('📁 Processando e salvando documento para agente:', agentId);
+
+      // Processar o documento com embeddings
+      const processedDoc = await documentProcessor.processFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      // Salvar diretamente na tabela RAG
+      const ragDoc = await storage.createRagDocument({
+        agentId: parseInt(agentId),
+        filename: processedDoc.filename,
+        originalName: processedDoc.originalName,
+        content: processedDoc.content,
+        embedding: processedDoc.embedding,
+        fileSize: processedDoc.fileSize,
+        mimeType: processedDoc.mimeType,
+        uploadedBy: user.id
+      });
+
+      console.log('📄 Documento salvo na base de conhecimento:', ragDoc.originalName);
+
+      // Retornar documento sem embeddings para o frontend
+      const responseDoc = {
+        id: ragDoc.id,
+        filename: ragDoc.filename,
+        originalName: ragDoc.originalName,
+        content: ragDoc.content,
+        fileSize: ragDoc.fileSize,
+        mimeType: ragDoc.mimeType,
+        processingStatus: processedDoc.processingStatus,
+        uploadedAt: ragDoc.uploadedAt
+      };
+
+      res.json(responseDoc);
+    } catch (error: any) {
+      console.error("❌ Erro ao processar e salvar documento:", error);
       res.status(500).json({ message: "Falha ao processar documento", error: error.message });
     }
   });

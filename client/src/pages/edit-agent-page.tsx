@@ -126,31 +126,21 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     try {
       const formData = new FormData();
       formData.append('document', file);
-
-      const response = await apiRequest("POST", "/api/process-document", formData, {
-        'Content-Type': undefined // Let browser set content-type for FormData
+      
+      // Upload direto para a base de conhecimento do agente
+      const response = await apiRequest("POST", `/api/agents/${agentId}/upload-document`, formData, {
+        'Content-Type': undefined
       });
       
-      const processedDoc = await response.json();
+      const ragDoc = await response.json();
+      setRagDocuments(prev => [...prev, ragDoc]);
       
-      const newDoc = {
-        id: Date.now(),
-        filename: processedDoc.filename,
-        originalName: processedDoc.originalName,
-        fileSize: processedDoc.fileSize,
-        mimeType: processedDoc.mimeType,
-        content: processedDoc.content,
-        processingStatus: processedDoc.processingStatus,
-      };
-      
-      setRagDocuments(prev => [...prev, newDoc]);
-      
-      if (processedDoc.processingStatus === 'success') {
+      if (ragDoc.processingStatus === 'success') {
         toast({
           title: "Arquivo processado com sucesso",
-          description: `${file.name} foi extraído e pode ser usado pelo agente.`,
+          description: `${file.name} foi adicionado à base de conhecimento do agente.`,
         });
-      } else if (processedDoc.processingStatus === 'unsupported') {
+      } else if (ragDoc.processingStatus === 'unsupported') {
         toast({
           title: "Processamento limitado",
           description: `${file.name} foi salvo mas requer extração manual de texto.`,
