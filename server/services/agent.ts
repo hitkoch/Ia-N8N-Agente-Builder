@@ -84,18 +84,69 @@ export class AgentService {
         return null;
       }
       
-      console.log('📄 Documentos disponíveis:', ragDocs.length);
+      console.log(`📄 Documentos disponíveis: ${ragDocs.length}`);
       
-      // Verificar se temos documentos com embeddings
-      const docsWithEmbeddings = ragDocs.filter(doc => doc.embedding);
+      // Debug completo dos documentos
+      for (const doc of ragDocs) {
+        console.log(`📄 Documento: ${doc.originalName}`);
+        console.log(`   - ID: ${doc.id}`);
+        console.log(`   - Conteúdo: ${doc.content ? doc.content.length : 0} caracteres`);
+        console.log(`   - Has embedding: ${!!doc.embedding}`);
+        
+        if (doc.embedding) {
+          try {
+            const chunks = JSON.parse(doc.embedding);
+            console.log(`   - Chunks: ${chunks.length}`);
+            if (chunks.length > 0) {
+              console.log(`   - Primeiro chunk: ${chunks[0].text?.substring(0, 100)}...`);
+              console.log(`   - Embedding length: ${chunks[0].embedding?.length || 0}`);
+            }
+          } catch (e) {
+            console.log(`   - Erro ao parsear embedding: ${e.message}`);
+          }
+        }
+      }
+      
+      // Verificar se temos documentos com embeddings válidos
+      const docsWithEmbeddings = ragDocs.filter(doc => {
+        if (!doc.embedding) return false;
+        try {
+          const chunks = JSON.parse(doc.embedding);
+          return chunks && chunks.length > 0 && chunks[0].embedding;
+        } catch {
+          return false;
+        }
+      });
+      
+      console.log(`🔮 Documentos com embeddings válidos: ${docsWithEmbeddings.length}`);
       
       if (docsWithEmbeddings.length > 0) {
-        console.log('🔮 Usando busca semântica com embeddings');
-        return await this.getSemanticContext(docsWithEmbeddings, userMessage);
-      } else {
-        console.log('📝 Usando busca por palavras-chave (fallback)');
-        return await this.getKeywordContext(ragDocs, userMessage);
+        console.log('🔍 Iniciando busca semântica');
+        const semanticResult = await this.getSemanticContext(docsWithEmbeddings, userMessage);
+        if (semanticResult) {
+          console.log('✅ Busca semântica encontrou resultado');
+          return semanticResult;
+        }
+        console.log('❌ Busca semântica não encontrou resultado relevante');
       }
+      
+      // Fallback: retornar todo o conteúdo dos documentos
+      console.log('📄 Usando fallback: retornando conteúdo completo');
+      const allContent = ragDocs
+        .filter(doc => {
+          const validContent = doc.content && 
+                              !doc.content.includes('[ERRO') && 
+                              !doc.content.includes('[FORMATO NÃO SUPORTADO') &&
+                              doc.content.length > 50 &&
+                              doc.content.includes('n8n') // Conteúdo relevante para teste
+          console.log(`📄 ${doc.originalName}: ${validContent ? 'válido' : 'inválido'}`);
+          return validContent;
+        })
+        .map(doc => `=== ${doc.originalName} ===\n${doc.content.substring(0, 2000)}`) // Limitar tamanho
+        .join('\n\n---\n\n');
+      
+      console.log(`📄 Conteúdo final: ${allContent.length} caracteres`);
+      return allContent.length > 0 ? allContent : null;
       
     } catch (error) {
       console.error('❌ Erro ao buscar contexto da base de conhecimento:', error);
@@ -105,18 +156,44 @@ export class AgentService {
   
   private async getSemanticContext(ragDocs: any[], userMessage: string): Promise<string | null> {
     try {
-      // Criar embedding da pergunta do usuário
+      console.log('🔮 Criando embedding da consulta...');
       const queryEmbedding = await embeddingService.createEmbedding(userMessage);
+      console.log(`🔮 Embedding criado: ${queryEmbedding.length} dimensões`);
       
-      let allRelevantChunks: { text: string; similarity: number; docName: string }[] = [];
+      let allMatches: { text: string; similarity: number; docName: string }[] = [];
       
-      // Buscar chunks similares em todos os documentos
+      // Buscar em todos os documentos
       for (const doc of ragDocs) {
-        if (!doc.embedding) continue;
+        console.log(`📄 Processando documento: ${doc.originalName}`);
+        
+        if (!doc.embedding) {
+          console.log(`❌ Documento sem embedding: ${doc.originalName}`);
+          continue;
+        }
         
         try {
           const docChunks = JSON.parse(doc.embedding);
-          const similarChunks = await embeddingService.findSimilarChunks(queryEmbedding, docChunks, 3);
+          console.log(`🔮 Chunks no documento: ${docChunks.length}`);
+          
+          for (let i = 0; i < docChunks.length; i++) {
+            const chunk = docChunks[i];
+            if (!chunk.embedding || !chunk.text) {
+              console.log(`❌ Chunk ${i+1} inválido`);
+              continue;
+            }
+            
+            const similarity = embeddingService.calculateSimilarity(queryEmbedding, chunk.embedding);
+            console.log(`📊 Chunk ${i+1}: similaridade = ${similarity.toFixed(4)}`);
+            
+            if (similarity > 0.2) { // Threshold bem baixo para capturar tudo
+              allMatches.push({
+                text: chunk.text,
+                similarity: similarity,
+                docName: doc.originalName
+              });
+              console.log(`✅ Match encontrado! Sim: ${similarity.toFixed(4)}`);
+            }
+          }
           
           // Adicionar nome do documento aos chunks
           const chunksWithDoc = similarChunks.map(chunk => ({

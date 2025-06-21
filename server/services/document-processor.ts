@@ -204,12 +204,14 @@ Informações do arquivo:
   }
 
   private cleanTextForDatabase(text: string): string {
-    // Remover caracteres nulos e outros caracteres de controle problemáticos para PostgreSQL
+    // Conversão mais agressiva para garantir UTF-8 válido
     return text
       .replace(/\x00/g, '') // Remove null bytes
-      .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove outros caracteres de controle
+      .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove caracteres de controle
+      .replace(/[\x80-\xFF]/g, '') // Remove caracteres não ASCII problemáticos
       .replace(/\uFFFD/g, '') // Remove replacement character
-      .replace(/\s+/g, ' ') // Normalizar espaços em branco
+      .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, '') // Manter apenas caracteres imprimíveis
+      .replace(/\s+/g, ' ') // Normalizar espaços
       .trim();
   }
 }
