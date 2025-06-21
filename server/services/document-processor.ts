@@ -68,36 +68,65 @@ export class DocumentProcessor {
   private async processPDF(buffer: Buffer): Promise<string> {
     console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
     
-    // Estratégia simplificada: extrair texto básico diretamente do buffer
     try {
       const pdfString = buffer.toString('latin1');
-      
-      // Procurar por padrões de texto em PDFs
-      const textMatches = pdfString.match(/\(([^)]+)\)/g);
-      const streamMatches = pdfString.match(/stream\s*(.*?)\s*endstream/gs);
-      
       let extractedText = '';
       
-      // Extrair texto de strings em parênteses (método básico)
+      // Método 1: Extrair texto de strings em parênteses
+      const textMatches = pdfString.match(/\(([^)]+)\)/g);
       if (textMatches) {
         const cleanTexts = textMatches
-          .map(match => match.slice(1, -1)) // Remove parênteses
-          .filter(text => text.length > 2 && /[a-zA-ZÀ-ÿ]/.test(text)) // Filtra textos válidos
-          .filter(text => !text.includes('\\') || text.includes(' ')) // Remove códigos de controle
+          .map(match => match.slice(1, -1))
+          .filter(text => text.length > 2 && /[a-zA-ZÀ-ÿ]/.test(text))
+          .filter(text => !text.includes('\\') || text.includes(' '))
           .join(' ');
-        
-        extractedText += cleanTexts;
+        extractedText += cleanTexts + ' ';
       }
       
-      // Tentar extrair de streams de texto (método avançado)
-      if (streamMatches && extractedText.length < 100) {
+      // Método 2: Extrair texto de arrays de strings (formato comum)
+      const arrayMatches = pdfString.match(/\[([^\]]+)\]/g);
+      if (arrayMatches) {
+        for (const match of arrayMatches) {
+          const content = match.slice(1, -1);
+          const textParts = content.match(/\(([^)]+)\)/g);
+          if (textParts) {
+            const arrayText = textParts
+              .map(part => part.slice(1, -1))
+              .filter(text => text.length > 1 && /[a-zA-ZÀ-ÿ]/.test(text))
+              .join(' ');
+            extractedText += arrayText + ' ';
+          }
+        }
+      }
+      
+      // Método 3: Extrair texto de streams decodificados
+      const streamMatches = pdfString.match(/stream\s*(.*?)\s*endstream/gs);
+      if (streamMatches) {
         for (const stream of streamMatches) {
           const streamContent = stream.replace(/^stream\s*/, '').replace(/\s*endstream$/, '');
+          
           // Procurar por texto legível no stream
-          const readableText = streamContent.match(/[a-zA-ZÀ-ÿ\s]{10,}/g);
+          const readableText = streamContent.match(/[a-zA-ZÀ-ÿ\s]{5,}/g);
           if (readableText) {
-            extractedText += ' ' + readableText.join(' ');
+            const streamText = readableText
+              .filter(text => text.trim().length > 3)
+              .join(' ');
+            extractedText += streamText + ' ';
           }
+        }
+      }
+      
+      // Método 4: Extrair texto de objetos TJ (text showing)
+      const tjMatches = pdfString.match(/TJ\s*\n/g);
+      if (tjMatches) {
+        // Procurar por padrões antes de TJ
+        const beforeTjMatches = pdfString.match(/\(([^)]+)\)\s*TJ/g);
+        if (beforeTjMatches) {
+          const tjText = beforeTjMatches
+            .map(match => match.replace(/\)\s*TJ$/, '').replace(/^\(/, ''))
+            .filter(text => text.length > 2 && /[a-zA-ZÀ-ÿ]/.test(text))
+            .join(' ');
+          extractedText += tjText + ' ';
         }
       }
       
@@ -105,21 +134,21 @@ export class DocumentProcessor {
       extractedText = extractedText
         .replace(/\s+/g, ' ')
         .replace(/[^\w\sÀ-ÿ.,!?;:()\-]/g, '')
+        .replace(/\b\w{1}\b/g, '') // Remove palavras de 1 letra
         .trim();
       
       console.log('📄 Texto extraído do PDF:', extractedText.length, 'caracteres');
+      console.log('📄 Primeiros 200 caracteres:', extractedText.substring(0, 200));
       
-      if (extractedText.length > 50) {
+      if (extractedText.length > 20) {
         return extractedText;
       }
       
-      // Se não conseguiu extrair texto suficiente, usar fallback
       throw new Error('Texto insuficiente extraído');
       
     } catch (error) {
       console.log('📄 Extração direta falhou, usando fallback informativo');
       
-      // Fallback: retornar conteúdo processável ao invés de falhar
       return `[PDF DETECTADO: ${buffer.length} bytes]
 
 Este é um arquivo PDF que foi carregado no sistema.

@@ -102,7 +102,7 @@ export class AgentService {
       // Arquivos PDF detectados são aceitos como fonte de informação limitada
       if (docContent.includes('[PDF DETECTADO:')) {
         console.log(`📄 ${doc.originalName}: PDF detectado mas sem extração de texto`);
-        return false; // Por enquanto ignora até implementarmos melhor
+        return false; // Ignora PDFs não processados
       }
 
       // Verificar se alguma palavra da pergunta está no documento
