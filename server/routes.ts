@@ -567,6 +567,67 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Endpoint para listar documentos da base de conhecimento do agente
+  app.get("/api/agents/:agentId/documents", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const user = getAuthenticatedUser(req);
+
+      // Verificar se o agente pertence ao usuário
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const documents = await storage.getRagDocumentsByAgent(parseInt(agentId));
+      
+      // Retornar documentos sem embeddings para o frontend
+      const responseDocuments = documents.map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        originalName: doc.originalName,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        uploadedAt: doc.uploadedAt,
+        content: doc.content ? doc.content.substring(0, 200) + '...' : ''
+      }));
+
+      res.json(responseDocuments);
+    } catch (error: any) {
+      console.error("❌ Erro ao listar documentos:", error);
+      res.status(500).json({ message: "Falha ao listar documentos", error: error.message });
+    }
+  });
+
+  // Endpoint para excluir documento da base de conhecimento do agente
+  app.delete("/api/agents/:agentId/documents/:documentId", requireAuth, async (req, res) => {
+    try {
+      const { agentId, documentId } = req.params;
+      const user = getAuthenticatedUser(req);
+
+      // Verificar se o agente pertence ao usuário
+      const agent = await storage.getAgent(parseInt(agentId), user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      console.log(`🗑️ Excluindo documento ${documentId} do agente ${agentId}`);
+
+      // Excluir documento e todos os embeddings associados
+      const deleted = await storage.deleteRagDocument(parseInt(documentId), user.id);
+      
+      if (deleted) {
+        console.log(`✅ Documento ${documentId} excluído com sucesso`);
+        res.json({ message: "Documento excluído com sucesso" });
+      } else {
+        res.status(404).json({ message: "Documento não encontrado" });
+      }
+    } catch (error: any) {
+      console.error("❌ Erro ao excluir documento:", error);
+      res.status(500).json({ message: "Falha ao excluir documento", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

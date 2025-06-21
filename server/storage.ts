@@ -182,9 +182,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRagDocument(id: number, ownerId: number): Promise<boolean> {
     try {
+      console.log(`🗑️ Deletando documento RAG ${id} do usuário ${ownerId}`);
+      
+      // Buscar o documento antes de deletar para logs
+      const [document] = await db.select().from(ragDocuments)
+        .where(and(eq(ragDocuments.id, id), eq(ragDocuments.uploadedBy, ownerId)));
+      
+      if (document) {
+        console.log(`📄 Documento encontrado: ${document.originalName}`);
+        console.log(`🔮 Removendo embeddings associados ao documento`);
+      }
+      
+      // Deletar documento (embeddings são deletados automaticamente pois estão na mesma linha)
       const result = await db.delete(ragDocuments)
         .where(and(eq(ragDocuments.id, id), eq(ragDocuments.uploadedBy, ownerId)));
-      return (result.rowCount || 0) > 0;
+      
+      const deleted = (result.rowCount || 0) > 0;
+      
+      if (deleted && document) {
+        console.log(`✅ Documento ${document.originalName} e seus embeddings foram excluídos permanentemente`);
+      }
+      
+      return deleted;
     } catch (error) {
       console.error('❌ Erro ao deletar documento RAG:', error);
       return false;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,23 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
   const [ragDocuments, setRagDocuments] = useState<any[]>([]);
+
+  // Carregar documentos existentes
+  useEffect(() => {
+    if (agentId) {
+      loadRagDocuments();
+    }
+  }, [agentId]);
+
+  const loadRagDocuments = async () => {
+    try {
+      const response = await apiRequest("GET", `/api/agents/${agentId}/documents`);
+      const documents = await response.json();
+      setRagDocuments(documents);
+    } catch (error) {
+      console.error("Erro ao carregar documentos:", error);
+    }
+  };
   const [currentStep, setCurrentStep] = useState(1);
 
   React.useEffect(() => {
@@ -163,12 +180,29 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     }
   };
 
-  const removeDocument = (docId: number) => {
-    setRagDocuments(prev => prev.filter(doc => doc.id !== docId));
-    toast({
-      title: "Arquivo removido",
-      description: "O arquivo foi removido da base de conhecimento.",
-    });
+  const handleDeleteDocument = async (documentId: number, fileName: string) => {
+    if (!confirm(`Deseja realmente excluir "${fileName}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      await apiRequest("DELETE", `/api/agents/${agentId}/documents/${documentId}`);
+      
+      // Remover da lista local
+      setRagDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      toast({
+        title: "Documento excluído",
+        description: `${fileName} foi removido da base de conhecimento e todos os embeddings foram excluídos.`,
+      });
+    } catch (error) {
+      console.error("Erro ao excluir documento:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o documento.",
+        variant: "destructive",
+      });
+    }
   };
 
   const steps = [
@@ -442,8 +476,9 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeDocument(doc.id)}
+                            onClick={() => handleDeleteDocument(doc.id, doc.originalName)}
                             className="text-red-500 hover:text-red-700"
+                            title="Excluir documento"
                           >
                             <X className="h-4 w-4" />
                           </Button>
