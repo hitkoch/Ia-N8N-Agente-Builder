@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Bot, BarChart3, Settings, Webhook, TestTube, LogOut, User } from "lucide-react";
+import { Bot, BarChart3, Settings, Webhook, TestTube, LogOut, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3 },
     { id: "agents", name: "AI Agents", icon: Bot },
+    { id: "templates", name: "Templates", icon: FileText },
     { id: "evolution", name: "Evolution API", icon: Webhook },
     { id: "testing", name: "Agent Testing", icon: TestTube },
     { id: "settings", name: "Settings", icon: Settings },

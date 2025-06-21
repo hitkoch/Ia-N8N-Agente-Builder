@@ -10,6 +10,7 @@ import { Bot, CheckCircle, Webhook, MessageCircle, Plus, Eye, Zap } from "lucide
 import AgentCard from "@/components/agent-card";
 import CreateAgentModal from "@/components/create-agent-modal";
 import AgentsPage from "./agents-page";
+import TemplatesPage from "./templates-page";
 import EvolutionPage from "./evolution-page";
 import TestingPage from "./testing-page";
 import SettingsPage from "./settings-page";
@@ -208,6 +209,8 @@ export default function HomePage() {
     switch (currentSection) {
       case "agents":
         return <AgentsPage onTest={handleTestAgent} />;
+      case "templates":
+        return <TemplatesPage />;
       case "evolution":
         return <EvolutionPage />;
       case "testing":
