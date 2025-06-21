@@ -1,10 +1,12 @@
 import * as mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
+import { embeddingService } from './embeddings';
 
 export interface ProcessedDocument {
   filename: string;
   originalName: string;
   content: string;
+  embedding?: string; // JSON string dos embeddings
   fileSize: number;
   mimeType: string;
   processingStatus: 'success' | 'error' | 'unsupported';
@@ -60,6 +62,19 @@ export class DocumentProcessor {
       result.content = `[ERRO AO PROCESSAR: ${filename}]\n\nErro: ${error.message}\n\nTente converter o arquivo para um formato mais simples (TXT ou MD).`;
       result.processingStatus = 'error';
       result.error = error.message;
+    }
+
+    // Se o processamento foi bem-sucedido e não é um PDF com problema, criar embedding
+    if (result.processingStatus === 'success' && result.content.length > 50 && !result.content.includes('[PDF DETECTADO:')) {
+      try {
+        console.log('🔮 Criando embeddings para o documento');
+        const chunks = await embeddingService.processDocumentForRAG(result.content);
+        result.embedding = JSON.stringify(chunks);
+        console.log('✅ Embeddings criados e salvos');
+      } catch (embeddingError) {
+        console.warn('⚠️ Falha ao criar embeddings:', embeddingError.message);
+        // Não falhar o processamento por causa dos embeddings
+      }
     }
 
     return result;
