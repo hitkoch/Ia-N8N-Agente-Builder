@@ -12,6 +12,7 @@ import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
+import { registerCleanupRoutes } from "./routes/cleanup";
 import type { Agent } from "@shared/schema";
 
 function requireAuth(req: any, res: any, next: any) {
@@ -42,6 +43,12 @@ function generateWebchatCode(agent: Agent, baseUrl: string): string {
 export function registerRoutes(app: Express): Server {
   // Configurar autenticação
   setupAuth(app);
+  
+  // Register WhatsApp status routes
+  registerWhatsAppStatusRoutes(app);
+  
+  // Register cleanup routes
+  registerCleanupRoutes(app);
 
   // Configurar multer para upload de arquivos
   const upload = multer({ 
@@ -874,9 +881,9 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('debug-menu.html', { root: process.cwd() });
   });
 
-  // Serve menu fix test
-  app.get("/test-menu-fix", (req, res) => {
-    res.sendFile('test-menu-fix.html', { root: process.cwd() });
+  // Serve cleanup test
+  app.get("/cleanup-test", (req, res) => {
+    res.sendFile('cleanup-test.html', { root: process.cwd() });
   });
 
   const httpServer = createServer(app);

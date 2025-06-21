@@ -92,12 +92,20 @@ export default function WhatsAppManagementPage() {
       const response = await apiRequest("DELETE", `/api/agents/${agentId}/whatsapp`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
-      toast({
-        title: "Instância removida",
-        description: "Instância WhatsApp removida com sucesso.",
-      });
+      
+      if (data.cleaned) {
+        toast({
+          title: "Limpeza concluída",
+          description: "Nenhuma instância fantasma encontrada para remover.",
+        });
+      } else {
+        toast({
+          title: "Instância removida",
+          description: "Instância WhatsApp removida com sucesso.",
+        });
+      }
       stopPolling();
     },
     onError: (error: any) => {
