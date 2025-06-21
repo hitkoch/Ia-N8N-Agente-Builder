@@ -63,7 +63,7 @@ export function validateWebhookData(req: Request, res: Response, next: NextFunct
   }
   
   // Validate instance name format (prevents injection)
-  const instancePattern = /^agent-\d+-\d+-whatsapp$/;
+  const instancePattern = /^whatsapp-\d{8,15}$/;
   if (!instancePattern.test(instance)) {
     console.warn(`🚨 Webhook validation failed: invalid instance name format: ${instance}`);
     return res.status(400).json({ 
@@ -73,7 +73,7 @@ export function validateWebhookData(req: Request, res: Response, next: NextFunct
   }
   
   // Validate event type
-  const allowedEvents = ['messages.upsert', 'connection.update', 'qr.updated'];
+  const allowedEvents = ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'messages.upsert', 'connection.update', 'qr.updated'];
   if (!allowedEvents.includes(event)) {
     console.warn(`🚨 Webhook validation failed: unsupported event type: ${event}`);
     return res.status(400).json({ 

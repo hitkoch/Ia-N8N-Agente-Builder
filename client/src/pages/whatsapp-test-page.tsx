@@ -40,7 +40,7 @@ interface TestResult {
 
 export default function WhatsAppTestPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState("41999888777");
+  const [phoneNumber, setPhoneNumber] = useState("41985656666");
   const [testMessage, setTestMessage] = useState("Olá! Este é um teste do sistema WhatsApp. Como você está?");
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const { toast } = useToast();
@@ -300,12 +300,27 @@ export default function WhatsAppTestPage() {
 
             <div className="space-y-2">
               <Label htmlFor="phone">Número de Telefone</Label>
-              <Input
-                id="phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="41999888777"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="phone"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="41985656666"
+                  maxLength={15}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPhoneNumber("41985656666")}
+                  className="whitespace-nowrap"
+                >
+                  Usar Padrão
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Use o número da sua instância ativa: 41985656666
+              </p>
             </div>
           </div>
 
@@ -428,8 +443,12 @@ export default function WhatsAppTestPage() {
               <CardContent className="space-y-3">
                 <Button
                   onClick={() => {
+                    if (!selectedAgentId) return;
+                    
+                    // Sequência de testes
                     checkStatusMutation.mutate();
-                    setTimeout(() => testWebhookMessageMutation.mutate(), 1000);
+                    setTimeout(() => testWebhookMessageMutation.mutate(), 1500);
+                    setTimeout(() => testConnectionUpdateMutation.mutate('open'), 3000);
                   }}
                   disabled={!selectedAgentId}
                   className="w-full"

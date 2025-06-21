@@ -1046,10 +1046,7 @@ export function registerRoutes(app: Express): Server {
     res.json({ message: "API funcionando", timestamp: new Date().toISOString() });
   });
 
-  // Serve test page
-  app.get("/whatsapp-test", (req, res) => {
-    res.sendFile('public/test.html', { root: process.cwd() });
-  });
+
 
   // Serve WhatsApp test page
   app.get("/test-whatsapp", (req, res) => {
