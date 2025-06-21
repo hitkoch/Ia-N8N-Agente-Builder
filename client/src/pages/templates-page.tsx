@@ -274,14 +274,14 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#f8fafc' }}>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
-            <FileText className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ backgroundColor: '#022b44' }}>
+            <FileText className="h-8 w-8" style={{ color: '#b8ec00' }} />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl font-bold mb-4" style={{ color: '#b8ec00' }}>
             Templates de Agentes IA
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -294,19 +294,19 @@ export default function TemplatesPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600">{agentTemplates.length}</div>
+              <div className="text-3xl font-bold" style={{ color: '#022b44' }}>{agentTemplates.length}</div>
               <div className="text-sm text-muted-foreground">Templates Disponíveis</div>
             </CardContent>
           </Card>
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600">{categories.length}</div>
+              <div className="text-3xl font-bold" style={{ color: '#022b44' }}>{categories.length}</div>
               <div className="text-sm text-muted-foreground">Categorias</div>
             </CardContent>
           </Card>
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-indigo-600">100%</div>
+              <div className="text-3xl font-bold" style={{ color: '#022b44' }}>100%</div>
               <div className="text-sm text-muted-foreground">Personalizáveis</div>
             </CardContent>
           </Card>
@@ -353,6 +353,10 @@ export default function TemplatesPage() {
               <Badge 
                 variant={selectedCategory === "all" ? "default" : "secondary"}
                 className="cursor-pointer hover:scale-105 transition-transform"
+                style={{ 
+                  backgroundColor: selectedCategory === "all" ? '#022b44' : '#e2e8f0',
+                  color: selectedCategory === "all" ? '#FFFFFF' : '#64748b'
+                }}
                 onClick={() => setSelectedCategory("all")}
               >
                 Todos
@@ -362,6 +366,11 @@ export default function TemplatesPage() {
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
                   className="cursor-pointer hover:scale-105 transition-transform"
+                  style={{ 
+                    backgroundColor: selectedCategory === category ? '#022b44' : 'transparent',
+                    color: selectedCategory === category ? '#FFFFFF' : '#022b44',
+                    borderColor: '#022b44'
+                  }}
                   onClick={() => setSelectedCategory(category)}
                 >
                   {category}
@@ -383,16 +392,17 @@ export default function TemplatesPage() {
                 <CardHeader className="relative z-10 pb-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <span className="text-2xl">{template.icon}</span>
+                      <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: '#022b44' }}>
+                        <span className="text-2xl" style={{ filter: 'hue-rotate(0deg) saturate(1) brightness(1)' }}>{template.icon}</span>
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                        <CardTitle className="text-xl font-bold transition-colors" style={{ color: '#022b44' }}>
                           {template.name}
                         </CardTitle>
                         <Badge 
                           variant="secondary" 
-                          className="mt-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-0"
+                          className="mt-2 border-0"
+                          style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
                         >
                           {template.category}
                         </Badge>
@@ -424,7 +434,18 @@ export default function TemplatesPage() {
                       }}
                       variant="outline"
                       size="sm"
-                      className="flex-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                      className="flex-1 transition-colors"
+                      style={{ borderColor: '#022b44', color: '#022b44' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#b8ec00';
+                        e.currentTarget.style.borderColor = '#b8ec00';
+                        e.currentTarget.style.color = '#022b44';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.borderColor = '#022b44';
+                        e.currentTarget.style.color = '#022b44';
+                      }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       Preview
@@ -433,7 +454,16 @@ export default function TemplatesPage() {
                       onClick={() => handleCreateFromTemplate(template)}
                       disabled={createAgentMutation.isPending}
                       size="sm"
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-0 shadow-lg"
+                      className="flex-1 border-0 shadow-lg transition-colors"
+                      style={{ backgroundColor: '#022b44', color: '#FFFFFF' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#b8ec00';
+                        e.currentTarget.style.color = '#022b44';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#022b44';
+                        e.currentTarget.style.color = '#FFFFFF';
+                      }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {createAgentMutation.isPending ? "Criando..." : "Usar Template"}
@@ -476,14 +506,14 @@ export default function TemplatesPage() {
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-blue-50 to-purple-50">
           <DialogHeader className="pb-6">
             <DialogTitle className="flex items-center space-x-4 text-2xl">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#022b44' }}>
                 <span className="text-2xl">{selectedTemplate?.icon}</span>
               </div>
               <div>
-                <div className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="font-bold" style={{ color: '#b8ec00' }}>
                   {selectedTemplate?.name}
                 </div>
-                <Badge variant="secondary" className="mt-1 bg-white/70">
+                <Badge variant="secondary" className="mt-1" style={{ backgroundColor: '#b8ec00', color: '#022b44' }}>
                   {selectedTemplate?.category}
                 </Badge>
               </div>
@@ -494,7 +524,7 @@ export default function TemplatesPage() {
             <div className="space-y-8">
               <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-3 text-gray-800">Sobre este Template</h3>
+                  <h3 className="font-semibold text-lg mb-3" style={{ color: '#022b44' }}>Sobre este Template</h3>
                   <p className="text-gray-600 leading-relaxed mb-4">{selectedTemplate.description}</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedTemplate.tags.map(tag => (
@@ -509,7 +539,7 @@ export default function TemplatesPage() {
               <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg text-gray-800">Prompt do Sistema</h3>
+                    <h3 className="font-semibold text-lg" style={{ color: '#022b44' }}>Prompt do Sistema</h3>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -531,7 +561,7 @@ export default function TemplatesPage() {
               <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg text-gray-800">Base de Conhecimento Sugerida</h3>
+                    <h3 className="font-semibold text-lg" style={{ color: '#022b44' }}>Base de Conhecimento Sugerida</h3>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -557,7 +587,16 @@ export default function TemplatesPage() {
                     setShowPreview(false);
                   }}
                   disabled={createAgentMutation.isPending}
-                  className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-0 shadow-lg text-base"
+                  className="flex-1 h-12 border-0 shadow-lg text-base transition-colors"
+                  style={{ backgroundColor: '#022b44', color: '#FFFFFF' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b8ec00';
+                    e.currentTarget.style.color = '#022b44';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#022b44';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }}
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   {createAgentMutation.isPending ? "Criando Agente..." : "Criar Agente com Este Template"}

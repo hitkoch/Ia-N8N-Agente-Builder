@@ -21,14 +21,14 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
   ];
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-slate-200">
+    <div className="fixed inset-y-0 left-0 z-50 w-64 shadow-lg border-r border-slate-200" style={{ backgroundColor: '#022b44' }}>
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="flex items-center px-6 py-4 border-b border-slate-200">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-            <Bot className="text-white h-4 w-4" />
+        <div className="flex items-center px-6 py-4 border-b border-slate-600">
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center mr-3" style={{ backgroundColor: '#b8ec00' }}>
+            <Bot className="h-4 w-4" style={{ color: '#022b44' }} />
           </div>
-          <h1 className="text-lg font-semibold text-slate-900">AI Agent Builder</h1>
+          <h1 className="text-lg font-semibold" style={{ color: '#b8ec00' }}>AI Agent Builder</h1>
         </div>
 
         {/* Navigation Menu */}
