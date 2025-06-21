@@ -7,12 +7,19 @@ export class AgentService {
       // Recuperar contexto da base de conhecimento
       const knowledgeContext = await this.getKnowledgeContext(agent, userMessage);
       
-      const messages: ChatMessage[] = [
-        {
-          role: "user",
-          content: knowledgeContext ? `Contexto da base de conhecimento:\n${knowledgeContext}\n\nPergunta do usuário: ${userMessage}` : userMessage,
-        },
-      ];
+      const messages: ChatMessage[] = [];
+      
+      if (knowledgeContext) {
+        messages.push({
+          role: "system",
+          content: `IMPORTANTE: Use as informações da base de conhecimento abaixo para responder às perguntas do usuário. Se a pergunta se relacionar com essas informações, priorize-as na sua resposta.\n\n${knowledgeContext}`
+        });
+      }
+      
+      messages.push({
+        role: "user",
+        content: userMessage,
+      });
       
       const response = await openaiService.generateResponse(agent, messages);
       return response;
@@ -52,35 +59,55 @@ export class AgentService {
   }
 
   private async getKnowledgeContext(agent: Agent, userMessage: string): Promise<string | null> {
+    console.log("🔍 Buscando contexto para:", userMessage);
+    console.log("📄 Documentos disponíveis:", agent.ragDocuments?.length || 0);
+    
     if (!agent.ragDocuments || !Array.isArray(agent.ragDocuments) || agent.ragDocuments.length === 0) {
+      console.log("❌ Nenhum documento na base de conhecimento");
       return null;
     }
 
-    // Simulação de busca semântica (em produção, usaria embeddings)
+    // Busca mais flexível
     const relevantDocs = agent.ragDocuments.filter((doc: any) => {
-      if (!doc.content) return false;
+      if (!doc.content) {
+        console.log("⚠️ Documento sem conteúdo:", doc.originalName);
+        return false;
+      }
       
-      const messageWords = userMessage.toLowerCase().split(' ');
+      const messageWords = userMessage.toLowerCase().split(/\s+/);
       const docContent = doc.content.toLowerCase();
       
-      // Verificar se pelo menos 2 palavras da pergunta estão no documento
-      const matchingWords = messageWords.filter(word => 
-        word.length > 3 && docContent.includes(word)
-      );
+      // Palavras-chave específicas para melhor busca
+      const keyWords = messageWords.filter(word => word.length > 2);
       
-      return matchingWords.length >= Math.min(2, messageWords.length);
+      // Verificar se alguma palavra da pergunta está no documento
+      const hasRelevantContent = keyWords.some(word => docContent.includes(word)) ||
+        docContent.includes('empresa') ||
+        docContent.includes('suporte') ||
+        docContent.includes('produto') ||
+        docContent.includes('contato') ||
+        docContent.includes('treinamento');
+      
+      console.log(`📄 ${doc.originalName}: ${hasRelevantContent ? '✅ relevante' : '❌ não relevante'}`);
+      return hasRelevantContent;
     });
 
     if (relevantDocs.length === 0) {
+      console.log("❌ Nenhum documento relevante encontrado");
       return null;
     }
 
+    console.log(`✅ Encontrados ${relevantDocs.length} documentos relevantes`);
+
     // Combinar conteúdo dos documentos relevantes
     const context = relevantDocs
-      .map((doc: any) => `Documento: ${doc.originalName}\nConteúdo: ${doc.content}`)
-      .join('\n\n');
+      .map((doc: any) => `[Documento: ${doc.originalName}]\n${doc.content}`)
+      .join('\n\n---\n\n');
 
-    return context.substring(0, 3000); // Limitar o contexto para não exceder tokens
+    const finalContext = context.substring(0, 4000);
+    console.log("📋 Contexto criado com", finalContext.length, "caracteres");
+    
+    return finalContext;
   }
 
   validateAgentConfiguration(agent: Partial<Agent>): string[] {

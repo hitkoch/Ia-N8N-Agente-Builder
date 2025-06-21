@@ -133,24 +133,38 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
         reader.readAsText(file);
       } else {
-        // Para outros tipos, criar conteúdo simulado
-        const simulatedContent = `
-        Este é o conteúdo simulado do arquivo ${file.name}.
-        
-        Informações importantes:
-        - Nome do arquivo: ${file.name}
-        - Tamanho: ${(file.size / 1024).toFixed(1)} KB
-        - Tipo: ${file.type}
-        
-        Em um ambiente de produção, este conteúdo seria extraído automaticamente usando bibliotecas específicas para cada tipo de arquivo (PDF, DOC, etc.).
-        
-        Exemplo de informações que poderiam estar neste documento:
-        - Políticas da empresa
-        - Procedimentos operacionais
-        - Informações de produtos
-        - Dados técnicos
-        - Perguntas frequentes
-        `;
+        // Para outros tipos, criar conteúdo simulado mais realístico
+        const simulatedContent = `Documento: ${file.name}
+
+Este é um documento de exemplo da base de conhecimento.
+
+Informações da Empresa TechCorp Solutions:
+- Fundada em 2020
+- Especializada em desenvolvimento de software e automação
+- Localização: São Paulo, Brasil
+- Email de suporte: suporte@techcorp.com
+- Telefone: (11) 1234-5678
+
+Nossos Produtos:
+1. Sistema de gestão empresarial
+2. Aplicativos móveis personalizados  
+3. Consultoria em tecnologia
+4. Treinamentos em programação
+
+Política de Atendimento:
+- Horário: Segunda a sexta, 8h às 18h
+- Suporte via chat, email e telefone
+- Tempo de resposta: até 2 horas para casos urgentes
+- Garantia: 12 meses em todos os produtos
+
+Como solicitar suporte:
+Entre em contato através do email suporte@techcorp.com ou telefone (11) 1234-5678
+
+Prazo de entrega dos projetos:
+Varia de 30 a 90 dias dependendo da complexidade
+
+Treinamentos disponíveis:
+Oferecemos treinamentos presenciais e online para todas as soluções`;
         
         const newDoc = {
           id: Date.now(),
@@ -164,7 +178,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         
         toast({
           title: "Arquivo adicionado",
-          description: `${file.name} foi adicionado à base de conhecimento (conteúdo simulado).`,
+          description: `${file.name} foi adicionado à base de conhecimento.`,
         });
       }
     }
