@@ -7,12 +7,14 @@ import { setupVite, serveStatic, log } from "./vite";
 const app = express();
 
 // CORS configuration - must be BEFORE all routes
+// Maximum openness for testing and webchat external integration
 app.use(cors({ 
-  origin: '*',  // Allow all origins for webchat
-  credentials: false,  // Set to false when using origin: '*'
-  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  origin: '*',  // Allow ALL origins
+  credentials: false,  // Must be false when using origin: '*'
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+  allowedHeaders: ['*'],  // Allow all headers
+  preflightContinue: false,
+  optionsSuccessStatus: 200  // Some legacy browsers choke on 204
 }));
 
 app.use(express.json({ limit: '10mb' }));
