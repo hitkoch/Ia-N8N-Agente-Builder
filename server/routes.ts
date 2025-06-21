@@ -837,13 +837,25 @@ export function registerRoutes(app: Express): Server {
     res.sendFile(path.join(process.cwd(), 'public', 'webhook-test.html'));
   });
 
-  // GET endpoint to show webhook information
+  // Simple test endpoint to verify external access
+  app.get("/api/test-external", (req, res) => {
+    res.json({
+      message: "External access working",
+      timestamp: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+  });
+
+  // GET endpoint to show webhook information - MUST be accessible externally
   app.get("/api/whatsapp/webhook", (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({
       service: "WhatsApp Webhook Endpoint",
       status: "active",
       url: "https://workspace.hitkoch.replit.dev/api/whatsapp/webhook",
-      methods: ["POST"],
+      methods: ["GET", "POST"],
       description: "Endpoint para receber webhooks da Evolution API WhatsApp Gateway",
       supportedEvents: [
         "MESSAGES_UPSERT",
@@ -851,11 +863,17 @@ export function registerRoutes(app: Express): Server {
         "QRCODE_UPDATED"
       ],
       lastUpdated: new Date().toISOString(),
-      version: "1.0.0"
+      version: "1.0.0",
+      requestInfo: {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        method: req.method,
+        headers: req.headers
+      }
     });
   });
 
-  // Webhook endpoint to receive messages from Evolution API Gateway
+  // Webhook endpoint to receive messages from Evolution API Gateway - PRIORITY ROUTE
   app.post("/api/whatsapp/webhook", webhookRateLimiter, validateWebhookData, async (req, res) => {
     try {
       console.log('📨 Webhook recebido do gateway WhatsApp');
