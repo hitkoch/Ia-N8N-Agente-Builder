@@ -794,6 +794,16 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('test-webhook.html', { root: process.cwd() });
   });
 
+  // Serve WhatsApp dashboard
+  app.get("/whatsapp-dashboard", (req, res) => {
+    res.sendFile('client/public/dashboard.html', { root: process.cwd() });
+  });
+
+  // Serve test dashboard
+  app.get("/test-dashboard", (req, res) => {
+    res.sendFile('test-whatsapp-dashboard.html', { root: process.cwd() });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
