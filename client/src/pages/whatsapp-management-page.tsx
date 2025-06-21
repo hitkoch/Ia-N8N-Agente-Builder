@@ -242,8 +242,6 @@ export default function WhatsAppManagementPage() {
 
       {selectedAgentId && (
         <>
-
-          
           {instanceLoading ? (
             <Card>
               <CardContent className="flex items-center justify-center py-8">
@@ -313,57 +311,7 @@ export default function WhatsAppManagementPage() {
                 </div>
               </div>
 
-              {/* Instance Management Section - Move to top */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    Gerenciamento da Instância
-                  </CardTitle>
-                  <CardDescription>
-                    Controle e configurações da instância WhatsApp
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      onClick={() => refreshStatusMutation.mutate(selectedAgentId)}
-                      disabled={refreshStatusMutation.isPending}
-                      variant="outline"
-                    >
-                      {refreshStatusMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Atualizar Status
-                    </Button>
-                    
-                    {!isConnected && (
-                      <Button
-                        onClick={startPolling}
-                        disabled={isPolling}
-                        variant="outline"
-                      >
-                        {isPolling ? "Verificando..." : "Iniciar Monitoramento"}
-                      </Button>
-                    )}
-                    
-                    <Button
-                      onClick={() => deleteInstanceMutation.mutate(selectedAgentId)}
-                      disabled={deleteInstanceMutation.isPending}
-                      variant="destructive"
-                    >
-                      {deleteInstanceMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Trash2 className="w-4 h-4 mr-2" />
-                      )}
-                      Remover Instância
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              
 
               {/* Connection Status Messages */}
               {status === "open" || isConnected ? (
