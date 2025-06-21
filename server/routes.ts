@@ -206,6 +206,8 @@ export function registerRoutes(app: Express): Server {
       const { message } = req.body;
 
       console.log(`🤖 Webchat: recebida mensagem para agente ${agentId}: "${message}"`);
+      console.log(`🌐 Origin: ${req.headers.origin || 'não especificado'}`);
+      console.log(`🔍 User-Agent: ${req.headers['user-agent'] || 'não especificado'}`);
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: "Mensagem é obrigatória" });

@@ -54,6 +54,17 @@
     const apiUrl = params.get('apiUrl');
     if (apiUrl) {
       config.apiUrl = apiUrl;
+    } else {
+      // Try to extract from iframe's referrer or use current origin
+      try {
+        if (window.parent && window.parent !== window) {
+          // Get the parent window's origin
+          config.apiUrl = window.location.origin + '/api';
+        }
+      } catch (e) {
+        // Cross-origin restriction, use current origin
+        config.apiUrl = window.location.origin + '/api';
+      }
     }
   }
 
@@ -121,13 +132,17 @@
     
     try {
       // Send message to API
-      console.log('Enviando mensagem para:', `${config.apiUrl}/webchat/${config.agentId}/chat`);
-      const response = await fetch(`${config.apiUrl}/webchat/${config.agentId}/chat`, {
+      const apiEndpoint = `${config.apiUrl}/webchat/${config.agentId}/chat`;
+      console.log('Enviando mensagem para:', apiEndpoint);
+      console.log('Config atual:', config);
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message: message }),
+        mode: 'cors', // Explicitly set CORS mode
       });
       
       const data = await response.json();
