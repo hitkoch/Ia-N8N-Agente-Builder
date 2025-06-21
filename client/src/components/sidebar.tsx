@@ -12,11 +12,11 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3 },
-    { id: "agents", name: "AI Agents", icon: Bot },
-    { id: "templates", name: "Templates", icon: FileText },
-    { id: "evolution", name: "Evolution API", icon: Webhook },
-    { id: "testing", name: "Agent Testing", icon: TestTube },
-    { id: "settings", name: "Settings", icon: Settings },
+    { id: "agents", name: "Agentes IA", icon: Bot },
+    { id: "templates", name: "Modelos", icon: FileText },
+    { id: "evolution", name: "API Evolution", icon: Webhook },
+    { id: "testing", name: "Teste de Agentes", icon: TestTube },
+    { id: "settings", name: "Configurações", icon: Settings },
   ];
 
   return (
