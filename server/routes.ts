@@ -526,8 +526,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Create WhatsApp instance for agent
-  app.post("/api/agents/:agentId/whatsapp/create", requireAuth, agentOwnershipMiddleware, async (req, res) => {
+  // Step 1: Create WhatsApp instance structure (no webhook, no QR code yet)
+  app.post("/api/agents/:agentId/whatsapp/create-instance", requireAuth, agentOwnershipMiddleware, async (req, res) => {
     try {
       const { agentId } = req.params;
       const { phoneNumber } = req.body;
@@ -556,6 +556,7 @@ export function registerRoutes(app: Express): Server {
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
       
       // Save to database with PENDING status
+      console.log(`💾 Salvando instância no banco de dados: ${instanceName}`);
       const whatsappInstance = await storage.createWhatsappInstance({
         instanceName,
         status: "PENDING", // Mark as pending activation
@@ -563,7 +564,7 @@ export function registerRoutes(app: Express): Server {
         agentId: parseInt(agentId)
       });
       
-      console.log(`✅ Estrutura da instância WhatsApp criada para agente ${agentId}: ${instanceName}`);
+      console.log(`✅ Estrutura da instância WhatsApp criada para agente ${agentId}: ${instanceName}`, whatsappInstance);
       res.status(201).json(whatsappInstance);
       
     } catch (error: any) {
