@@ -1043,7 +1043,191 @@ export function registerRoutes(app: Express): Server {
 
   // Serve WhatsApp test page
   app.get("/test-whatsapp", (req, res) => {
-    res.sendFile('test-whatsapp.html', { root: process.cwd() });
+    res.send(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste WhatsApp - Plataforma AI Agent</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .test-section { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .button { background: #b8ec00; color: #022b44; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .button:hover { opacity: 0.8; }
+        .result { background: #fff; border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        h1 { color: #022b44; }
+        .step { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste WhatsApp - Sistema AI Agent</h1>
+    
+    <div class="step">
+        <h3>Passo 1: Criar Instância WhatsApp</h3>
+        <button class="button" onclick="createInstance()">Criar Instância</button>
+        <button class="button" onclick="checkStatus()">Verificar Status</button>
+        <div id="instance-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="step">
+        <h3>Passo 2: Testar Webhook - Mensagem</h3>
+        <button class="button" onclick="testMessage()">Simular Mensagem Recebida</button>
+        <div id="message-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="step">
+        <h3>Passo 3: Testar Webhook - Conexão</h3>
+        <button class="button" onclick="testConnection()">Simular Conexão</button>
+        <button class="button" onclick="testDisconnection()">Simular Desconexão</button>
+        <div id="connection-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="step">
+        <h3>Passo 4: Buscar QR Code</h3>
+        <button class="button" onclick="fetchQR()">Buscar QR Code</button>
+        <div id="qr-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="step">
+        <h3>Passo 5: Limpeza</h3>
+        <button class="button" onclick="deleteInstance()" style="background: #dc3545; color: white;">Remover Instância</button>
+        <div id="delete-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="step">
+        <h3>📊 Log de Atividades</h3>
+        <div id="log" class="result">Sistema carregado. Clique nos botões para executar os testes.</div>
+    </div>
+
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.textContent += '\\n[' + time + '] ' + msg;
+        }
+
+        async function apiCall(method, url, data = null) {
+            try {
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                log(method + ' ' + url + ' - Status: ' + response.status);
+                return { status: response.status, data: result };
+            } catch (error) {
+                log('Erro: ' + error.message);
+                return { status: 'error', data: { error: error.message } };
+            }
+        }
+
+        async function createInstance() {
+            log('Criando instância WhatsApp...');
+            const result = await apiCall('POST', '/api/agents/2/whatsapp/create-instance', {
+                phoneNumber: '41999888777'
+            });
+            
+            document.getElementById('instance-result').style.display = 'block';
+            document.getElementById('instance-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 201) {
+                log('✅ Instância criada com sucesso');
+            } else {
+                log('❌ Falha ao criar instância');
+            }
+        }
+
+        async function checkStatus() {
+            log('Verificando status...');
+            const result = await apiCall('GET', '/api/agents/2/whatsapp');
+            
+            document.getElementById('instance-result').style.display = 'block';
+            document.getElementById('instance-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ Status verificado' : '❌ Instância não encontrada');
+        }
+
+        async function testMessage() {
+            log('Enviando mensagem de teste...');
+            const result = await apiCall('POST', '/api/whatsapp/webhook', {
+                event: "MESSAGES_UPSERT",
+                instance: "whatsapp-41999888777",
+                data: {
+                    messages: [{
+                        key: {
+                            remoteJid: "5541999888777@s.whatsapp.net",
+                            fromMe: false,
+                            id: "test_" + Date.now()
+                        },
+                        message: {
+                            conversation: "Olá! Este é um teste. Como você está?"
+                        },
+                        messageTimestamp: Math.floor(Date.now() / 1000).toString()
+                    }]
+                }
+            });
+            
+            document.getElementById('message-result').style.display = 'block';
+            document.getElementById('message-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ Webhook processado' : '❌ Falha no webhook');
+        }
+
+        async function testConnection() {
+            log('Simulando conexão...');
+            const result = await apiCall('POST', '/api/whatsapp/webhook', {
+                event: "CONNECTION_UPDATE",
+                instance: "whatsapp-41999888777",
+                data: { state: "open" }
+            });
+            
+            document.getElementById('connection-result').style.display = 'block';
+            document.getElementById('connection-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ Conexão simulada' : '❌ Falha na conexão');
+        }
+
+        async function testDisconnection() {
+            log('Simulando desconexão...');
+            const result = await apiCall('POST', '/api/whatsapp/webhook', {
+                event: "CONNECTION_UPDATE",
+                instance: "whatsapp-41999888777",
+                data: { state: "close" }
+            });
+            
+            document.getElementById('connection-result').style.display = 'block';
+            document.getElementById('connection-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ Desconexão simulada' : '❌ Falha na desconexão');
+        }
+
+        async function fetchQR() {
+            log('Buscando QR Code...');
+            const result = await apiCall('GET', '/api/agents/2/whatsapp/fetch-qr');
+            
+            document.getElementById('qr-result').style.display = 'block';
+            document.getElementById('qr-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ QR Code obtido' : '❌ QR Code não disponível');
+        }
+
+        async function deleteInstance() {
+            if (!confirm('Tem certeza que deseja remover a instância?')) return;
+            
+            log('Removendo instância...');
+            const result = await apiCall('DELETE', '/api/agents/2/whatsapp');
+            
+            document.getElementById('delete-result').style.display = 'block';
+            document.getElementById('delete-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            log(result.status === 200 ? '✅ Instância removida' : '❌ Falha ao remover');
+        }
+    </script>
+</body>
+</html>
+    `);
   });
 
   // Serve debug page
