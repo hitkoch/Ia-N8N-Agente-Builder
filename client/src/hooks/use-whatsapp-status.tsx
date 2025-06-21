@@ -137,14 +137,16 @@ export function useWhatsAppStatus({
     
     const statusMap = {
       CONNECTED: { label: "Conectado", color: "green" },
+      open: { label: "Conectado", color: "green" },
       PENDING: { label: "Aguardando", color: "yellow" },
       CREATED: { label: "Criado", color: "blue" },
+      connecting: { label: "Conectando", color: "blue" },
       close: { label: "Desconectado", color: "red" },
       DISCONNECTED: { label: "Desconectado", color: "red" },
     };
     
     return statusMap[instance.status as keyof typeof statusMap] || 
-           { label: instance.status, color: "gray" };
+           { label: "Verificando", color: "gray" };
   }, [instance]);
 
   // Check if QR code is available

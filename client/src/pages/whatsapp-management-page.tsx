@@ -365,16 +365,33 @@ export default function WhatsAppManagementPage() {
                 </CardContent>
               </Card>
 
-              {/* QR Code or Connection Status */}
-              {isConnected ? (
-                <Alert className="border-green-200 bg-green-50">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    <strong>WhatsApp Conectado!</strong> Seu agente está pronto para receber mensagens automaticamente.
-                  </AlertDescription>
-                </Alert>
+              {/* Connection Status Messages */}
+              {status === "open" || isConnected ? (
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="pt-6">
+                    <div className="text-center text-green-800">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-sm font-medium">WhatsApp Conectado com Sucesso!</p>
+                      <p className="text-xs mt-1">
+                        Seu agente está pronto para receber e enviar mensagens automaticamente.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               ) : hasQRCode ? (
                 renderQRCode()
+              ) : status === "connecting" ? (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="pt-6">
+                    <div className="text-center text-blue-800">
+                      <Clock className="w-8 h-8 mx-auto mb-2 animate-pulse" />
+                      <p className="text-sm font-medium">Preparando Conexão...</p>
+                      <p className="text-xs mt-1">
+                        Aguarde enquanto geramos o QR Code para conexão.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               ) : needsAttention ? (
                 <Alert variant="destructive">
                   <XCircle className="w-4 h-4" />

@@ -19,7 +19,16 @@ const statusConfig = {
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
     label: "Conectado",
-    description: "WhatsApp está conectado e funcionando",
+    description: "WhatsApp conectado e funcionando",
+    pulse: false
+  },
+  open: {
+    icon: CheckCircle,
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+    borderColor: "border-green-200",
+    label: "Conectado",
+    description: "WhatsApp conectado e funcionando",
     pulse: false
   },
   PENDING: {
@@ -58,14 +67,14 @@ const statusConfig = {
     description: "Conexão perdida com o WhatsApp",
     pulse: false
   },
-  ERROR: {
-    icon: AlertTriangle,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
-    label: "Erro",
-    description: "Erro na conexão",
-    pulse: false
+  connecting: {
+    icon: Clock,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200",
+    label: "Conectando",
+    description: "Escaneie o QR Code para conectar",
+    pulse: true
   }
 };
 
@@ -78,7 +87,15 @@ export default function WhatsAppStatusIndicator({
 }: WhatsAppStatusIndicatorProps) {
   const [dots, setDots] = useState("");
   
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.ERROR;
+  const config = statusConfig[status as keyof typeof statusConfig] || {
+    icon: Clock,
+    color: "text-gray-600",
+    bgColor: "bg-gray-50",
+    borderColor: "border-gray-200",
+    label: "Verificando",
+    description: "Verificando status da conexão",
+    pulse: true
+  };
   const Icon = config.icon;
 
   // Animated dots for loading states
