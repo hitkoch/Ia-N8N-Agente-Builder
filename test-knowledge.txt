@@ -1,0 +1,15 @@
+Esta é uma base de conhecimento de teste.
+
+Informações sobre nossa empresa:
+- Nome: CodeFlow Solutions
+- Fundada: 2023
+- Especialidade: Automação e IA
+
+Nossos planos:
+1. Plano Básico - R$ 99/mês
+2. Plano Premium - R$ 299/mês
+3. Plano Enterprise - R$ 599/mês
+
+Contato:
+Email: contato@codeflow.com.br
+Telefone: (11) 9999-8888

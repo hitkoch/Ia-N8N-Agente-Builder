@@ -131,8 +131,8 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         setRagDocuments(prev => [...prev, newDoc]);
         
         toast({
-          title: "Arquivo adicionado",
-          description: `${file.name} foi adicionado à base de conhecimento.`,
+          title: "Arquivo TXT/MD processado",
+          description: `${file.name} foi adicionado e pode ser usado pelo agente.`,
         });
       };
       
@@ -140,38 +140,20 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
         reader.readAsText(file);
       } else {
-        // Para outros tipos, criar conteúdo simulado mais realístico
-        const simulatedContent = `Documento: ${file.name}
+        // Para arquivos não-texto, criar um placeholder informativo
+        const placeholderContent = `[ARQUIVO NÃO PROCESSADO: ${file.name}]
 
-Este é um documento de exemplo da base de conhecimento.
+AVISO: Este arquivo não pode ser processado automaticamente pelo sistema atual.
+- Nome: ${file.name}
+- Tipo: ${file.type}
+- Tamanho: ${(file.size / 1024).toFixed(1)} KB
 
-Informações da Empresa TechCorp Solutions:
-- Fundada em 2020
-- Especializada em desenvolvimento de software e automação
-- Localização: São Paulo, Brasil
-- Email de suporte: suporte@techcorp.com
-- Telefone: (11) 1234-5678
+Para que o agente possa usar as informações deste arquivo, você precisa:
+1. Converter o arquivo para formato TXT ou MD
+2. Ou copiar e colar o conteúdo relevante manualmente
+3. Ou usar a funcionalidade de texto personalizado na Base de Conhecimento
 
-Nossos Produtos:
-1. Sistema de gestão empresarial
-2. Aplicativos móveis personalizados  
-3. Consultoria em tecnologia
-4. Treinamentos em programação
-
-Política de Atendimento:
-- Horário: Segunda a sexta, 8h às 18h
-- Suporte via chat, email e telefone
-- Tempo de resposta: até 2 horas para casos urgentes
-- Garantia: 12 meses em todos os produtos
-
-Como solicitar suporte:
-Entre em contato através do email suporte@techcorp.com ou telefone (11) 1234-5678
-
-Prazo de entrega dos projetos:
-Varia de 30 a 90 dias dependendo da complexidade
-
-Treinamentos disponíveis:
-Oferecemos treinamentos presenciais e online para todas as soluções`;
+Em um ambiente de produção, seria implementada a extração automática de texto para PDFs, DOCs, etc.`;
         
         const newDoc = {
           id: Date.now(),
@@ -179,13 +161,14 @@ Oferecemos treinamentos presenciais e online para todas as soluções`;
           originalName: file.name,
           fileSize: file.size,
           mimeType: file.type,
-          content: simulatedContent,
+          content: placeholderContent,
         };
         setRagDocuments(prev => [...prev, newDoc]);
         
         toast({
-          title: "Arquivo adicionado",
-          description: `${file.name} foi adicionado à base de conhecimento.`,
+          title: "Arquivo salvo (não processado)",
+          description: `${file.name} foi salvo mas não pode ser lido pelo agente. Use TXT/MD para processamento automático.`,
+          variant: "destructive",
         });
       }
     }
@@ -432,7 +415,7 @@ Oferecemos treinamentos presenciais e online para todas as soluções`;
                     Clique para fazer upload ou arraste arquivos aqui
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
-                    Suporte para PDF, TXT, DOC, DOCX, MD (máx. 10MB)
+                    Suporte para TXT, MD (processamento automático) | PDF, DOC, DOCX (salvos mas não processados)
                   </p>
                   <input
                     type="file"
@@ -484,10 +467,19 @@ Oferecemos treinamentos presenciais e online para todas as soluções`;
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Dicas para Base de Conhecimento</h4>
                   <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Use documentos relevantes para o contexto do seu agente</li>
-                    <li>• Textos bem estruturados melhoram as respostas</li>
+                    <li>• Use arquivos TXT ou MD para melhor processamento</li>
+                    <li>• PDFs, DOCs e outros formatos são salvos mas não processados automaticamente</li>
+                    <li>• Textos bem estruturados melhoram as respostas do agente</li>
                     <li>• Evite documentos muito técnicos se o agente for para usuários finais</li>
-                    <li>• PDFs com texto selecionável funcionam melhor</li>
+                  </ul>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">⚠️ Limitações Atuais</h4>
+                  <ul className="text-xs text-yellow-700 space-y-1">
+                    <li>• Apenas arquivos TXT e MD são processados automaticamente</li>
+                    <li>• PDFs e outros formatos são salvos mas não lidos pelo agente</li>
+                    <li>• Para usar PDFs, converta para TXT ou copie o conteúdo manualmente</li>
                   </ul>
                 </div>
               </CardContent>

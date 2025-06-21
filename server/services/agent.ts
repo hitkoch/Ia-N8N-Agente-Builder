@@ -91,13 +91,19 @@ export class AgentService {
       // Palavras-chave específicas para melhor busca
       const keyWords = messageWords.filter(word => word.length > 2);
       
+      // Ignorar arquivos não processados
+      if (docContent.includes('[arquivo não processado]')) {
+        console.log(`⚠️ ${doc.originalName}: arquivo não processado, ignorando`);
+        return false;
+      }
+
       // Verificar se alguma palavra da pergunta está no documento
       const hasRelevantContent = keyWords.some(word => docContent.includes(word)) ||
-        docContent.includes('empresa') ||
-        docContent.includes('suporte') ||
-        docContent.includes('produto') ||
-        docContent.includes('contato') ||
-        docContent.includes('treinamento');
+        docContent.includes('plano') ||
+        docContent.includes('preço') ||
+        docContent.includes('valor') ||
+        docContent.includes('custo') ||
+        docContent.includes('informação');
       
       console.log(`📄 ${doc.originalName}: ${hasRelevantContent ? '✅ relevante' : '❌ não relevante'}`);
       return hasRelevantContent;
