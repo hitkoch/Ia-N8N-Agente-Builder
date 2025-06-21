@@ -408,14 +408,26 @@ export default function WhatsAppManagementPage() {
                   </CardContent>
                 </Card>
               ) : status === "connecting" ? (
-                <Card className="border-blue-200 bg-blue-50">
+                <Card className="border-orange-200 bg-orange-50">
                   <CardContent className="pt-6">
-                    <div className="text-center text-blue-800">
+                    <div className="text-center text-orange-800">
                       <Clock className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-                      <p className="text-sm font-medium">Preparando Conexão...</p>
-                      <p className="text-xs mt-1">
-                        Aguarde enquanto geramos o QR Code para conexão.
+                      <p className="text-sm font-medium">Instância Antiga - Necessita Reconfiguração</p>
+                      <p className="text-xs mt-1 mb-4">
+                        Esta instância foi criada com o método antigo. Para usar o novo sistema de 2 etapas, exclua e recrie.
                       </p>
+                      <Button
+                        onClick={() => deleteInstanceMutation.mutate(selectedAgentId)}
+                        disabled={deleteInstanceMutation.isPending}
+                        variant="destructive"
+                      >
+                        {deleteInstanceMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
+                        Excluir e Recriar Instância
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
