@@ -9,7 +9,6 @@ import { Agent } from "@shared/schema";
 import { Bot, CheckCircle, Webhook, MessageCircle, Plus, Eye, Zap } from "lucide-react";
 import AgentCard from "@/components/agent-card";
 import CreateAgentModal from "@/components/create-agent-modal";
-import EditAgentModal from "@/components/edit-agent-modal";
 import AgentsPage from "./agents-page";
 import EvolutionPage from "./evolution-page";
 import TestingPage from "./testing-page";
@@ -26,7 +25,6 @@ export default function HomePage() {
   const [currentSection, setCurrentSection] = useState("dashboard");
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -37,11 +35,6 @@ export default function HomePage() {
   });
 
   const recentAgents = agents.slice(0, 3);
-
-  const handleEditAgent = (agentId: number) => {
-    setSelectedAgentId(agentId);
-    setIsEditModalOpen(true);
-  };
 
   const handleTestAgent = (agentId: number) => {
     setSelectedAgentId(agentId);
@@ -214,7 +207,7 @@ export default function HomePage() {
   const renderContent = () => {
     switch (currentSection) {
       case "agents":
-        return <AgentsPage onEdit={handleEditAgent} onTest={handleTestAgent} />;
+        return <AgentsPage onTest={handleTestAgent} />;
       case "evolution":
         return <EvolutionPage />;
       case "testing":
@@ -244,12 +237,6 @@ export default function HomePage() {
       <CreateAgentModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-      />
-
-      <EditAgentModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        agentId={selectedAgentId}
       />
     </div>
   );

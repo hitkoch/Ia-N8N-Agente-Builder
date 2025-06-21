@@ -6,19 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bot, MoreVertical, Edit, Copy, Trash2, Play, Code } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import WebchatCodeModal from "./webchat-code-modal";
 
 interface AgentCardProps {
   agent: Agent;
-  onEdit: () => void;
   onTest: () => void;
 }
 
-export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
+export default function AgentCard({ agent, onTest }: AgentCardProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isWebchatModalOpen, setIsWebchatModalOpen] = useState(false);
 
   const deleteMutation = useMutation({
@@ -131,7 +132,7 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onEdit}>
+                  <DropdownMenuItem onClick={() => setLocation(`/agents/${agent.id}/edit`)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar Agente
                   </DropdownMenuItem>
@@ -173,7 +174,7 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onEdit}
+                onClick={() => setLocation(`/agents/${agent.id}/edit`)}
                 className="flex-1"
               >
                 <Edit className="h-4 w-4 mr-1" />

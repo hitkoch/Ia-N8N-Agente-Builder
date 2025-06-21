@@ -7,11 +7,10 @@ import { useState } from "react";
 import CreateAgentModal from "@/components/create-agent-modal";
 
 interface AgentsPageProps {
-  onEdit: (agentId: number) => void;
   onTest: (agentId: number) => void;
 }
 
-export default function AgentsPage({ onEdit, onTest }: AgentsPageProps) {
+export default function AgentsPage({ onTest }: AgentsPageProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: agents = [], isLoading } = useQuery<Agent[]>({
@@ -67,7 +66,6 @@ export default function AgentsPage({ onEdit, onTest }: AgentsPageProps) {
             <AgentCard
               key={agent.id}
               agent={agent}
-              onEdit={() => onEdit(agent.id)}
               onTest={() => onTest(agent.id)}
             />
           ))}
