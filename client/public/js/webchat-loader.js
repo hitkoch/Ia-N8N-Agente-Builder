@@ -3,7 +3,8 @@
 
   // Configuration
   const CONFIG = {
-    chatUrl: '', // Will be set based on script source
+    chatUrl: '', // Will be set based on script source  
+    apiUrl: '', // Will be set based on script source
     position: 'bottom-right',
     zIndex: 999999
   };
@@ -84,15 +85,21 @@
   }
 
   function setChatUrl(scriptElement) {
-    // Extract base URL from script source
+    // Always use the script source URL for external sites
     const scriptSrc = scriptElement.src;
     if (scriptSrc) {
       const url = new URL(scriptSrc);
       CONFIG.chatUrl = `${url.protocol}//${url.host}/chat.html`;
+      CONFIG.apiUrl = `${url.protocol}//${url.host}/api`;
     } else {
-      // Fallback to current domain
+      // Fallback to current domain (for local development)
       CONFIG.chatUrl = `${window.location.protocol}//${window.location.host}/chat.html`;
+      CONFIG.apiUrl = `${window.location.protocol}//${window.location.host}/api`;
     }
+    
+    console.log('Script source:', scriptSrc);
+    console.log('Chat URL configurada:', CONFIG.chatUrl);
+    console.log('API URL configurada:', CONFIG.apiUrl);
   }
 
   function injectStyles() {
@@ -179,13 +186,13 @@
     chatIframe = document.createElement('iframe');
     chatIframe.className = 'webchat-iframe';
     
-    // Build iframe URL with parameters
+    // Build iframe URL with parameters - use the API URL from script source
     const params = new URLSearchParams({
       agentId: agentConfig.agentId,
       agentName: agentConfig.agentName,
       primaryColor: agentConfig.primaryColor,
       accentColor: agentConfig.accentColor,
-      apiUrl: `${window.location.protocol}//${window.location.host}/api`
+      apiUrl: CONFIG.apiUrl // Use the API URL from script source, not current domain
     });
     
     chatIframe.src = `${CONFIG.chatUrl}?${params.toString()}`;
