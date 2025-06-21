@@ -1,7 +1,7 @@
 import * as mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { embeddingService } from './embeddings';
-import * as pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 
 export interface ProcessedDocument {
   filename: string;
