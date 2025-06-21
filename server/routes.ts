@@ -42,74 +42,7 @@ function generateWebchatCode(agent: Agent, baseUrl: string): string {
 }
 
 export function registerRoutes(app: Express): Server {
-  // PRIORITY: Register webhook routes FIRST
-  app.get("/api/whatsapp/webhook", (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.json({
-      service: "WhatsApp Webhook Endpoint",
-      status: "active",
-      url: "https://workspace.hitkoch.replit.dev/api/whatsapp/webhook",
-      methods: ["GET", "POST"],
-      description: "Endpoint para receber webhooks da Evolution API WhatsApp Gateway",
-      supportedEvents: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
-      lastUpdated: new Date().toISOString(),
-      version: "1.0.0"
-    });
-  });
-
-  app.post("/api/whatsapp/webhook", webhookRateLimiter, validateWebhookData, async (req, res) => {
-    try {
-      const { event, instance, data } = req.body;
-
-      if (event === 'MESSAGES_UPSERT' && data?.messages) {
-        for (const message of data.messages) {
-          if (message.key?.fromMe) continue;
-
-          const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
-          const messageText = message.message?.conversation || '';
-          
-          if (!messageText) continue;
-
-          const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
-          if (!whatsappInstance) continue;
-
-          let agent = null;
-          for (let userId = 1; userId <= 100; userId++) {
-            try {
-              const userAgents = await storage.getAgentsByOwner(userId);
-              const foundAgent = userAgents.find(a => a.id === whatsappInstance.agentId);
-              if (foundAgent) {
-                agent = foundAgent;
-                break;
-              }
-            } catch (error) {
-              continue;
-            }
-          }
-
-          if (!agent) continue;
-
-          const aiResponse = await agentService.testAgent(agent, messageText);
-          if (aiResponse?.trim()) {
-            await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
-            await storage.createConversation({
-              agentId: agent.id,
-              contactId: phoneNumber,
-              messages: [
-                { role: 'user', content: messageText, timestamp: new Date() },
-                { role: 'assistant', content: aiResponse, timestamp: new Date() }
-              ]
-            });
-          }
-        }
-      }
-      
-      res.json({ status: 'processed' });
-    } catch (error) {
-      res.status(500).json({ status: 'error' });
-    }
-  });
+  // Webhook routes are now handled in webhook.ts
 
   // Other routes
   setupAuth(app);

@@ -3,6 +3,7 @@ import cors from "cors";
 import { seedDatabase } from "./seed";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupWebhookRoutes } from "./webhook";
 
 const app = express();
 
@@ -59,7 +60,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Register API routes FIRST - this is critical for webhook access
+  // Setup webhook routes with ABSOLUTE PRIORITY
+  setupWebhookRoutes(app);
+  
+  // Register other API routes
   const server = await registerRoutes(app);
 
   // Error handler for API routes
@@ -69,6 +73,14 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // CRITICAL: API routes must be processed before Vite catch-all
+  // Add explicit API route priority middleware
+  app.use('/api/*', (req, res, next) => {
+    // Ensure API routes bypass Vite middleware
+    res.setHeader('X-API-Route', 'true');
+    next();
   });
 
   // Setup Vite/static serving AFTER API routes
