@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -49,25 +49,8 @@ const googleServices = [
 export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
-  const [ragDocuments, setRagDocuments] = useState<any[]>([]);
-  const [apiConfigs, setApiConfigs] = useState<any[]>([]);
-  const [newApiConfig, setNewApiConfig] = useState({ name: "", baseUrl: "", authType: "none" });
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  const form = useForm<UpdateAgentForm>({
-    resolver: zodResolver(updateAgentSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      systemPrompt: "",
-      model: "gpt-4o",
-      temperature: 0.7,
-      status: "draft",
-    },
-  });
-
+  // Agent data query
   const { data: agent, isLoading: agentLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
     queryFn: async () => {
@@ -77,27 +60,63 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     enabled: isOpen && !!agentId,
   });
 
-  const { data: documents } = useQuery({
-    queryKey: ["/api/agents", agentId, "documents"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/agents/${agentId}/documents`);
-      return await res.json();
-    },
-    enabled: isOpen && !!agentId,
+  // Initialize form with agent data
+  const defaultValues = useMemo(() => ({
+    name: agent?.name || "",
+    description: agent?.description || "",
+    systemPrompt: agent?.systemPrompt || "",
+    model: agent?.model || "gpt-4o",
+    temperature: agent?.temperature || 0.7,
+    status: agent?.status || "draft",
+  }), [agent]);
+
+  const form = useForm<UpdateAgentForm>({
+    resolver: zodResolver(updateAgentSchema),
+    values: defaultValues, // Use values instead of defaultValues to update when agent changes
   });
 
-  const { data: configs } = useQuery({
-    queryKey: ["/api/agents", agentId, "api-configs"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/agents/${agentId}/api-configs`);
-      return await res.json();
-    },
-    enabled: isOpen && !!agentId,
-  });
+  // Parse existing tools and services
+  const existingTools = useMemo(() => {
+    return agent?.tools ? agent.tools.split(',').filter(Boolean) : [];
+  }, [agent?.tools]);
+
+  const existingGoogleServices = useMemo(() => {
+    return agent?.googleServices ? agent.googleServices.split(',').filter(Boolean) : [];
+  }, [agent?.googleServices]);
+
+  // Local state for selections
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
+  const [ragDocuments, setRagDocuments] = useState<any[]>([]);
+  const [apiConfigs, setApiConfigs] = useState<any[]>([]);
+  const [newApiConfig, setNewApiConfig] = useState({ name: "", baseUrl: "", authType: "none" });
+
+  // Initialize selections when agent data is available
+  React.useEffect(() => {
+    if (agent && isOpen) {
+      setSelectedTools(existingTools);
+      setSelectedGoogleServices(existingGoogleServices);
+    }
+  }, [agent, isOpen, existingTools, existingGoogleServices]);
+
+  // Reset states when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setSelectedTools([]);
+      setSelectedGoogleServices([]);
+      setRagDocuments([]);
+      setApiConfigs([]);
+      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
+    }
+  }, [isOpen]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateAgentForm) => {
-      const res = await apiRequest("PUT", `/api/agents/${agentId}`, data);
+      const res = await apiRequest("PUT", `/api/agents/${agentId}`, {
+        ...data,
+        tools: selectedTools.join(','),
+        googleServices: selectedGoogleServices.join(','),
+      });
       return await res.json();
     },
     onSuccess: () => {
@@ -118,65 +137,23 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     },
   });
 
-  // Initialize data when modal opens and agent data is available
-  React.useEffect(() => {
-    if (!isOpen) {
-      setIsInitialized(false);
-      setSelectedTools([]);
-      setSelectedGoogleServices([]);
-      setRagDocuments([]);
-      setApiConfigs([]);
-      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
-      return;
-    }
-
-    if (isOpen && agent && !isInitialized) {
-      const formData = {
-        name: agent.name || "",
-        description: agent.description || "",
-        systemPrompt: agent.systemPrompt || "",
-        model: agent.model || "gpt-4o",
-        temperature: agent.temperature || 0.7,
-        status: agent.status || "draft",
-      };
-
-      form.reset(formData);
-      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
-      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
-      
-      if (documents) setRagDocuments(documents);
-      if (configs) setApiConfigs(configs);
-      
-      setIsInitialized(true);
-    }
-  }, [isOpen, agent?.id, documents, configs, isInitialized]);
-
-  const onSubmit = useCallback((data: UpdateAgentForm) => {
-    const updateData = {
-      ...data,
-      tools: selectedTools.join(','),
-      googleServices: selectedGoogleServices.join(','),
-    };
-    updateMutation.mutate(updateData);
-  }, [selectedTools, selectedGoogleServices, updateMutation]);
-
-  const handleToolToggle = useCallback((toolId: string) => {
+  const handleToolToggle = (toolId: string) => {
     setSelectedTools(prev => 
       prev.includes(toolId) 
         ? prev.filter(id => id !== toolId)
         : [...prev, toolId]
     );
-  }, []);
+  };
 
-  const handleGoogleServiceToggle = useCallback((serviceId: string) => {
+  const handleGoogleServiceToggle = (serviceId: string) => {
     setSelectedGoogleServices(prev => 
       prev.includes(serviceId) 
         ? prev.filter(id => id !== serviceId)
         : [...prev, serviceId]
     );
-  }, []);
+  };
 
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const newDoc = {
@@ -185,7 +162,6 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         originalName: file.name,
         fileSize: file.size,
         mimeType: file.type,
-        content: `Conteúdo do arquivo ${file.name}`,
       };
       setRagDocuments(prev => [...prev, newDoc]);
       
@@ -194,24 +170,21 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         description: `${file.name} foi adicionado à base de conhecimento.`,
       });
     }
-  }, [toast]);
+  };
 
-  const removeDocument = useCallback((docId: number) => {
+  const removeDocument = (docId: number) => {
     setRagDocuments(prev => prev.filter(doc => doc.id !== docId));
-    
     toast({
       title: "Arquivo removido",
       description: "O arquivo foi removido da base de conhecimento.",
     });
-  }, [toast]);
+  };
 
-  const addApiConfig = useCallback(() => {
+  const addApiConfig = () => {
     if (newApiConfig.name && newApiConfig.baseUrl) {
       const config = {
         id: Date.now(),
         ...newApiConfig,
-        authConfig: "{}",
-        endpoints: "[]",
         isActive: true,
       };
       setApiConfigs(prev => [...prev, config]);
@@ -222,16 +195,19 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         description: `Configuração da API ${config.name} foi adicionada.`,
       });
     }
-  }, [newApiConfig, toast]);
+  };
 
-  const removeApiConfig = useCallback((configId: number) => {
+  const removeApiConfig = (configId: number) => {
     setApiConfigs(prev => prev.filter(config => config.id !== configId));
-    
     toast({
       title: "API removida",
       description: "A configuração da API foi removida.",
     });
-  }, [toast]);
+  };
+
+  const onSubmit = (data: UpdateAgentForm) => {
+    updateMutation.mutate(data);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
