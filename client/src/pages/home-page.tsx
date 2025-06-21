@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import { useQuery } from "@tanstack/react-query";
