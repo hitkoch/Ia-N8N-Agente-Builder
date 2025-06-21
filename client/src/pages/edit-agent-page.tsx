@@ -296,69 +296,119 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Descrição</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Descreva a função do agente"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Prompt do Sistema</label>
-                  <textarea
-                    value={formData.systemPrompt}
-                    onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Instruções para o comportamento do agente"
-                    rows={4}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Base de Conhecimento</label>
-                  <textarea
-                    value={formData.knowledgeBase || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, knowledgeBase: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente"
-                    rows={4}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Conhecimento específico e contexto que o agente deve usar nas suas respostas.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Modelo</label>
-                    <select
-                      value={formData.model}
-                      onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="gpt-4o">GPT-4 Omni</option>
-                      <option value="gpt-4">GPT-4</option>
-                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Temperatura</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="2"
-                      step="0.1"
-                      value={formData.temperature}
-                      onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                      Descrição
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#022b44';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      placeholder="Descreva a função do agente"
+                      rows={3}
                     />
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                      Prompt do Sistema
+                    </label>
+                    <textarea
+                      value={formData.systemPrompt}
+                      onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#022b44';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      placeholder="Instruções para o comportamento do agente"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                      Base de Conhecimento
+                    </label>
+                    <textarea
+                      value={formData.knowledgeBase || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, knowledgeBase: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#022b44';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      placeholder="Informações específicas, contexto adicional ou conhecimento especializado para o agente"
+                      rows={4}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Conhecimento específico e contexto que o agente deve usar nas suas respostas.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                        Modelo
+                      </label>
+                      <select
+                        value={formData.model}
+                        onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#022b44';
+                          e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="gpt-4o">GPT-4 Omni</option>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: '#022b44' }}>
+                        Temperatura
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value={formData.temperature}
+                        onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#022b44';
+                          e.target.style.boxShadow = `0 0 0 2px rgba(2, 43, 68, 0.2)`;
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Status</label>
