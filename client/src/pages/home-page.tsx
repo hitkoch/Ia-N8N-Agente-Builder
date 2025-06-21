@@ -296,7 +296,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar currentSection={currentSection} onSectionChange={setCurrentSection} />
+      <Sidebar currentSection={currentSection} onSectionChange={(section) => {
+        if (section === "whatsapp") {
+          window.location.href = "/whatsapp.html";
+        } else {
+          setCurrentSection(section);
+        }
+      }} />
       
       <div className="ml-64 flex flex-col min-h-screen">
         <Header 
