@@ -30,10 +30,35 @@ export default function Header({ currentSection, onCreateAgent, onOpenWizard }: 
             <Bell className="h-4 w-4" />
             <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
           </Button>
-          <Button onClick={onCreateAgent}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Agent
-          </Button>
+          <div className="flex space-x-2">
+            {onOpenWizard && (
+              <Button 
+                onClick={onOpenWizard} 
+                className="flex items-center space-x-2"
+                style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b8ec00';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                <Bot className="h-4 w-4" />
+                <span>Assistente</span>
+              </Button>
+            )}
+            <Button 
+              onClick={onCreateAgent} 
+              variant="outline"
+              className="flex items-center space-x-2"
+              style={{ borderColor: '#022b44', color: '#022b44' }}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Criar Rápido</span>
+            </Button>
+          </div>
         </div>
       </div>
     </header>

@@ -249,6 +249,7 @@ export default function HomePage() {
         <Header 
           currentSection={currentSection}
           onCreateAgent={() => setIsCreateModalOpen(true)}
+          onOpenWizard={() => setIsWizardOpen(true)}
         />
         
         <main className="flex-1 p-6">
@@ -256,6 +257,11 @@ export default function HomePage() {
         </main>
       </div>
 
+      <AgentCreationWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+      />
+      
       <CreateAgentModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
