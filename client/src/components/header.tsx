@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Bell } from "lucide-react";
+import { Plus, Bell, Bot } from "lucide-react";
 
 interface HeaderProps {
   currentSection: string;
   onCreateAgent: () => void;
+  onOpenWizard?: () => void;
 }
 
 const sectionTitles = {
@@ -14,7 +15,7 @@ const sectionTitles = {
   settings: { title: "Settings", subtitle: "Manage your account and preferences" },
 };
 
-export default function Header({ currentSection, onCreateAgent }: HeaderProps) {
+export default function Header({ currentSection, onCreateAgent, onOpenWizard }: HeaderProps) {
   const { title, subtitle } = sectionTitles[currentSection as keyof typeof sectionTitles] || sectionTitles.dashboard;
 
   return (

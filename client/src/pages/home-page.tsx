@@ -9,6 +9,7 @@ import { Agent } from "@shared/schema";
 import { Bot, CheckCircle, Webhook, MessageCircle, Plus, Eye, Zap } from "lucide-react";
 import AgentCard from "@/components/agent-card";
 import CreateAgentModal from "@/components/create-agent-modal";
+import AgentCreationWizard from "@/components/agent-creation-wizard";
 import AgentsPage from "./agents-page";
 import TemplatesPage from "./templates-page";
 import EvolutionPage from "./evolution-page";
@@ -26,6 +27,7 @@ export default function HomePage() {
   const [currentSection, setCurrentSection] = useState("dashboard");
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -154,16 +156,33 @@ export default function HomePage() {
           <CardContent className="space-y-4">
             <Button
               variant="outline"
+              className="w-full justify-start h-auto p-4 mb-2"
+              onClick={() => setIsWizardOpen(true)}
+              style={{ borderColor: '#b8ec00' }}
+            >
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center mr-4" style={{ backgroundColor: '#b8ec00' }}>
+                  <Bot className="h-5 w-5" style={{ color: '#022b44' }} />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium" style={{ color: '#022b44' }}>Assistente de Criação</p>
+                  <p className="text-xs text-slate-500">Guia passo a passo personalizado</p>
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
               className="w-full justify-start h-auto p-4"
               onClick={() => setIsCreateModalOpen(true)}
             >
               <div className="flex items-center">
-                <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center mr-4">
-                  <Plus className="h-5 w-5 text-primary" />
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center mr-4" style={{ backgroundColor: '#022b44' }}>
+                  <Plus className="h-5 w-5" style={{ color: '#b8ec00' }} />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-slate-900">Create New Agent</p>
-                  <p className="text-xs text-slate-500">Build a custom AI assistant</p>
+                  <p className="text-sm font-medium" style={{ color: '#022b44' }}>Criação Rápida</p>
+                  <p className="text-xs text-slate-500">Para usuários experientes</p>
                 </div>
               </div>
             </Button>
