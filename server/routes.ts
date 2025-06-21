@@ -911,5 +911,86 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
 
+  // WhatsApp webhook endpoint to receive messages
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      console.log("📨 Webhook WhatsApp recebido:", JSON.stringify(req.body, null, 2));
+      
+      const { event, instance, data } = req.body;
+      
+      // Handle different webhook events
+      if (event === "MESSAGES_UPSERT") {
+        const messages = data?.messages || [];
+        
+        for (const message of messages) {
+          // Skip messages sent by the bot itself
+          if (message.key?.fromMe) {
+            console.log("⏭️ Ignorando mensagem própria");
+            continue;
+          }
+          
+          // Skip non-text messages for now
+          if (!message.message?.conversation) {
+            console.log("⏭️ Ignorando mensagem não-texto");
+            continue;
+          }
+          
+          const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '');
+          const messageText = message.message.conversation;
+          
+          console.log(`📱 Nova mensagem de ${phoneNumber}: ${messageText}`);
+          
+          // Find the agent associated with this instance
+          const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+          if (!whatsappInstance) {
+            console.log(`❌ Instância não encontrada: ${instance}`);
+            continue;
+          }
+          
+          const agent = await storage.getAgent(whatsappInstance.agentId, whatsappInstance.agentId);
+          if (!agent) {
+            console.log(`❌ Agente não encontrado para instância: ${instance}`);
+            continue;
+          }
+          
+          // Generate AI response
+          try {
+            const aiResponse = await agentService.testAgent(agent, messageText);
+            
+            // Send response back via WhatsApp
+            await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
+            
+            console.log(`✅ Resposta enviada para ${phoneNumber}: ${aiResponse}`);
+            
+          } catch (aiError) {
+            console.error(`❌ Erro ao processar mensagem do agente:`, aiError);
+            
+            // Send fallback message
+            const fallbackMessage = "Desculpe, estou com dificuldades técnicas no momento. Tente novamente em alguns instantes.";
+            await whatsappGatewayService.sendMessage(instance, phoneNumber, fallbackMessage);
+          }
+        }
+      } else if (event === "CONNECTION_UPDATE") {
+        console.log(`🔄 Status de conexão atualizado para ${instance}:`, data);
+        
+        // Update instance status in database
+        try {
+          const connectionStatus = data?.state || "unknown";
+          await storage.updateWhatsappInstanceByName(instance, {
+            status: connectionStatus
+          });
+        } catch (updateError) {
+          console.error("❌ Erro ao atualizar status da instância:", updateError);
+        }
+      }
+      
+      res.status(200).json({ success: true });
+      
+    } catch (error) {
+      console.error("❌ Erro no webhook WhatsApp:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   return httpServer;
 }

@@ -46,8 +46,10 @@ export interface IStorage {
   
   // WhatsApp Instances management
   getWhatsappInstance(agentId: number): Promise<WhatsappInstance | undefined>;
+  getWhatsappInstanceByName(instanceName: string): Promise<WhatsappInstance | undefined>;
   createWhatsappInstance(instance: InsertWhatsappInstance): Promise<WhatsappInstance>;
   updateWhatsappInstance(agentId: number, updates: Partial<InsertWhatsappInstance>): Promise<WhatsappInstance | undefined>;
+  updateWhatsappInstanceByName(instanceName: string, updates: Partial<InsertWhatsappInstance>): Promise<WhatsappInstance | undefined>;
   deleteWhatsappInstance(agentId: number): Promise<boolean>;
   
   sessionStore: any;

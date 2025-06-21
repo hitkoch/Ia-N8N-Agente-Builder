@@ -1,0 +1,108 @@
+## Objetivo: Configurar Automaticamente o Webhook na Criação da Instância do WhatsApp
+
+Atualize a lógica de criação de instâncias da API Evolution para que, imediatamente após uma nova instância ser criada, seu webhook seja configurado para apontar para nossa aplicação. Isso é essencial para que o agente de IA possa receber e responder às mensagens.
+
+---
+
+### **PARTE 1: ATUALIZAÇÃO DO SERVIÇO `evolutionApiService.js`**
+
+**Ação:** Adicione uma nova função ao serviço `src/services/evolutionApiService.js`.
+
+1.  **Crie a Função `setWebhook(instanceName)`:**
+    *   **Assinatura da Função:** `async function setWebhook(instanceName)`
+    *   **Lógica:**
+        1.  Esta função fará uma requisição `POST` para o endpoint `/webhook/set/{instanceName}` do gateway da API Evolution.
+        2.  O corpo da requisição (payload) deve ser exatamente o JSON que configura o webhook para receber os eventos necessários.
+        3.  A URL do webhook deve ser construída dinamicamente para apontar para o nosso servidor.
+    *   **Implementação de Exemplo:**
+        ```javascript
+        async function setWebhook(instanceName) {
+          // A URL pública do nosso servidor Replit.
+          // Certifique-se de ter essa variável nos seus Secrets (.env).
+          const myAppBaseUrl = process.env.MY_APP_BASE_URL; 
+          
+          const webhookUrl = `${myAppBaseUrl}/api/whatsapp/webhook`;
+
+          const payload = {
+            webhook: {
+              enabled: true,
+              url: webhookUrl,
+              // Adicione cabeçalhos se precisar de segurança extra no webhook
+              // headers: { "Authorization": "Bearer SEU_TOKEN_SECRETO" }, 
+              events: [
+                "MESSAGES_UPSERT", // O evento mais importante para novas mensagens
+                "CONNECTION_UPDATE" // Útil para saber se o cliente conectou/desconectou
+              ]
+            }
+          };
+
+          try {
+            // A instância do axios `apiClient` já deve ter a URL base e a apikey.
+            const response = await apiClient.post(`/webhook/set/${instanceName}`, payload);
+            console.log(`Webhook configurado com sucesso para a instância ${instanceName}:`, response.data);
+            return response.data;
+          } catch (error) {
+            console.error(`Falha ao configurar o webhook para ${instanceName}:`, error.response?.data || error.message);
+            throw error;
+          }
+        }
+        ```
+    *   **Exporte a nova função** para que o controlador possa usá-la.
+
+---
+
+### **PARTE 2: ATUALIZAÇÃO DO CONTROLADOR `whatsappController.js`**
+
+**Ação:** Modifique a função `createInstance` no arquivo `src/controllers/whatsappController.js`.
+
+1.  **Integre a Configuração do Webhook:**
+    *   Na função `createInstance`, logo **após** a chamada para `evolutionApiService.createInstance(instanceName)` ser bem-sucedida, adicione uma nova chamada para a função que acabamos de criar.
+    *   **Fluxo Lógico Atualizado:**
+        1.  Gerar `instanceName`.
+        2.  Chamar `evolutionApiService.createInstance(instanceName)`. **(Passo existente)**
+        3.  Se a criação for bem-sucedida, **imediatamente chame `evolutionApiService.setWebhook(instanceName)`**. **(Novo Passo Crucial)**
+        4.  Se a configuração do webhook for bem-sucedida, prossiga para salvar tudo no banco de dados e retornar a resposta para o frontend.
+        5.  Se qualquer um dos passos falhar, retorne um erro e, se possível, reverta a criação da instância (ou marque-a como "falha").
+
+*   **Implementação de Exemplo no Controlador:**
+    ```javascript
+    // Em src/controllers/whatsappController.js
+
+    exports.createInstance = async (req, res) => {
+      // ... (verificações de segurança e geração do instanceName) ...
+
+      try {
+        // Passo 1: Criar a instância na API Evolution
+        const creationResponse = await evolutionApiService.createInstance(instanceName);
+        
+        // Passo 2: Configurar o Webhook para esta nova instância
+        await evolutionApiService.setWebhook(instanceName);
+
+        // Passo 3: Salvar no nosso banco de dados
+        const newInstance = await prisma.whatsAppInstance.create({
+          data: {
+            instanceName: instanceName,
+            qrCode: creationResponse.qrcode?.base64,
+            status: 'CREATED',
+            agentId: agentId,
+          },
+        });
+
+        res.status(201).json(newInstance);
+
+      } catch (error) {
+        console.error("Erro no processo de criação da instância:", error);
+        // Adicionar lógica de limpeza se necessário (ex: deletar instância criada no gateway)
+        res.status(500).json({ error: "Falha ao criar e configurar a instância do WhatsApp." });
+      }
+    };
+    ```
+
+---
+
+### **Instruções Finais para a IA:**
+
+1.  Adicione a variável de ambiente `MY_APP_BASE_URL` aos Secrets do Replit. O valor deve ser a URL pública principal da sua aplicação (ex: `https://seu-projeto.seu-user.replit.dev`).
+2.  Implemente a nova função `setWebhook` em `evolutionApiService.js`, garantindo que ela construa a URL do webhook dinamicamente.
+3.  Modifique a função `createInstance` em `whatsappController.js` para chamar `setWebhook` como o segundo passo do processo de criação.
+4.  Certifique-se de que a rota do webhook `POST /api/whatsapp/webhook` está implementada para ignorar mensagens com `fromMe: true` para evitar que o bot responda a si mesmo.
