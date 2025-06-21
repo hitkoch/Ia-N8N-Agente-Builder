@@ -333,36 +333,11 @@ export class WhatsAppGatewayService {
       webhook: {
         enabled: true,
         url: webhookUrl,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        byEvents: false,
-        base64: true,
+        base64: true, // ATIVADO: Para receber imagens, áudios, etc.
         events: [
-          'APPLICATION_STARTUP',
-          'QRCODE_UPDATED', 
-          'MESSAGES_SET',
-          'MESSAGES_UPSERT',
-          'MESSAGES_UPDATE',
-          'MESSAGES_DELETE',
-          'SEND_MESSAGE',
-          'CONTACTS_SET',
-          'CONTACTS_UPSERT',
-          'CONTACTS_UPDATE',
-          'PRESENCE_UPDATE',
-          'CHATS_SET',
-          'CHATS_UPSERT',
-          'CHATS_UPDATE',
-          'CHATS_DELETE',
-          'GROUPS_UPSERT',
-          'GROUP_UPDATE',
-          'GROUP_PARTICIPANTS_UPDATE',
-          'CONNECTION_UPDATE',
-          'LABELS_EDIT',
-          'LABELS_ASSOCIATION',
-          'CALL',
-          'TYPEBOT_START',
-          'TYPEBOT_CHANGE_STATUS'
+          "MESSAGES_UPSERT",   // ATIVADO: Evento principal para novas mensagens.
+          "CONNECTION_UPDATE"  // ATIVADO: Útil para saber o status da conexão.
+          // Todos os outros eventos foram removidos para otimização.
         ]
       }
     };
