@@ -120,26 +120,6 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
 
   // Initialize data when modal opens and agent data is available
   React.useEffect(() => {
-    if (isOpen && agent && !isInitialized) {
-      form.reset({
-        name: agent.name || "",
-        description: agent.description || "",
-        systemPrompt: agent.systemPrompt || "",
-        model: agent.model || "gpt-4o",
-        temperature: agent.temperature || 0.7,
-        status: agent.status || "draft",
-      });
-      
-      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
-      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
-      setRagDocuments(documents || []);
-      setApiConfigs(configs || []);
-      setIsInitialized(true);
-    }
-  }, [isOpen, agent, documents, configs, isInitialized, form]);
-
-  // Reset when modal closes
-  React.useEffect(() => {
     if (!isOpen) {
       setIsInitialized(false);
       setSelectedTools([]);
@@ -147,16 +127,29 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
       setRagDocuments([]);
       setApiConfigs([]);
       setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
-      form.reset({
-        name: "",
-        description: "",
-        systemPrompt: "",
-        model: "gpt-4o",
-        temperature: 0.7,
-        status: "draft",
-      });
+      return;
     }
-  }, [isOpen, form]);
+
+    if (isOpen && agent && !isInitialized) {
+      const formData = {
+        name: agent.name || "",
+        description: agent.description || "",
+        systemPrompt: agent.systemPrompt || "",
+        model: agent.model || "gpt-4o",
+        temperature: agent.temperature || 0.7,
+        status: agent.status || "draft",
+      };
+
+      form.reset(formData);
+      setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
+      setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
+      
+      if (documents) setRagDocuments(documents);
+      if (configs) setApiConfigs(configs);
+      
+      setIsInitialized(true);
+    }
+  }, [isOpen, agent?.id, documents, configs, isInitialized]);
 
   const onSubmit = useCallback((data: UpdateAgentForm) => {
     const updateData = {
