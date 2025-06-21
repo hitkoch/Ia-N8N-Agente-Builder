@@ -3,8 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Loader2, Smartphone, QrCode, CheckCircle, XCircle, RefreshCw, Trash2, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,6 +28,8 @@ interface WhatsAppInstance {
 
 export default function WhatsAppManagementPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -68,8 +73,10 @@ export default function WhatsAppManagementPage() {
   });
 
   const createInstanceMutation = useMutation({
-    mutationFn: async (agentId: number) => {
-      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/create`);
+    mutationFn: async ({ agentId, phoneNumber }: { agentId: number; phoneNumber: string }) => {
+      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/create`, {
+        phoneNumber: phoneNumber
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -78,6 +85,8 @@ export default function WhatsAppManagementPage() {
         title: "Instância criada",
         description: "Instância WhatsApp criada com sucesso. Escaneie o QR Code para conectar.",
       });
+      setIsCreateDialogOpen(false);
+      setPhoneNumber("");
       startPolling();
     },
     onError: (error: any) => {
@@ -244,6 +253,47 @@ export default function WhatsAppManagementPage() {
             </Card>
           ) : hasInstance ? (
             <div className="space-y-6">
+              {/* Instance Management Section - Move to top */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Gerenciamento da Instância
+                  </CardTitle>
+                  <CardDescription>
+                    Controle e configurações da instância WhatsApp
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => refreshStatusMutation.mutate(selectedAgentId)}
+                      disabled={refreshStatusMutation.isPending}
+                      variant="outline"
+                    >
+                      {refreshStatusMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Atualizar Status
+                    </Button>
+                    <Button
+                      onClick={() => deleteInstanceMutation.mutate(selectedAgentId)}
+                      disabled={deleteInstanceMutation.isPending}
+                      variant="destructive"
+                    >
+                      {deleteInstanceMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 mr-2" />
+                      )}
+                      Excluir Instância
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Real-time Status and Activity in a 2-column layout */}
               <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-1">
@@ -263,13 +313,16 @@ export default function WhatsAppManagementPage() {
                 </div>
               </div>
 
-              {/* Action buttons */}
+              {/* Instance Management Section - Move to top */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="w-5 h-5" />
                     Gerenciamento da Instância
                   </CardTitle>
+                  <CardDescription>
+                    Controle e configurações da instância WhatsApp
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
@@ -350,20 +403,55 @@ export default function WhatsAppManagementPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    onClick={() => createInstanceMutation.mutate(selectedAgentId)}
-                    disabled={createInstanceMutation.isPending}
-                    style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
-                    className="hover:opacity-90 w-full"
-                    size="lg"
-                  >
-                    {createInstanceMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Smartphone className="w-4 h-4 mr-2" />
-                    )}
-                    Criar Nova Instância WhatsApp
-                  </Button>
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                        className="hover:opacity-90 w-full"
+                        size="lg"
+                      >
+                        <Smartphone className="w-4 h-4 mr-2" />
+                        Criar Nova Instância WhatsApp
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Criar Instância WhatsApp</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="phoneNumber">Número do Celular (com DDD)</Label>
+                          <Input
+                            id="phoneNumber"
+                            type="tel"
+                            placeholder="Ex: 11987654321"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                            maxLength={11}
+                          />
+                          <p className="text-sm text-gray-500 mt-1">
+                            Digite apenas números. Este número será usado como nome da instância.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => createInstanceMutation.mutate({ 
+                            agentId: selectedAgentId!, 
+                            phoneNumber 
+                          })}
+                          disabled={createInstanceMutation.isPending || !phoneNumber || phoneNumber.length < 10}
+                          style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                          className="hover:opacity-90 w-full"
+                        >
+                          {createInstanceMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Smartphone className="w-4 h-4 mr-2" />
+                          )}
+                          Criar Instância
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardContent>
               </Card>
               
@@ -374,9 +462,10 @@ export default function WhatsAppManagementPage() {
                     <p className="text-sm font-medium">Como funciona:</p>
                     <ol className="text-xs mt-2 space-y-1 text-left">
                       <li>1. Clique em "Criar Nova Instância WhatsApp"</li>
-                      <li>2. Será gerado um QR Code para conexão</li>
-                      <li>3. Escaneie o QR Code com seu WhatsApp</li>
-                      <li>4. Seu agente estará conectado e funcionando</li>
+                      <li>2. Digite seu número de celular (com DDD)</li>
+                      <li>3. Será gerado um QR Code para conexão</li>
+                      <li>4. Escaneie o QR Code com seu WhatsApp</li>
+                      <li>5. Seu agente estará conectado e funcionando</li>
                     </ol>
                   </div>
                 </CardContent>

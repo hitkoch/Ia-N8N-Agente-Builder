@@ -172,7 +172,7 @@ export function useWhatsAppStatus({
     isPolling,
     hasQRCode: hasQRCode(),
     needsAttention: needsAttention(),
-    isConnected: instance?.status === "CONNECTED",
+    isConnected: instance?.status === "CONNECTED" || instance?.status === "open",
     hasInstance: !isLoading && !!instance,
     
     // Actions

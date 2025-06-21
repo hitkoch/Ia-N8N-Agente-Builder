@@ -530,7 +530,12 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/agents/:agentId/whatsapp/create", requireAuth, agentOwnershipMiddleware, async (req, res) => {
     try {
       const { agentId } = req.params;
+      const { phoneNumber } = req.body;
       const user = getAuthenticatedUser(req);
+      
+      if (!phoneNumber || phoneNumber.length < 10) {
+        return res.status(400).json({ message: "Número de telefone inválido" });
+      }
       
       // Verify agent ownership
       const agent = await storage.getAgent(parseInt(agentId), user.id);
@@ -544,8 +549,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "Instância WhatsApp já existe para este agente" });
       }
       
-      // Generate unique instance name
-      const instanceName = whatsappGatewayService.generateInstanceName(parseInt(agentId), user.id);
+      // Generate unique instance name using phone number
+      const instanceName = `whatsapp-${phoneNumber}`;
       
       // Create instance via gateway
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
