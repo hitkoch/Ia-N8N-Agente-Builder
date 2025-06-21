@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,11 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Search, Calculator, Code, Calendar, FileSpreadsheet, File, Upload, X, Plus } from "lucide-react";
+import { FileText, Search, Calculator, Code, Calendar, FileSpreadsheet, File } from "lucide-react";
 import { insertAgentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -49,9 +47,11 @@ const googleServices = [
 export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
+  const [initialized, setInitialized] = useState(false);
 
-  // Agent data query
-  const { data: agent, isLoading: agentLoading } = useQuery({
+  const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/agents/${agentId}`);
@@ -60,55 +60,51 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     enabled: isOpen && !!agentId,
   });
 
-  // Initialize form with agent data
-  const defaultValues = useMemo(() => ({
-    name: agent?.name || "",
-    description: agent?.description || "",
-    systemPrompt: agent?.systemPrompt || "",
-    model: agent?.model || "gpt-4o",
-    temperature: agent?.temperature || 0.7,
-    status: agent?.status || "draft",
-  }), [agent]);
-
   const form = useForm<UpdateAgentForm>({
     resolver: zodResolver(updateAgentSchema),
-    values: defaultValues, // Use values instead of defaultValues to update when agent changes
+    defaultValues: {
+      name: "",
+      description: "",
+      systemPrompt: "",
+      model: "gpt-4o",
+      temperature: 0.7,
+      status: "draft",
+    },
   });
 
-  // Parse existing tools and services
-  const existingTools = useMemo(() => {
-    return agent?.tools ? agent.tools.split(',').filter(Boolean) : [];
-  }, [agent?.tools]);
-
-  const existingGoogleServices = useMemo(() => {
-    return agent?.googleServices ? agent.googleServices.split(',').filter(Boolean) : [];
-  }, [agent?.googleServices]);
-
-  // Local state for selections
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [selectedGoogleServices, setSelectedGoogleServices] = useState<string[]>([]);
-  const [ragDocuments, setRagDocuments] = useState<any[]>([]);
-  const [apiConfigs, setApiConfigs] = useState<any[]>([]);
-  const [newApiConfig, setNewApiConfig] = useState({ name: "", baseUrl: "", authType: "none" });
-
-  // Initialize selections when agent data is available
+  // Initialize form when agent data is loaded
   React.useEffect(() => {
-    if (agent && isOpen) {
-      setSelectedTools(existingTools);
-      setSelectedGoogleServices(existingGoogleServices);
+    if (agent && !initialized) {
+      form.reset({
+        name: agent.name || "",
+        description: agent.description || "",
+        systemPrompt: agent.systemPrompt || "",
+        model: agent.model || "gpt-4o",
+        temperature: agent.temperature || 0.7,
+        status: agent.status || "draft",
+      });
+      
+      if (agent.tools) {
+        setSelectedTools(agent.tools.split(',').filter(Boolean));
+      }
+      
+      if (agent.googleServices) {
+        setSelectedGoogleServices(agent.googleServices.split(',').filter(Boolean));
+      }
+      
+      setInitialized(true);
     }
-  }, [agent, isOpen, existingTools, existingGoogleServices]);
+  }, [agent, initialized, form]);
 
-  // Reset states when modal closes
+  // Reset when modal closes
   React.useEffect(() => {
     if (!isOpen) {
+      setInitialized(false);
       setSelectedTools([]);
       setSelectedGoogleServices([]);
-      setRagDocuments([]);
-      setApiConfigs([]);
-      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
+      form.reset();
     }
-  }, [isOpen]);
+  }, [isOpen, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateAgentForm) => {
@@ -153,61 +149,11 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     );
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const newDoc = {
-        id: Date.now(),
-        filename: file.name,
-        originalName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-      };
-      setRagDocuments(prev => [...prev, newDoc]);
-      
-      toast({
-        title: "Arquivo adicionado",
-        description: `${file.name} foi adicionado à base de conhecimento.`,
-      });
-    }
-  };
-
-  const removeDocument = (docId: number) => {
-    setRagDocuments(prev => prev.filter(doc => doc.id !== docId));
-    toast({
-      title: "Arquivo removido",
-      description: "O arquivo foi removido da base de conhecimento.",
-    });
-  };
-
-  const addApiConfig = () => {
-    if (newApiConfig.name && newApiConfig.baseUrl) {
-      const config = {
-        id: Date.now(),
-        ...newApiConfig,
-        isActive: true,
-      };
-      setApiConfigs(prev => [...prev, config]);
-      setNewApiConfig({ name: "", baseUrl: "", authType: "none" });
-      
-      toast({
-        title: "API adicionada",
-        description: `Configuração da API ${config.name} foi adicionada.`,
-      });
-    }
-  };
-
-  const removeApiConfig = (configId: number) => {
-    setApiConfigs(prev => prev.filter(config => config.id !== configId));
-    toast({
-      title: "API removida",
-      description: "A configuração da API foi removida.",
-    });
-  };
-
   const onSubmit = (data: UpdateAgentForm) => {
     updateMutation.mutate(data);
   };
+
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -216,7 +162,7 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
           <DialogTitle>Editar Agente</DialogTitle>
         </DialogHeader>
 
-        {agentLoading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -224,10 +170,9 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic">Básico</TabsTrigger>
                   <TabsTrigger value="tools">Ferramentas</TabsTrigger>
-                  <TabsTrigger value="knowledge">Base de Conhecimento</TabsTrigger>
                   <TabsTrigger value="integrations">Integrações</TabsTrigger>
                 </TabsList>
 
@@ -406,62 +351,6 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="knowledge" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Base de Conhecimento</CardTitle>
-                      <CardDescription>Gerencie documentos e arquivos para o agente</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Clique para fazer upload ou arraste arquivos aqui
-                        </p>
-                        <input
-                          type="file"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          id="file-upload-edit"
-                          accept=".pdf,.txt,.doc,.docx,.md"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('file-upload-edit')?.click()}
-                        >
-                          Selecionar Arquivo
-                        </Button>
-                      </div>
-
-                      {ragDocuments.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>Arquivos Carregados:</Label>
-                          {ragDocuments.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center space-x-2">
-                                <FileText className="h-4 w-4" />
-                                <span className="text-sm">{doc.originalName}</span>
-                                <Badge variant="secondary">
-                                  {(doc.fileSize / 1024).toFixed(1)} KB
-                                </Badge>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeDocument(doc.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
                 <TabsContent value="integrations" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -504,67 +393,6 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
                           );
                         })}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>APIs Externas</CardTitle>
-                      <CardDescription>Configure integrações com APIs customizadas</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Input
-                          placeholder="Nome da API"
-                          value={newApiConfig.name}
-                          onChange={(e) => setNewApiConfig(prev => ({ ...prev, name: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="URL Base"
-                          value={newApiConfig.baseUrl}
-                          onChange={(e) => setNewApiConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
-                        />
-                        <div className="flex space-x-2">
-                          <Select
-                            value={newApiConfig.authType}
-                            onValueChange={(value) => setNewApiConfig(prev => ({ ...prev, authType: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Sem Autenticação</SelectItem>
-                              <SelectItem value="bearer">Bearer Token</SelectItem>
-                              <SelectItem value="api_key">API Key</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button type="button" onClick={addApiConfig}>
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {apiConfigs.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>APIs Configuradas:</Label>
-                          {apiConfigs.map((config) => (
-                            <div key={config.id} className="flex items-center justify-between p-3 border rounded">
-                              <div>
-                                <span className="font-medium">{config.name}</span>
-                                <p className="text-sm text-muted-foreground">{config.baseUrl}</p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeApiConfig(config.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
