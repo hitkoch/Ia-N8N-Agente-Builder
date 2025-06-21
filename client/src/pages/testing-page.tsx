@@ -60,238 +60,340 @@ export default function TestingPage({ selectedAgentId }: TestingPageProps) {
     }
   }, [selectedAgentId, currentAgentId]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || !currentAgentId || testMutation.isPending) return;
-    
-    testMutation.mutate({
-      agentId: currentAgentId,
-      message: inputMessage.trim(),
-    });
-  };
-
   const clearChat = () => {
     setMessages([]);
   };
 
-  const sendTestMessage = (message: string) => {
+  const exportChat = () => {
+    const chatData = {
+      agent: currentAgent?.name,
+      timestamp: new Date().toISOString(),
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-${currentAgent?.name}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Chat exportado",
+      description: "Histórico do chat foi baixado como arquivo JSON.",
+    });
+  };
+
+  const generateWebchatCode = (agentId: number) => {
+    const baseUrl = window.location.origin;
+    return `<!-- Webchat do Agente AI -->
+<div id="ai-webchat-${agentId}"></div>
+<script>
+  (function() {
+    const script = document.createElement('script');
+    script.src = '${baseUrl}/webchat.js';
+    script.onload = function() {
+      AIWebchat.init({
+        agentId: ${agentId},
+        containerId: 'ai-webchat-${agentId}',
+        apiUrl: '${baseUrl}/api',
+        theme: {
+          primaryColor: '#022b44',
+          accentColor: '#b8ec00',
+          borderRadius: '8px'
+        },
+        position: 'bottom-right', // 'bottom-right', 'bottom-left', 'inline'
+        title: '${currentAgent?.name || "Assistente AI"}',
+        subtitle: 'Como posso ajudar você hoje?',
+        placeholder: 'Digite sua mensagem...',
+        height: '500px',
+        width: '350px'
+      });
+    };
+    document.head.appendChild(script);
+  })();
+</script>`;
+  };
+
+  const copyWebchatCode = () => {
     if (!currentAgentId) return;
-    testMutation.mutate({
-      agentId: currentAgentId,
-      message,
+    
+    const code = generateWebchatCode(currentAgentId);
+    navigator.clipboard.writeText(code).then(() => {
+      toast({
+        title: "Código copiado!",
+        description: "O código do webchat foi copiado para a área de transferência.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o código. Tente novamente.",
+        variant: "destructive",
+      });
     });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-semibold text-slate-900">Agent Testing</h3>
-          <p className="text-sm text-slate-600 mt-1">Test your AI agents in real-time</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Select value={currentAgentId?.toString() || ""} onValueChange={(value) => {
-            setCurrentAgentId(parseInt(value));
-            setMessages([]);
-          }}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select an agent" />
-            </SelectTrigger>
-            <SelectContent>
-              {agents.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id.toString()}>
-                  {agent.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={clearChat}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear Chat
-          </Button>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar currentSection="testing" onSectionChange={() => {}} />
+      
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
+        <div className="container mx-auto py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold" style={{ color: '#022b44' }}>
+                Teste de Agentes
+              </h1>
+              <p className="text-gray-600 mt-1">Teste seus agentes AI e avalie suas respostas</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsWebchatModalOpen(true)}
+                disabled={!currentAgentId}
+                className="flex items-center space-x-2"
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                <Code className="h-4 w-4" />
+                <span>Código Webchat</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={exportChat}
+                disabled={messages.length === 0}
+                className="flex items-center space-x-2"
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                <Download className="h-4 w-4" />
+                <span>Exportar Chat</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={clearChat}
+                disabled={messages.length === 0}
+                className="flex items-center space-x-2"
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Limpar</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Agent Selection */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <BarChart className="h-5 w-5" style={{ color: '#022b44' }} />
+                  <div>
+                    <h3 className="text-lg font-semibold" style={{ color: '#022b44' }}>
+                      Selecionar Agente para Teste
+                    </h3>
+                    <p className="text-sm text-gray-500">Escolha um agente da sua coleção</p>
+                  </div>
+                </div>
+                {currentAgent && (
+                  <Badge 
+                    variant={currentAgent.status === "active" ? "default" : "secondary"}
+                    style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                  >
+                    {currentAgent.status === "active" ? "Ativo" : 
+                     currentAgent.status === "testing" ? "Testando" : "Rascunho"}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Select value={currentAgentId?.toString()} onValueChange={(value) => setCurrentAgentId(parseInt(value))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um agente para testar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id.toString()}>
+                      <div className="flex items-center space-x-2">
+                        <Bot className="h-4 w-4" />
+                        <span>{agent.name}</span>
+                        <span className="text-xs text-gray-500">({agent.model})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {currentAgent && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium" style={{ color: '#022b44' }}>Detalhes do Agente</h4>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <p><span className="font-medium">Descrição:</span> {currentAgent.description}</p>
+                    <p><span className="font-medium">Modelo:</span> {currentAgent.model}</p>
+                    <p><span className="font-medium">Temperatura:</span> {currentAgent.temperature}</p>
+                    <p><span className="font-medium">Status:</span> 
+                      <Badge 
+                        variant={currentAgent.status === "active" ? "default" : "secondary"} 
+                        className="ml-2"
+                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                      >
+                        {currentAgent.status === "active" ? "Ativo" : 
+                         currentAgent.status === "testing" ? "Testando" : "Rascunho"}
+                      </Badge>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Chat Interface */}
+          {currentAgent ? (
+            <div className="h-[600px]">
+              <ChatInterface agent={currentAgent} />
+            </div>
+          ) : (
+            <Card className="h-[600px] flex items-center justify-center">
+              <CardContent className="text-center">
+                <Bot className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#022b44' }}>
+                  Nenhum Agente Selecionado
+                </h3>
+                <p className="text-gray-500">Selecione um agente acima para começar a testar</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
-      {!currentAgent ? (
-        <div className="text-center py-12">
-          <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Bot className="h-12 w-12 text-slate-400" />
-          </div>
-          <h3 className="text-lg font-medium text-slate-900 mb-2">Select an agent to test</h3>
-          <p className="text-slate-600">Choose an agent from the dropdown above to start testing</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Chat Interface */}
-          <div className="lg:col-span-3">
-            <Card className="h-96 flex flex-col">
-              {/* Chat Header */}
-              <CardHeader className="pb-4">
-                <div className="flex items-center">
-                  <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-900">{currentAgent.name}</h4>
-                    <p className="text-xs text-slate-500">{currentAgent.model} • Temperature: {currentAgent.temperature}</p>
-                  </div>
-                  <div className="ml-auto flex items-center">
-                    <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-xs text-slate-600">Online</span>
-                  </div>
-                </div>
-              </CardHeader>
+      {/* Webchat Code Modal */}
+      <Dialog open={isWebchatModalOpen} onOpenChange={setIsWebchatModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle style={{ color: '#022b44' }}>
+              Código do Webchat - {currentAgent?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">📋 Como usar:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Copie o código abaixo e cole no HTML do seu site</li>
+                <li>• O webchat aparecerá automaticamente no canto da página</li>
+                <li>• Personalize as cores e posição através dos parâmetros</li>
+                <li>• O código já inclui as cores da sua marca (#022b44 e #b8ec00)</li>
+              </ul>
+            </div>
 
-              {/* Chat Messages */}
-              <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
-                {messages.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Bot className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500">Start a conversation with your AI agent</p>
-                  </div>
-                ) : (
-                  messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-start space-x-3 ${
-                        message.role === "user" ? "flex-row-reverse space-x-reverse" : ""
-                      }`}
-                    >
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        message.role === "user" 
-                          ? "bg-slate-200" 
-                          : "bg-primary/10"
-                      }`}>
-                        {message.role === "user" ? (
-                          <User className="h-4 w-4 text-slate-600" />
-                        ) : (
-                          <Bot className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                      <div className={`flex-1 ${message.role === "user" ? "text-right" : ""}`}>
-                        <div className={`rounded-xl p-3 inline-block max-w-[80%] ${
-                          message.role === "user"
-                            ? "bg-primary text-white"
-                            : "bg-slate-100 text-slate-900"
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-
-              {/* Chat Input */}
-              <div className="p-4 border-t border-slate-200">
-                <form onSubmit={handleSendMessage} className="flex space-x-3">
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    disabled={testMutation.isPending}
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="submit" 
-                    disabled={!inputMessage.trim() || testMutation.isPending}
-                    size="icon"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium" style={{ color: '#022b44' }}>
+                  Código HTML para integração:
+                </label>
+                <Button
+                  onClick={copyWebchatCode}
+                  size="sm"
+                  style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                  className="transition-all"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#022b44';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b8ec00';
+                    e.currentTarget.style.color = '#022b44';
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Código
+                </Button>
               </div>
-            </Card>
+              
+              <div className="relative">
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto max-h-96">
+                  <code>{currentAgentId ? generateWebchatCode(currentAgentId) : ''}</code>
+                </pre>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-yellow-800 mb-2">⚠️ Configurações disponíveis:</h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• <strong>position:</strong> 'bottom-right', 'bottom-left', 'inline'</li>
+                <li>• <strong>theme:</strong> Personalize primaryColor, accentColor, borderRadius</li>
+                <li>• <strong>size:</strong> Ajuste height e width conforme necessário</li>
+                <li>• <strong>textos:</strong> Customize title, subtitle e placeholder</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsWebchatModalOpen(false)}
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                Fechar
+              </Button>
+              <Button
+                onClick={() => window.open('/docs/webchat', '_blank')}
+                style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                className="transition-all"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b8ec00';
+                  e.currentTarget.style.color = '#022b44';
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Ver Documentação
+              </Button>
+            </div>
           </div>
-
-          {/* Agent Settings Panel */}
-          <div className="space-y-6">
-            {/* Current Agent Info */}
-            <Card>
-              <CardHeader>
-                <h5 className="text-sm font-semibold text-slate-900">Current Agent</h5>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Model:</span>
-                  <span className="text-slate-900 font-medium">{currentAgent.model}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Temperature:</span>
-                  <span className="text-slate-900 font-medium">{currentAgent.temperature}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Max Tokens:</span>
-                  <span className="text-slate-900 font-medium">{currentAgent.maxTokens}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Status:</span>
-                  <Badge variant={currentAgent.status === "active" ? "default" : "secondary"}>
-                    {currentAgent.status}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <h5 className="text-sm font-semibold text-slate-900">Quick Actions</h5>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Conversation
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Share className="h-4 w-4 mr-2" />
-                  Share Test Results
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <BarChart className="h-4 w-4 mr-2" />
-                  View Analytics
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Test Templates */}
-            <Card>
-              <CardHeader>
-                <h5 className="text-sm font-semibold text-slate-900">Test Templates</h5>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => sendTestMessage("Hello, can you help me?")}
-                >
-                  Basic Greeting
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => sendTestMessage("What are your pricing plans?")}
-                >
-                  Pricing Inquiry
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => sendTestMessage("I need technical support")}
-                >
-                  Support Request
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
