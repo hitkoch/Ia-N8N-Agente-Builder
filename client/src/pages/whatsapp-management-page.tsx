@@ -31,13 +31,6 @@ export default function WhatsAppManagementPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-
-  // Auto-open QR modal when QR code becomes available
-  useEffect(() => {
-    if (hasQRCode && instance?.qrCode && !isConnected) {
-      setIsQRModalOpen(true);
-    }
-  }, [hasQRCode, instance?.qrCode, isConnected]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -79,6 +72,13 @@ export default function WhatsAppManagementPage() {
       }
     }
   });
+
+  // Auto-open QR modal when QR code becomes available
+  useEffect(() => {
+    if (hasQRCode && instance?.qrCode && !isConnected) {
+      setIsQRModalOpen(true);
+    }
+  }, [hasQRCode, instance?.qrCode, isConnected]);
 
   const createInstanceMutation = useMutation({
     mutationFn: async ({ agentId, phoneNumber }: { agentId: number; phoneNumber: string }) => {
