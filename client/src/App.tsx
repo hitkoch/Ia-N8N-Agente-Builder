@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
-import EditAgentPage from "@/pages/edit-agent-page";
+import SimpleEditAgentPage from "@/pages/simple-edit-agent-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,7 +17,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/agents/:id/edit">
         {(params) => (
-          <ProtectedRoute path={`/agents/${params.id}/edit`} component={() => <EditAgentPage agentId={params.id} />} />
+          <ProtectedRoute path={`/agents/${params.id}/edit`} component={() => <SimpleEditAgentPage agentId={params.id} />} />
         )}
       </Route>
       <Route component={NotFound} />
