@@ -69,7 +69,7 @@ export default function HomePage() {
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Active Agents</p>
+                <p className="text-sm font-medium text-slate-600">Agentes Ativos</p>
                 <p className="text-2xl font-bold text-slate-900">{stats?.activeAgents || 0}</p>
               </div>
             </div>
