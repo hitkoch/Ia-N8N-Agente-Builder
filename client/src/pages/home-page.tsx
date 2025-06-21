@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Agent } from "@shared/schema";
-import { Bot, CheckCircle, Webhook, MessageCircle, Plus, Eye, Zap } from "lucide-react";
+import { Bot, CheckCircle, Webhook, MessageCircle, Plus, Eye, Zap, Edit, Play } from "lucide-react";
 import AgentCard from "@/components/agent-card";
 import CreateAgentModal from "@/components/create-agent-modal";
 import AgentCreationWizard from "@/components/agent-creation-wizard";
