@@ -553,7 +553,9 @@ export function registerRoutes(app: Express): Server {
       const instanceName = `whatsapp-${phoneNumber}`;
       
       // Only create the basic instance structure - no webhook, no QR code
+      console.log(`📱 Criando estrutura básica da instância: ${instanceName}`);
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
+      console.log(`✅ Instância criada no gateway Evolution: ${instanceName}`);
       
       // Save to database with PENDING status
       console.log(`💾 Salvando instância no banco de dados: ${instanceName}`);
