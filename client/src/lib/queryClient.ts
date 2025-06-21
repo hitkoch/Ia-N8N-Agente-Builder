@@ -11,11 +11,18 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  customHeaders?: Record<string, string | undefined>,
 ): Promise<Response> {
+  const isFormData = data instanceof FormData;
+  
+  const headers: HeadersInit = isFormData 
+    ? (customHeaders ? Object.fromEntries(Object.entries(customHeaders).filter(([_, v]) => v !== undefined)) : {})
+    : { "Content-Type": "application/json", ...(customHeaders ? Object.fromEntries(Object.entries(customHeaders).filter(([_, v]) => v !== undefined)) : {}) };
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
     credentials: "include",
   });
 

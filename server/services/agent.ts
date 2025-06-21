@@ -91,9 +91,11 @@ export class AgentService {
       // Palavras-chave específicas para melhor busca
       const keyWords = messageWords.filter(word => word.length > 2);
       
-      // Ignorar arquivos não processados
-      if (docContent.includes('[arquivo não processado]')) {
-        console.log(`⚠️ ${doc.originalName}: arquivo não processado, ignorando`);
+      // Ignorar arquivos não processados ou com erro
+      if (docContent.includes('[arquivo não processado]') || 
+          docContent.includes('[formato não suportado]') ||
+          docContent.includes('[erro ao processar]')) {
+        console.log(`⚠️ ${doc.originalName}: arquivo não processado/erro, ignorando`);
         return false;
       }
 

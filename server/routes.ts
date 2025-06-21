@@ -1,5 +1,11 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import { documentProcessor } from "./services/document-processor";
+
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { agentService } from "./services/agent";
@@ -230,6 +236,12 @@ export function registerRoutes(app: Express): Server {
   // Configurar autenticação
   setupAuth(app);
 
+  // Configurar multer para upload de arquivos
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  });
+
   // Rota das estatísticas do painel
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     const user = getAuthenticatedUser(req);
@@ -452,6 +464,26 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Erro ao deletar instância Evolution:", error);
       res.status(500).json({ message: "Falha ao deletar instância Evolution" });
+    }
+  });
+
+  // Endpoint para processar documentos
+  app.post("/api/process-document", requireAuth, upload.single('document'), async (req: MulterRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+      }
+
+      const processedDoc = await documentProcessor.processFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      res.json(processedDoc);
+    } catch (error: any) {
+      console.error("Erro ao processar documento:", error);
+      res.status(500).json({ message: "Falha ao processar documento", error: error.message });
     }
   });
 

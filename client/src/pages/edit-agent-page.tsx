@@ -113,64 +113,63 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
+    if (!file) return;
+
+    // Mostrar loading
+    toast({
+      title: "Processando arquivo...",
+      description: `Extraindo texto de ${file.name}`,
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const response = await apiRequest("POST", "/api/process-document", formData, {
+        'Content-Type': undefined // Let browser set content-type for FormData
+      });
       
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        const newDoc = {
-          id: Date.now(),
-          filename: file.name,
-          originalName: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
-          content: content || `Conteúdo do arquivo ${file.name} - Este é um exemplo de conteúdo. Em produção, aqui estaria o texto extraído do arquivo.`,
-        };
-        setRagDocuments(prev => [...prev, newDoc]);
-        
-        toast({
-          title: "Arquivo TXT/MD processado",
-          description: `${file.name} foi adicionado e pode ser usado pelo agente.`,
-        });
+      const processedDoc = await response.json();
+      
+      const newDoc = {
+        id: Date.now(),
+        filename: processedDoc.filename,
+        originalName: processedDoc.originalName,
+        fileSize: processedDoc.fileSize,
+        mimeType: processedDoc.mimeType,
+        content: processedDoc.content,
+        processingStatus: processedDoc.processingStatus,
       };
       
-      // Ler arquivo como texto
-      if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-        reader.readAsText(file);
-      } else {
-        // Para arquivos não-texto, criar um placeholder informativo
-        const placeholderContent = `[ARQUIVO NÃO PROCESSADO: ${file.name}]
-
-AVISO: Este arquivo não pode ser processado automaticamente pelo sistema atual.
-- Nome: ${file.name}
-- Tipo: ${file.type}
-- Tamanho: ${(file.size / 1024).toFixed(1)} KB
-
-Para que o agente possa usar as informações deste arquivo, você precisa:
-1. Converter o arquivo para formato TXT ou MD
-2. Ou copiar e colar o conteúdo relevante manualmente
-3. Ou usar a funcionalidade de texto personalizado na Base de Conhecimento
-
-Em um ambiente de produção, seria implementada a extração automática de texto para PDFs, DOCs, etc.`;
-        
-        const newDoc = {
-          id: Date.now(),
-          filename: file.name,
-          originalName: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
-          content: placeholderContent,
-        };
-        setRagDocuments(prev => [...prev, newDoc]);
-        
+      setRagDocuments(prev => [...prev, newDoc]);
+      
+      if (processedDoc.processingStatus === 'success') {
         toast({
-          title: "Arquivo salvo (não processado)",
-          description: `${file.name} foi salvo mas não pode ser lido pelo agente. Use TXT/MD para processamento automático.`,
+          title: "Arquivo processado com sucesso",
+          description: `${file.name} foi extraído e pode ser usado pelo agente.`,
+        });
+      } else if (processedDoc.processingStatus === 'unsupported') {
+        toast({
+          title: "Formato não suportado",
+          description: `${file.name} foi salvo mas o formato não é suportado completamente.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro no processamento",
+          description: `${file.name} não pôde ser processado corretamente.`,
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível processar o arquivo.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -415,14 +414,14 @@ Em um ambiente de produção, seria implementada a extração automática de tex
                     Clique para fazer upload ou arraste arquivos aqui
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
-                    Suporte para TXT, MD (processamento automático) | PDF, DOC, DOCX (salvos mas não processados)
+                    Suporte completo para: PDF, DOCX, XLSX, XLS, TXT, MD (máx. 10MB)
                   </p>
                   <input
                     type="file"
                     onChange={handleFileUpload}
                     className="hidden"
                     id="file-upload-edit"
-                    accept=".pdf,.txt,.doc,.docx,.md"
+                    accept=".pdf,.txt,.doc,.docx,.md,.xlsx,.xls"
                   />
                   <Button
                     type="button"
@@ -464,22 +463,23 @@ Em um ambiente de produção, seria implementada a extração automática de tex
                   </div>
                 )}
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Dicas para Base de Conhecimento</h4>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Use arquivos TXT ou MD para melhor processamento</li>
-                    <li>• PDFs, DOCs e outros formatos são salvos mas não processados automaticamente</li>
-                    <li>• Textos bem estruturados melhoram as respostas do agente</li>
-                    <li>• Evite documentos muito técnicos se o agente for para usuários finais</li>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-green-800 mb-2">✅ Formatos Suportados</h4>
+                  <ul className="text-xs text-green-700 space-y-1">
+                    <li>• PDF - Extração automática de texto</li>
+                    <li>• DOCX - Documentos Word modernos</li>
+                    <li>• XLSX/XLS - Planilhas Excel (dados tabulares)</li>
+                    <li>• TXT/MD - Arquivos de texto simples</li>
                   </ul>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">⚠️ Limitações Atuais</h4>
-                  <ul className="text-xs text-yellow-700 space-y-1">
-                    <li>• Apenas arquivos TXT e MD são processados automaticamente</li>
-                    <li>• PDFs e outros formatos são salvos mas não lidos pelo agente</li>
-                    <li>• Para usar PDFs, converta para TXT ou copie o conteúdo manualmente</li>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Dicas para Melhores Resultados</h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• Use documentos bem estruturados e organizados</li>
+                    <li>• PDFs com texto selecionável funcionam melhor</li>
+                    <li>• Planilhas Excel são convertidas em formato tabular</li>
+                    <li>• Evite documentos com muitas imagens ou diagramas</li>
                   </ul>
                 </div>
               </CardContent>
