@@ -55,7 +55,7 @@ export default function HomePage() {
                 <Bot className="h-5 w-5 text-primary" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600">Total Agents</p>
+                <p className="text-sm font-medium text-slate-600">Total Agentes</p>
                 <p className="text-2xl font-bold text-slate-900">{stats?.totalAgents || 0}</p>
               </div>
             </div>
