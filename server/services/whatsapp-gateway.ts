@@ -126,10 +126,28 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      throw new Error(`Falha ao criar instância: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Erro na API Evolution:`, errorText);
+      throw new Error(`Falha ao criar instância: ${response.statusText} - ${errorText}`);
     }
 
-    const data: CreateInstanceResponse = await response.json();
+    let data: CreateInstanceResponse;
+    try {
+      const responseText = await response.text();
+      console.log(`📋 Raw response from Evolution API:`, responseText);
+      
+      // Clean any potential HTML/DOCTYPE issues from response
+      const cleanedResponse = responseText.replace(/<!DOCTYPE[^>]*>/gi, '').replace(/<html[^>]*>.*<\/html>/gis, '').trim();
+      
+      if (!cleanedResponse.startsWith('{')) {
+        throw new Error(`Resposta não é JSON válido: ${cleanedResponse.substring(0, 200)}`);
+      }
+      
+      data = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error(`❌ Erro ao fazer parse da resposta:`, parseError);
+      throw new Error(`Resposta da API não é JSON válido: ${parseError.message}`);
+    }
     console.log(`✅ Instância criada: ${data.instance.instanceName}`);
     
     return data;
