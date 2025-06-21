@@ -476,6 +476,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Debug endpoint to check CORS headers
+  app.options("/api/webchat/:agentId/chat", (req, res) => {
+    console.log(`🔍 CORS preflight para agente ${req.params.agentId}`);
+    console.log(`🌐 Origin: ${req.headers.origin || 'não especificado'}`);
+    console.log(`🔧 Method: ${req.headers['access-control-request-method'] || 'não especificado'}`);
+    console.log(`📋 Headers: ${req.headers['access-control-request-headers'] || 'não especificado'}`);
+    
+    res.status(200).end();
+  });
+
   // Serve test page for webchat debugging
   app.get("/test-webchat", (req, res) => {
     const testHtml = `
@@ -502,6 +512,11 @@ export function registerRoutes(app: Express): Server {
 </body>
 </html>`;
     res.send(testHtml);
+  });
+
+  // Serve debug page for external domain testing
+  app.get("/debug-cors", (req, res) => {
+    res.sendFile('debug_cors.html', { root: process.cwd() });
   });
 
   const httpServer = createServer(app);

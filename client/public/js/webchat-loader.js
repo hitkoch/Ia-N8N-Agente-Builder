@@ -97,9 +97,11 @@
       CONFIG.apiUrl = `${window.location.protocol}//${window.location.host}/api`;
     }
     
-    console.log('Script source:', scriptSrc);
-    console.log('Chat URL configurada:', CONFIG.chatUrl);
-    console.log('API URL configurada:', CONFIG.apiUrl);
+    console.log('🔧 Webchat Debug:');
+    console.log('  Script source:', scriptSrc);
+    console.log('  Chat URL:', CONFIG.chatUrl);
+    console.log('  API URL:', CONFIG.apiUrl);
+    console.log('  Current domain:', window.location.host);
   }
 
   function injectStyles() {

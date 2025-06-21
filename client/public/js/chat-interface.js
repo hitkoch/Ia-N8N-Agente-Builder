@@ -50,22 +50,22 @@
     config.primaryColor = params.get('primaryColor') || config.primaryColor;
     config.accentColor = params.get('accentColor') || config.accentColor;
     
-    // Update API URL if different domain
+    // Update API URL - prioritize passed parameter
     const apiUrl = params.get('apiUrl');
     if (apiUrl) {
       config.apiUrl = apiUrl;
+      console.log('🌐 API URL configurada via parâmetro:', apiUrl);
     } else {
-      // Try to extract from iframe's referrer or use current origin
-      try {
-        if (window.parent && window.parent !== window) {
-          // Get the parent window's origin
-          config.apiUrl = window.location.origin + '/api';
-        }
-      } catch (e) {
-        // Cross-origin restriction, use current origin
-        config.apiUrl = window.location.origin + '/api';
-      }
+      // Fallback: use iframe's origin
+      config.apiUrl = window.location.origin + '/api';
+      console.log('🌐 API URL fallback (iframe origin):', config.apiUrl);
     }
+    
+    console.log('🔧 Chat Debug:');
+    console.log('  Agent ID:', config.agentId);
+    console.log('  API URL final:', config.apiUrl);
+    console.log('  Iframe origin:', window.location.origin);
+    console.log('  URL params:', Object.fromEntries(params));
   }
 
   function getDOMElements() {
