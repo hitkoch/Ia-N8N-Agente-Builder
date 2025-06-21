@@ -1041,6 +1041,11 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('public/menu-test.html', { root: process.cwd() });
   });
 
+  // Serve WhatsApp test page
+  app.get("/test-whatsapp", (req, res) => {
+    res.sendFile('test-whatsapp.html', { root: process.cwd() });
+  });
+
   // Serve debug page
   app.get("/debug-menu", (req, res) => {
     res.sendFile('debug-menu.html', { root: process.cwd() });
