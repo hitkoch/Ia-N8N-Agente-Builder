@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -85,7 +85,9 @@ export const evolutionInstances = pgTable("evolution_instances", {
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
-  messages: text("messages").notNull(), // JSON stringified array of messages
+  contactId: text("contact_id").notNull(),
+  messages: jsonb("messages").notNull(),
+  metadata: jsonb("metadata"), // For storing multimedia analysis data
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

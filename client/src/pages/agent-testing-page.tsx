@@ -9,6 +9,7 @@ import { Agent } from "@shared/schema";
 import { Bot, User, Send, Trash2, Download, Copy, Code, ExternalLink, MessageSquare, BarChart3, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { MultimediaTest } from "@/components/multimedia-test";
 
 interface AgentTestingPageProps {
   selectedAgentId?: number | null;
@@ -629,6 +630,13 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Multimedia Testing Section */}
+      {currentAgent && (
+        <div className="mt-6">
+          <MultimediaTest agentId={currentAgent.id} />
+        </div>
+      )}
     </div>
   );
 }

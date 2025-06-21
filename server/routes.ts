@@ -11,6 +11,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
+import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
 
@@ -86,6 +87,99 @@ export function registerRoutes(app: Express): Server {
       res.json(agents);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar agentes" });
+    }
+  });
+
+  // Multimedia processing endpoints
+  app.post("/api/agents/:agentId/multimedia/audio", requireAuth, upload.single('audio'), async (req: MulterRequest, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Arquivo de áudio não enviado" });
+      }
+
+      console.log('🎤 Processando áudio via API...');
+      
+      // Process audio
+      const audioResult = await multimediaService.processMultimediaMessage(
+        req.file.buffer,
+        req.file.mimetype,
+        ''
+      );
+
+      // Generate AI response
+      const aiResponse = await agentService.testAgent(agent, audioResult.text);
+      
+      let audioResponse = null;
+      if (req.body.voice_response === 'true' && aiResponse) {
+        console.log('🗣️ Gerando resposta em voz...');
+        const voiceResult = await multimediaService.generateVoiceResponse(aiResponse);
+        audioResponse = voiceResult.audioBuffer.toString('base64');
+      }
+
+      res.json({
+        transcription: audioResult.text,
+        analysis: audioResult.analysis,
+        response: aiResponse,
+        audioResponse
+      });
+
+    } catch (error) {
+      console.error('❌ Erro no processamento de áudio:', error);
+      res.status(500).json({ message: "Erro ao processar áudio", error: error.message });
+    }
+  });
+
+  app.post("/api/agents/:agentId/multimedia/image", requireAuth, upload.single('image'), async (req: MulterRequest, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Arquivo de imagem não enviado" });
+      }
+
+      console.log('🖼️ Processando imagem via API...');
+      
+      // Process image
+      const imageResult = await multimediaService.processMultimediaMessage(
+        req.file.buffer,
+        req.file.mimetype,
+        ''
+      );
+
+      // Generate AI response
+      const aiResponse = await agentService.testAgent(agent, imageResult.text);
+      
+      let audioResponse = null;
+      if (req.body.voice_response === 'true' && aiResponse) {
+        console.log('🗣️ Gerando resposta em voz...');
+        const voiceResult = await multimediaService.generateVoiceResponse(aiResponse);
+        audioResponse = voiceResult.audioBuffer.toString('base64');
+      }
+
+      res.json({
+        analysis: imageResult.analysis,
+        description: imageResult.text,
+        response: aiResponse,
+        audioResponse
+      });
+
+    } catch (error) {
+      console.error('❌ Erro no processamento de imagem:', error);
+      res.status(500).json({ message: "Erro ao processar imagem", error: error.message });
     }
   });
 

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { storage } from "./storage";
 import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
+import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter } from "./middleware/security";
 
 export function setupWebhookRoutes(app: Express) {
@@ -41,7 +42,76 @@ export function setupWebhookRoutes(app: Express) {
           if (message.key?.fromMe) continue;
 
           const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
-          const messageText = message.message?.conversation || '';
+          let messageText = '';
+          let mediaAnalysis = null;
+          
+          // Extract text content
+          if (message.message?.conversation) {
+            messageText = message.message.conversation;
+          } else if (message.message?.extendedTextMessage?.text) {
+            messageText = message.message.extendedTextMessage.text;
+          }
+
+          // Process multimedia content
+          if (message.message?.audioMessage) {
+            console.log(`🎤 Processando áudio de ${phoneNumber}`);
+            try {
+              // Download audio from WhatsApp
+              const audioUrl = message.message.audioMessage.url;
+              if (audioUrl) {
+                const audioResponse = await fetch(audioUrl);
+                const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+                const mimeType = message.message.audioMessage.mimetype || 'audio/ogg';
+                
+                const audioResult = await multimediaService.processMultimediaMessage(
+                  audioBuffer, 
+                  mimeType, 
+                  messageText
+                );
+                
+                messageText = audioResult.text;
+                mediaAnalysis = audioResult.analysis;
+              }
+            } catch (error) {
+              console.error('❌ Erro ao processar áudio:', error);
+              messageText = messageText || 'Áudio recebido (erro no processamento)';
+            }
+          }
+
+          if (message.message?.imageMessage) {
+            console.log(`🖼️ Processando imagem de ${phoneNumber}`);
+            try {
+              // Download image from WhatsApp
+              const imageUrl = message.message.imageMessage.url;
+              if (imageUrl) {
+                const imageResponse = await fetch(imageUrl);
+                const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+                const mimeType = message.message.imageMessage.mimetype || 'image/jpeg';
+                
+                const imageResult = await multimediaService.processMultimediaMessage(
+                  imageBuffer, 
+                  mimeType, 
+                  message.message.imageMessage.caption || messageText
+                );
+                
+                messageText = imageResult.text;
+                mediaAnalysis = imageResult.analysis;
+              }
+            } catch (error) {
+              console.error('❌ Erro ao processar imagem:', error);
+              messageText = messageText || message.message.imageMessage.caption || 'Imagem recebida (erro no processamento)';
+            }
+          }
+
+          if (message.message?.videoMessage) {
+            console.log(`🎥 Vídeo recebido de ${phoneNumber}`);
+            messageText = messageText || message.message.videoMessage.caption || 'Vídeo recebido (análise não suportada)';
+          }
+
+          if (message.message?.documentMessage) {
+            console.log(`📄 Documento recebido de ${phoneNumber}`);
+            messageText = messageText || message.message.documentMessage.caption || 'Documento recebido';
+          }
           
           if (!messageText || !phoneNumber) continue;
 
@@ -74,7 +144,12 @@ export function setupWebhookRoutes(app: Express) {
 
           console.log(`🤖 Processando com agente: ${agent.name}`);
 
-          const aiResponse = await agentService.testAgent(agent, messageText);
+          // Generate AI response with multimedia context
+          const contextualPrompt = mediaAnalysis 
+            ? `${messageText}\n\n[Contexto de mídia: ${JSON.stringify(mediaAnalysis)}]`
+            : messageText;
+
+          const aiResponse = await agentService.testAgent(agent, contextualPrompt);
           if (aiResponse?.trim()) {
             await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
             console.log(`✅ Resposta enviada para ${phoneNumber}`);
@@ -83,7 +158,12 @@ export function setupWebhookRoutes(app: Express) {
               agentId: agent.id,
               contactId: phoneNumber,
               messages: [
-                { role: 'user', content: messageText, timestamp: new Date() },
+                { 
+                  role: 'user', 
+                  content: messageText, 
+                  timestamp: new Date(),
+                  metadata: mediaAnalysis ? { media: mediaAnalysis } : undefined
+                },
                 { role: 'assistant', content: aiResponse, timestamp: new Date() }
               ]
             });

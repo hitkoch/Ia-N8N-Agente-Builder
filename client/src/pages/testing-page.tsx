@@ -12,6 +12,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ChatInterface from "@/components/chat-interface";
 import Sidebar from "@/components/sidebar";
+import { TestChat } from "@/components/test-chat";
+import { MultimediaTest } from "@/components/multimedia-test";
 
 interface TestingPageProps {
   selectedAgentId?: number | null;
@@ -273,10 +275,13 @@ export default function TestingPage({ selectedAgentId }: TestingPageProps) {
         </CardContent>
       </Card>
 
-      {/* Chat Interface */}
+      {/* Chat Interface and Multimedia Testing */}
       {currentAgent ? (
-        <div className="h-[600px]">
-          <ChatInterface agent={currentAgent} />
+        <div className="space-y-6">
+          <div className="h-[600px]">
+            <ChatInterface agent={currentAgent} />
+          </div>
+          <MultimediaTest agentId={currentAgent.id} />
         </div>
       ) : (
         <Card className="h-[600px] flex items-center justify-center">
