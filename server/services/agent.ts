@@ -60,15 +60,26 @@ export class AgentService {
 
   private async getKnowledgeContext(agent: Agent, userMessage: string): Promise<string | null> {
     console.log("🔍 Buscando contexto para:", userMessage);
-    console.log("📄 Documentos disponíveis:", agent.ragDocuments?.length || 0);
+    console.log("📄 Dados brutos ragDocuments:", agent.ragDocuments);
     
-    if (!agent.ragDocuments || !Array.isArray(agent.ragDocuments) || agent.ragDocuments.length === 0) {
+    let docs = [];
+    try {
+      docs = typeof agent.ragDocuments === 'string' 
+        ? JSON.parse(agent.ragDocuments || '[]')
+        : Array.isArray(agent.ragDocuments) ? agent.ragDocuments : [];
+    } catch (e) {
+      console.log("❌ Erro ao parsear ragDocuments:", e);
+      docs = [];
+    }
+    console.log("📄 Documentos disponíveis:", docs.length);
+    
+    if (docs.length === 0) {
       console.log("❌ Nenhum documento na base de conhecimento");
       return null;
     }
 
     // Busca mais flexível
-    const relevantDocs = agent.ragDocuments.filter((doc: any) => {
+    const relevantDocs = docs.filter((doc: any) => {
       if (!doc.content) {
         console.log("⚠️ Documento sem conteúdo:", doc.originalName);
         return false;

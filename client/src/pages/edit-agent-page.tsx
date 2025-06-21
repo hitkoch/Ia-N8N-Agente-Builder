@@ -53,7 +53,14 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       
       setSelectedTools(Array.isArray(agent.tools) ? agent.tools : (agent.tools ? agent.tools.split(',').filter(Boolean) : []));
       setSelectedGoogleServices(Array.isArray(agent.googleServices) ? agent.googleServices : (agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []));
-      setRagDocuments(Array.isArray(agent.ragDocuments) ? agent.ragDocuments : []);
+      try {
+        const docs = typeof agent.ragDocuments === 'string' 
+          ? JSON.parse(agent.ragDocuments || '[]')
+          : Array.isArray(agent.ragDocuments) ? agent.ragDocuments : [];
+        setRagDocuments(docs);
+      } catch {
+        setRagDocuments([]);
+      }
     }
   }, [agent?.id]);
 
@@ -63,7 +70,7 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
         ...data,
         tools: selectedTools,
         googleServices: selectedGoogleServices,
-        ragDocuments: ragDocuments,
+        ragDocuments: JSON.stringify(ragDocuments),
       });
       return await res.json();
     },
@@ -227,7 +234,7 @@ Oferecemos treinamentos presenciais e online para todas as soluções`;
             <CardContent>
               <div className="space-y-4">
                 {steps.map((step, index) => (
-                  <div key={step.id} className="flex items-start space-x-3">
+                  <div key={`step-${step.id}`} className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
                       {step.completed ? (
                         <CheckCircle className="h-6 w-6 text-green-500" />
