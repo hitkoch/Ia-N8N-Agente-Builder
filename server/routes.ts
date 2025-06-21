@@ -470,9 +470,18 @@ export function registerRoutes(app: Express): Server {
   // Endpoint para processar documentos
   app.post("/api/process-document", requireAuth, upload.single('document'), async (req: MulterRequest, res) => {
     try {
+      console.log('📁 Requisição de upload recebida');
+      
       if (!req.file) {
+        console.log('❌ Nenhum arquivo na requisição');
         return res.status(400).json({ message: "Nenhum arquivo enviado" });
       }
+
+      console.log('📁 Arquivo recebido:', {
+        name: req.file.originalname,
+        size: req.file.size,
+        type: req.file.mimetype
+      });
 
       const processedDoc = await documentProcessor.processFile(
         req.file.buffer,
@@ -480,9 +489,10 @@ export function registerRoutes(app: Express): Server {
         req.file.mimetype
       );
 
+      console.log('✅ Documento processado com sucesso:', processedDoc.processingStatus);
       res.json(processedDoc);
     } catch (error: any) {
-      console.error("Erro ao processar documento:", error);
+      console.error("❌ Erro ao processar documento:", error);
       res.status(500).json({ message: "Falha ao processar documento", error: error.message });
     }
   });

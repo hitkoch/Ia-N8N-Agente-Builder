@@ -23,6 +23,8 @@ export class DocumentProcessor {
     };
 
     try {
+      console.log(`🔄 Processando arquivo: ${filename}, tipo: ${mimeType}, tamanho: ${fileBuffer.length}`);
+      
       if (mimeType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
         result.content = await this.processPDF(fileBuffer);
         result.processingStatus = 'success';
@@ -54,6 +56,7 @@ export class DocumentProcessor {
         result.processingStatus = 'unsupported';
       }
     } catch (error) {
+      console.error(`❌ Erro geral ao processar ${filename}:`, error);
       result.content = `[ERRO AO PROCESSAR: ${filename}]\n\nErro: ${error.message}\n\nTente converter o arquivo para um formato mais simples (TXT ou MD).`;
       result.processingStatus = 'error';
       result.error = error.message;
@@ -64,10 +67,16 @@ export class DocumentProcessor {
 
   private async processPDF(buffer: Buffer): Promise<string> {
     try {
+      console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
       const pdfParse = await import('pdf-parse');
+      console.log('📄 pdf-parse importado com sucesso');
+      
       const data = await pdfParse.default(buffer);
-      return data.text || '[PDF sem texto extraível]';
+      console.log('📄 PDF processado, texto extraído:', data.text?.length || 0, 'caracteres');
+      
+      return data.text || '[PDF sem texto extraível - pode ser um PDF de imagens]';
     } catch (error) {
+      console.error('❌ Erro detalhado ao processar PDF:', error);
       throw new Error(`Erro ao processar PDF: ${error.message}`);
     }
   }
