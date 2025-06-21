@@ -87,8 +87,8 @@ export function setupAuth(app: Express) {
       if (existingUser) {
         return res.status(400).json({ 
           message: existingUser.username === validatedData.username 
-            ? "Username already exists" 
-            : "Email already exists" 
+            ? "Nome de usuário já existe" 
+            : "E-mail já existe" 
         });
       }
 
@@ -110,7 +110,7 @@ export function setupAuth(app: Express) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
-          message: "Validation error", 
+          message: "Erro de validação", 
           errors: error.errors 
         });
       }
