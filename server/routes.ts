@@ -552,25 +552,27 @@ export function registerRoutes(app: Express): Server {
       // Generate unique instance name using phone number
       const instanceName = `whatsapp-${phoneNumber}`;
       
-      // Create complete instance: create + webhook + connect + QR code
+      // Step 1: Create instance with webhook configured for QR code delivery
       console.log(`📱 Criando instância WhatsApp: ${instanceName}`);
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
       console.log(`✅ Instância criada: ${instanceName}, Status: ${gatewayResponse.instance.status}`);
       
-      console.log(`🔗 Configurando webhook para: ${instanceName}`);
+      // Step 2: Configure webhook BEFORE connecting (to receive QR code)
+      console.log(`🔗 Configurando webhook para receber QR Code: ${instanceName}`);
       await whatsappGatewayService.setWebhook(instanceName);
       console.log(`✅ Webhook configurado para: ${instanceName}`);
       
-      console.log(`📱 Conectando e gerando QR Code para: ${instanceName}`);
+      // Step 3: Connect to trigger QR code generation (will be delivered via webhook)
+      console.log(`📱 Iniciando conexão para gerar QR Code: ${instanceName}`);
       const connectResponse = await whatsappGatewayService.connectInstance(instanceName);
-      console.log(`✅ Conexão iniciada para: ${instanceName}`);
+      console.log(`✅ Conexão iniciada para: ${instanceName} - QR Code será entregue via webhook`);
       
-      // Save to database with complete data
+      // Step 4: Save to database (QR code will be updated via webhook)
       console.log(`💾 Salvando instância no banco de dados: ${instanceName}`);
       const whatsappInstance = await storage.createWhatsappInstance({
         instanceName,
-        status: connectResponse.instance.status || "connecting",
-        qrCode: connectResponse.qrcode?.base64 || null,
+        status: "AWAITING_QR_SCAN",
+        qrCode: null, // Will be updated via webhook
         agentId: parseInt(agentId)
       });
       
@@ -827,6 +829,43 @@ export function registerRoutes(app: Express): Server {
           status: 'invalid_instance_name',
           message: 'Instance name does not match expected format'
         });
+      }
+      
+      // Handle QR code updates
+      if (event === 'qrcode.updated' || event === 'QRCODE_UPDATED') {
+        console.log('🔄 QR Code atualizado via webhook');
+        if (data?.qrcode) {
+          try {
+            await storage.updateWhatsappInstanceByName(instance, {
+              qrCode: data.qrcode,
+              status: 'AWAITING_QR_SCAN'
+            });
+            console.log(`✅ QR Code salvo no banco para: ${instance}`);
+          } catch (error) {
+            console.error(`❌ Erro ao salvar QR Code:`, error);
+          }
+        }
+        return res.status(200).json({ status: 'qr_updated' });
+      }
+      
+      // Handle connection updates
+      if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
+        console.log('🔗 Status de conexão atualizado via webhook');
+        if (data?.state) {
+          try {
+            const status = data.state === 'open' ? 'CONNECTED' : 
+                         data.state === 'close' ? 'DISCONNECTED' : 
+                         data.state === 'connecting' ? 'AWAITING_QR_SCAN' : data.state;
+            
+            await storage.updateWhatsappInstanceByName(instance, {
+              status: status
+            });
+            console.log(`✅ Status atualizado para ${status} na instância: ${instance}`);
+          } catch (error) {
+            console.error(`❌ Erro ao atualizar status:`, error);
+          }
+        }
+        return res.status(200).json({ status: 'connection_updated' });
       }
       
       // Processar apenas mensagens recebidas

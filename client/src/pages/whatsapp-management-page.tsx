@@ -77,12 +77,22 @@ export default function WhatsAppManagementPage() {
     }
   });
 
-  // Auto-open QR modal when QR code becomes available
+  // Auto-refresh to get QR code when instance is created
   useEffect(() => {
-    if (hasQRCode && instance?.qrCode && !isConnected) {
-      setIsQRModalOpen(true);
+    if (hasInstance && status === "AWAITING_QR_SCAN" && !instance?.qrCode) {
+      // Poll for QR code every 3 seconds for up to 30 seconds
+      const pollForQR = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
+      }, 3000);
+
+      // Stop polling after 30 seconds
+      setTimeout(() => {
+        clearInterval(pollForQR);
+      }, 30000);
+
+      return () => clearInterval(pollForQR);
     }
-  }, [hasQRCode, instance?.qrCode, isConnected]);
+  }, [hasInstance, status, instance?.qrCode, selectedAgentId, queryClient]);
 
   const createInstanceMutation = useMutation({
     mutationFn: async ({ agentId, phoneNumber }: { agentId: number; phoneNumber: string }) => {
@@ -332,6 +342,61 @@ export default function WhatsAppManagementPage() {
                 </div>
               </div>
 
+              {/* QR Code Display - Show directly on page instead of modal */}
+              {instance?.qrCode && !isConnected && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-blue-800">
+                      <QrCode className="w-5 h-5" />
+                      QR Code para Conexão WhatsApp
+                    </CardTitle>
+                    <CardDescription>
+                      Escaneie este código com seu WhatsApp para conectar a instância
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col lg:flex-row gap-6 items-center">
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={instance.qrCode} 
+                          alt="QR Code WhatsApp" 
+                          className="w-64 h-64 rounded-lg shadow-md border-2 border-blue-200"
+                        />
+                      </div>
+                      <div className="flex-1 text-sm text-blue-700 space-y-3">
+                        <div>
+                          <h4 className="font-semibold mb-2">Como conectar:</h4>
+                          <ol className="space-y-2">
+                            <li className="flex items-start gap-2">
+                              <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">1</span>
+                              <span>Abra o WhatsApp no seu celular</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">2</span>
+                              <span>Toque em "Dispositivos conectados"</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">3</span>
+                              <span>Toque em "Conectar um dispositivo"</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">4</span>
+                              <span>Escaneie este QR Code</span>
+                            </li>
+                          </ol>
+                        </div>
+                        <div className="bg-blue-100 p-3 rounded-lg">
+                          <p className="text-xs">
+                            <strong>Importante:</strong> O QR Code expira em alguns minutos. 
+                            Se não conseguir escanear, clique em "Atualizar Status" para gerar um novo código.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Connection Status Messages */}
               {status === "open" || isConnected ? (
                 <Card className="border-green-200 bg-green-50">
@@ -352,12 +417,24 @@ export default function WhatsAppManagementPage() {
                     <strong>Atenção!</strong> A conexão WhatsApp foi perdida. Clique em "Atualizar Status" para gerar um novo QR Code.
                   </AlertDescription>
                 </Alert>
+              ) : !instance?.qrCode && status === "AWAITING_QR_SCAN" ? (
+                <Card className="border-orange-200 bg-orange-50">
+                  <CardContent className="pt-6">
+                    <div className="text-center text-orange-800">
+                      <QrCode className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Gerando QR Code...</p>
+                      <p className="text-xs mt-1">
+                        Aguarde enquanto o código de conexão é gerado.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card>
                   <CardHeader>
                     <CardTitle>Pronto para Configurar</CardTitle>
                     <CardDescription>
-                      Instância configurada mas aguardando conexão. Escaneie o QR Code quando disponível.
+                      Instância configurada. Aguardando geração do QR Code.
                     </CardDescription>
                   </CardHeader>
                 </Card>

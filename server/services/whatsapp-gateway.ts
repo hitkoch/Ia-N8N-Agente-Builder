@@ -179,21 +179,27 @@ export class WhatsAppGatewayService {
    * Conecta uma instância (gera novo QR Code se necessário)
    */
   async connectInstance(instanceName: string): Promise<InstanceStatusResponse> {
-    console.log(`🔌 Conectando instância e gerando QR Code: ${instanceName}`);
+    console.log(`🔌 Iniciando conexão para gerar QR Code: ${instanceName}`);
     
-    // For Evolution API, connecting means the instance will start generating QR code
-    // We wait a moment and check the connection state
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for QR generation
-    
-    const response = await fetch(`${this.baseUrl}/instance/connectionState/${instanceName}`, {
-      method: 'GET',
-      headers: {
-        'apikey': this.globalToken
-      }
-    });
+    try {
+      // Connect the instance to trigger QR code generation
+      const connectResponse = await fetch(`${this.baseUrl}/instance/connect/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': this.globalToken
+        }
+      });
 
-    if (!response.ok) {
-      // If connectionState doesn't work, fall back to fetchInstances
+      if (connectResponse.ok) {
+        console.log(`✅ Connect command enviado para: ${instanceName}`);
+      } else {
+        console.log(`⚠️ Connect endpoint status: ${connectResponse.status}`);
+      }
+
+      // Give the instance time to start generating QR code
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Check instance status
       const instancesResponse = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
         method: 'GET',
         headers: {
@@ -208,37 +214,31 @@ export class WhatsAppGatewayService {
         if (instance) {
           console.log(`🔍 Estado da instância ${instanceName}: ${instance.connectionStatus}`);
           
-          const data: InstanceStatusResponse = {
+          return {
             instance: {
               instanceName: instance.name,
-              status: instance.connectionStatus,
-              state: instance.connectionStatus,
-              qrcode: undefined // QR code will come via webhook
-            }
+              status: 'AWAITING_QR_SCAN'
+            },
+            connectionStatus: instance.connectionStatus || 'connecting',
+            qrcode: undefined // QR code will be delivered via webhook
           };
-          
-          console.log(`✅ Instância conectada ${instanceName}: ${data.instance.status}`);
-          return data;
         }
       }
       
-      throw new Error(`Falha ao verificar estado da instância: ${response.statusText}`);
+      // Fallback response
+      return {
+        instance: {
+          instanceName: instanceName,
+          status: 'AWAITING_QR_SCAN'
+        },
+        connectionStatus: 'connecting',
+        qrcode: undefined
+      };
+      
+    } catch (error) {
+      console.error(`❌ Erro ao conectar instância ${instanceName}:`, error);
+      throw new Error(`Falha ao iniciar conexão: ${error.message}`);
     }
-
-    const connectionData = await response.json();
-    console.log(`🔍 Estado da conexão ${instanceName}: ${connectionData.instance.state}`);
-    
-    const data: InstanceStatusResponse = {
-      instance: {
-        instanceName: instanceName,
-        status: connectionData.instance.state,
-        state: connectionData.instance.state,
-        qrcode: undefined // QR code will be delivered via webhook
-      }
-    };
-    
-    console.log(`✅ Instância conectada ${instanceName}: ${data.instance.status}`);
-    return data;
   }
 
   /**
