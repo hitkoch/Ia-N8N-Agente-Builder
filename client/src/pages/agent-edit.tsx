@@ -203,9 +203,9 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
     <div className="flex h-screen bg-gray-50">
       <Sidebar onSectionChange={handleSectionChange} />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4">
+        <div className="bg-white border-b px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
@@ -231,217 +231,229 @@ export default function AgentEdit({ agentId }: AgentEditProps) {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="border-b bg-white px-6 flex-shrink-0">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: "basic", label: "Básico", icon: Settings },
+              { id: "knowledge", label: "Conhecimento", icon: Database },
+              { id: "whatsapp", label: "WhatsApp", icon: Smartphone }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setCurrentTab(tab.id)}
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                    currentTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
-          {/* Tab Navigation */}
-          <div className="border-b mb-6">
-            <nav className="-mb-px flex space-x-8">
-              {[
-                { id: "basic", label: "Básico", icon: Settings },
-                { id: "knowledge", label: "Conhecimento", icon: Database },
-                { id: "whatsapp", label: "WhatsApp", icon: Smartphone }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setCurrentTab(tab.id)}
-                    className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                      currentTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+
 
           {/* Basic Tab */}
           {currentTab === "basic" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações Básicas</CardTitle>
-                <CardDescription>Configure as informações do agente</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+            <div className="max-w-4xl">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações Básicas</CardTitle>
+                  <CardDescription>Configure as informações do agente</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="name">Nome</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Nome do agente"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Rascunho</SelectItem>
+                          <SelectItem value="active">Ativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <div>
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Nome do agente"
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Descreva o agente..."
+                      rows={3}
+                      className="mt-1"
                     />
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Rascunho</SelectItem>
-                        <SelectItem value="active">Ativo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descreva o agente..."
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="systemPrompt">Prompt do Sistema</Label>
-                  <Textarea
-                    id="systemPrompt"
-                    value={formData.systemPrompt}
-                    onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                    placeholder="Você é um assistente..."
-                    rows={6}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="model">Modelo</Label>
-                    <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                        <SelectItem value="gpt-4">GPT-4</SelectItem>
-                        <SelectItem value="gpt-3.5-turbo">GPT-3.5</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Temperature: {formData.temperature}</Label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={formData.temperature}
-                      onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) })}
-                      className="w-full mt-2"
+                    <Label htmlFor="systemPrompt">Prompt do Sistema</Label>
+                    <Textarea
+                      id="systemPrompt"
+                      value={formData.systemPrompt}
+                      onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
+                      placeholder="Você é um assistente..."
+                      rows={6}
+                      className="mt-1"
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="model">Modelo</Label>
+                      <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                          <SelectItem value="gpt-4">GPT-4</SelectItem>
+                          <SelectItem value="gpt-3.5-turbo">GPT-3.5</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Temperature: {formData.temperature}</Label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={formData.temperature}
+                        onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) })}
+                        className="w-full mt-2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Knowledge Tab */}
           {currentTab === "knowledge" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Base de Conhecimento</CardTitle>
-                <CardDescription>Gerencie documentos e conhecimento</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="knowledgeBase">Conhecimento Base</Label>
-                  <Textarea
-                    id="knowledgeBase"
-                    value={formData.knowledgeBase}
-                    onChange={(e) => setFormData({ ...formData, knowledgeBase: e.target.value })}
-                    placeholder="Adicione informações que o agente deve conhecer..."
-                    rows={6}
-                  />
-                </div>
-
-                <div className="border-t pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h4 className="font-medium">Documentos</h4>
-                      <p className="text-sm text-gray-500">Envie arquivos para expandir o conhecimento</p>
-                    </div>
-                    <div>
-                      <input
-                        type="file"
-                        id="file-upload"
-                        accept=".pdf,.docx,.txt,.xlsx"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                      <Button 
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                        disabled={uploadMutation.isPending}
-                        variant="outline"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {uploadMutation.isPending ? "Enviando..." : "Enviar"}
-                      </Button>
-                    </div>
+            <div className="max-w-4xl">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Base de Conhecimento</CardTitle>
+                  <CardDescription>Gerencie documentos e conhecimento</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label htmlFor="knowledgeBase">Conhecimento Base</Label>
+                    <Textarea
+                      id="knowledgeBase"
+                      value={formData.knowledgeBase}
+                      onChange={(e) => setFormData({ ...formData, knowledgeBase: e.target.value })}
+                      placeholder="Adicione informações que o agente deve conhecer..."
+                      rows={6}
+                      className="mt-1"
+                    />
                   </div>
 
-                  {documents.length > 0 ? (
-                    <div className="space-y-3">
-                      {documents.map((doc: any) => (
-                        <div key={doc.id} className="flex items-center justify-between p-4 border rounded">
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-5 w-5 text-blue-500" />
-                            <div>
-                              <p className="font-medium">{doc.originalFilename || doc.filename}</p>
-                              <p className="text-sm text-gray-500">
-                                {doc.fileSize && `${(doc.fileSize / 1024).toFixed(1)} KB`}
-                                {doc.fileType && ` • ${doc.fileType}`}
-                              </p>
+                  <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="font-medium">Documentos</h4>
+                        <p className="text-sm text-gray-500">Envie arquivos para expandir o conhecimento</p>
+                      </div>
+                      <div>
+                        <input
+                          type="file"
+                          id="file-upload"
+                          accept=".pdf,.docx,.txt,.xlsx"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <Button 
+                          onClick={() => document.getElementById('file-upload')?.click()}
+                          disabled={uploadMutation.isPending}
+                          variant="outline"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploadMutation.isPending ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {documents.length > 0 ? (
+                      <div className="space-y-3">
+                        {documents.map((doc: any) => (
+                          <div key={doc.id} className="flex items-center justify-between p-4 border rounded">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-5 w-5 text-blue-500" />
+                              <div>
+                                <p className="font-medium">{doc.originalName || doc.filename}</p>
+                                <p className="text-sm text-gray-500">
+                                  {doc.fileSize && `${(doc.fileSize / 1024).toFixed(1)} KB`}
+                                  {doc.mimeType && ` • ${doc.mimeType}`}
+                                </p>
+                              </div>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDoc(doc.id)}
+                              disabled={deleteMutation.isPending}
+                              className="text-red-500"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteDoc(doc.id)}
-                            disabled={deleteMutation.isPending}
-                            className="text-red-500"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded">
-                      <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-gray-500">Nenhum documento enviado</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded">
+                        <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500">Nenhum documento enviado</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* WhatsApp Tab */}
           {currentTab === "whatsapp" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Integração WhatsApp</CardTitle>
-                <CardDescription>Configure a integração com WhatsApp</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Smartphone className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">Configuração do WhatsApp será implementada</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="max-w-4xl">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Integração WhatsApp</CardTitle>
+                  <CardDescription>Configure a integração com WhatsApp</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Smartphone className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500">Configuração do WhatsApp será implementada</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>
