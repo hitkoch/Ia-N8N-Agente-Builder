@@ -176,6 +176,15 @@ export default function AgentCard({ agent, onTest }: AgentCardProps) {
                 size="sm"
                 onClick={() => setLocation(`/agents/${agent.id}/edit`)}
                 className="flex-1"
+                style={{ borderColor: '#022b44', color: '#022b44' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#022b44';
+                }}
               >
                 <Edit className="h-4 w-4 mr-1" />
                 Editar
@@ -184,6 +193,15 @@ export default function AgentCard({ agent, onTest }: AgentCardProps) {
                 size="sm"
                 onClick={onTest}
                 className="flex-1"
+                style={{ backgroundColor: '#b8ec00', color: '#022b44', border: 'none' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#022b44';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b8ec00';
+                  e.currentTarget.style.color = '#022b44';
+                }}
               >
                 <Play className="h-4 w-4 mr-1" />
                 Testar
