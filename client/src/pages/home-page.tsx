@@ -151,7 +151,7 @@ export default function HomePage() {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>Links Rápidos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
