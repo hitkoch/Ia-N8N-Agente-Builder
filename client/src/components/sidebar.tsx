@@ -61,20 +61,20 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
         </nav>
 
         {/* User Profile */}
-        <div className="px-4 py-4 border-t border-slate-200">
+        <div className="px-4 py-4 border-t border-white border-opacity-20">
           <div className="flex items-center">
-            <div className="h-8 w-8 bg-slate-200 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-slate-600" />
+            <div className="h-8 w-8 bg-[#b8ec00] rounded-full flex items-center justify-center">
+              <User className="h-4 w-4 text-[#022b44]" />
             </div>
             <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-gray-300 truncate">{user?.username}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => logoutMutation.mutate()}
-              className="ml-2 text-slate-400 hover:text-slate-600"
+              className="ml-2 text-gray-300 hover:text-[#b8ec00]"
             >
               <LogOut className="h-4 w-4" />
             </Button>
