@@ -32,12 +32,6 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
-  // Redirect if already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
-
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -65,6 +59,12 @@ export default function AuthPage() {
     const { confirmPassword, ...registerData } = data;
     registerMutation.mutate(registerData);
   };
+
+  // Redirect if already logged in
+  if (user) {
+    setLocation("/");
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex">
