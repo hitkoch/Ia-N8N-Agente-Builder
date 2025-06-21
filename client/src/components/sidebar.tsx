@@ -1,7 +1,6 @@
-import { useAuth } from "@/hooks/use-auth";
-import { Bot, BarChart3, Settings, Webhook, TestTube, LogOut, User, FileText } from "lucide-react";
+import { Bot, BarChart3, FileText, Webhook, TestTube, Settings, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SidebarProps {
   currentSection: string;
@@ -21,38 +20,37 @@ export default function Sidebar({ currentSection, onSectionChange }: SidebarProp
   ];
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-64 shadow-lg border-r border-slate-200" style={{ backgroundColor: '#022b44' }}>
+    <div className="fixed inset-y-0 left-0 z-50 w-64 shadow-lg" style={{ backgroundColor: '#022b44' }}>
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="flex items-center px-6 py-4 border-b border-slate-600">
+        <div className="flex items-center px-6 py-4 border-b border-white border-opacity-20">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center mr-3" style={{ backgroundColor: '#b8ec00' }}>
             <Bot className="h-4 w-4" style={{ color: '#022b44' }} />
           </div>
-          <h1 className="text-lg font-semibold" style={{ color: '#b8ec00' }}>AI Agent Builder</h1>
+          <h2 className="text-xl font-bold text-white">AI Agent Builder</h2>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
-                className={cn(
-                  "w-full group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                className={`w-full group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   currentSection === item.id
-                    ? "bg-slate-100 text-slate-900"
-                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-                )}
+                    ? "text-[#022b44] font-semibold shadow-sm"
+                    : "text-white hover:text-[#b8ec00] hover:bg-white hover:bg-opacity-10"
+                }`}
+                style={currentSection === item.id ? { backgroundColor: '#b8ec00' } : {}}
               >
                 <Icon
-                  className={cn(
-                    "mr-3 h-5 w-5",
+                  className={`mr-3 h-5 w-5 ${
                     currentSection === item.id
-                      ? "text-slate-600"
-                      : "text-slate-400 group-hover:text-slate-600"
-                  )}
+                      ? "text-[#022b44]"
+                      : "text-white group-hover:text-[#b8ec00]"
+                  }`}
                 />
                 {item.name}
               </button>
