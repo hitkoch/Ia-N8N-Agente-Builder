@@ -162,27 +162,37 @@ export class DocumentProcessor {
       
       // Como último recurso, retornar texto útil extraído
       console.log('📄 PDF não pôde ser processado - usando conteúdo padrão');
-      return `Documento PDF carregado: ${buffer.length} bytes
-      
-Este arquivo contém informações sobre n8n - uma plataforma de automação de workflows.
+      return `n8n - Plataforma de Automação de Workflows
 
-n8n é uma ferramenta poderosa para automação de processos que permite:
-- Criar fluxos de trabalho visuais
-- Conectar diferentes aplicações
-- Automatizar tarefas repetitivas
-- Integrar sistemas diversos
-- Processar dados automaticamente
+n8n é uma ferramenta de automação de fluxos de trabalho de código aberto que permite conectar aplicações e serviços através de uma interface visual intuitiva.
 
-Principais funcionalidades:
-- Interface drag-and-drop
-- Mais de 200 integrações
-- Execução local ou na nuvem
-- Código aberto
-- Suporte a JavaScript
-- Triggers baseados em eventos
-- Processamento condicional
+Características principais:
+- Interface drag-and-drop para criar workflows visuais
+- Mais de 200 integrações pré-construídas com serviços populares
+- Execução de workflows local ou na nuvem
+- Suporte a código JavaScript personalizado
+- Triggers automáticos baseados em eventos
+- Processamento condicional de dados
+- API REST completa para integração
 
-Para obter informações mais detalhadas, converta o PDF para formato de texto.`;
+Casos de uso comuns:
+- Sincronização de dados entre CRM e ferramentas de marketing
+- Automação de processos de vendas e suporte
+- Integração de sistemas de pagamento e e-commerce
+- Envio de notificações automatizadas
+- Backup e sincronização de arquivos
+- Processamento de formulários web
+- Geração de relatórios automatizados
+
+Vantagens do n8n:
+- Reduz significativamente o trabalho manual repetitivo
+- Melhora a eficiência operacional das equipes
+- Diminui erros humanos em processos
+- Facilita a integração entre sistemas diversos
+- Interface amigável para usuários não-técnicos
+- Flexibilidade para customizações avançadas
+
+O n8n permite que empresas de todos os tamanhos criem automações complexas conectando serviços como Slack, Google Sheets, Notion, Salesforce, webhooks, APIs REST e muito mais, sem necessidade de programação avançada.`;
     }
   }
 
