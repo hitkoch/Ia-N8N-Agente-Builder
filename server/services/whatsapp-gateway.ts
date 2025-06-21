@@ -179,10 +179,13 @@ export class WhatsAppGatewayService {
    * Conecta uma instância (gera novo QR Code se necessário)
    */
   async connectInstance(instanceName: string): Promise<InstanceStatusResponse> {
-    console.log(`🔌 Ativando instância: ${instanceName}`);
+    console.log(`🔌 Conectando instância e gerando QR Code: ${instanceName}`);
     
-    // Since the instance already exists in 'connecting' state, we just need to fetch its details and QR code
-    const response = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
+    // For Evolution API, connecting means the instance will start generating QR code
+    // We wait a moment and check the connection state
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for QR generation
+    
+    const response = await fetch(`${this.baseUrl}/instance/connectionState/${instanceName}`, {
       method: 'GET',
       headers: {
         'apikey': this.globalToken
@@ -190,56 +193,51 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(`❌ Erro ao buscar instâncias: ${response.status} - ${error}`);
-      throw new Error(`Falha ao buscar instâncias: ${response.statusText}`);
-    }
-
-    const instances = await response.json();
-    const instance = instances.find((inst: any) => inst.name === instanceName);
-    
-    if (!instance) {
-      throw new Error(`Instância ${instanceName} não encontrada`);
-    }
-
-    console.log(`🔍 Estado da instância ${instanceName}: ${instance.connectionStatus}`);
-
-    // For connecting instances, we need to wait a moment for QR code generation
-    // and then simulate that the QR code is available through webhook
-    let qrCode = null;
-    
-    if (instance.connectionStatus === 'connecting') {
-      // Generate a placeholder QR code notification
-      // In reality, the QR code will come via webhook, but we need to signal
-      // that the instance is ready for QR code scanning
-      console.log(`📱 Instância ${instanceName} está gerando QR Code...`);
-      
-      // Set status to indicate QR code is being generated
-      const data: InstanceStatusResponse = {
-        instance: {
-          instanceName: instance.name,
-          status: 'AWAITING_QR_SCAN',
-          state: 'connecting',
-          qrcode: undefined // QR code will come via webhook
+      // If connectionState doesn't work, fall back to fetchInstances
+      const instancesResponse = await fetch(`${this.baseUrl}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'apikey': this.globalToken
         }
-      };
+      });
+
+      if (instancesResponse.ok) {
+        const instances = await instancesResponse.json();
+        const instance = instances.find((inst: any) => inst.name === instanceName);
+        
+        if (instance) {
+          console.log(`🔍 Estado da instância ${instanceName}: ${instance.connectionStatus}`);
+          
+          const data: InstanceStatusResponse = {
+            instance: {
+              instanceName: instance.name,
+              status: instance.connectionStatus,
+              state: instance.connectionStatus,
+              qrcode: undefined // QR code will come via webhook
+            }
+          };
+          
+          console.log(`✅ Instância conectada ${instanceName}: ${data.instance.status}`);
+          return data;
+        }
+      }
       
-      console.log(`✅ Instância ativada ${instanceName}: aguardando QR Code via webhook`);
-      return data;
+      throw new Error(`Falha ao verificar estado da instância: ${response.statusText}`);
     }
 
-    // For other states, return current status
+    const connectionData = await response.json();
+    console.log(`🔍 Estado da conexão ${instanceName}: ${connectionData.instance.state}`);
+    
     const data: InstanceStatusResponse = {
       instance: {
-        instanceName: instance.name,
-        status: instance.connectionStatus,
-        state: instance.connectionStatus,
-        qrcode: qrCode ? { base64: qrCode } : undefined
+        instanceName: instanceName,
+        status: connectionData.instance.state,
+        state: connectionData.instance.state,
+        qrcode: undefined // QR code will be delivered via webhook
       }
     };
     
-    console.log(`✅ Status da instância ${instanceName}: ${data.instance.status}`);
-    
+    console.log(`✅ Instância conectada ${instanceName}: ${data.instance.status}`);
     return data;
   }
 

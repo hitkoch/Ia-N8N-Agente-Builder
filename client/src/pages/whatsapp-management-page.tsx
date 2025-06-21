@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Smartphone, QrCode, CheckCircle, XCircle, RefreshCw, Trash2, Settings, Clock } from "lucide-react";
+import { Loader2, Smartphone, QrCode, CheckCircle, XCircle, RefreshCw, Trash2, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useWhatsAppStatus } from "@/hooks/use-whatsapp-status";
@@ -78,15 +77,12 @@ export default function WhatsAppManagementPage() {
     }
   });
 
-  // Additional derived state
-  const isPending = instance?.status === "PENDING";
-
   // Auto-open QR modal when QR code becomes available
   useEffect(() => {
-    if (hasQRCode && instance?.qrCode && !isConnected && instance?.status === "AWAITING_QR_SCAN") {
+    if (hasQRCode && instance?.qrCode && !isConnected) {
       setIsQRModalOpen(true);
     }
-  }, [hasQRCode, instance?.qrCode, isConnected, instance?.status]);
+  }, [hasQRCode, instance?.qrCode, isConnected]);
 
   const createInstanceMutation = useMutation({
     mutationFn: async ({ agentId, phoneNumber }: { agentId: number; phoneNumber: string }) => {
@@ -97,39 +93,21 @@ export default function WhatsAppManagementPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
+      if (data.qrCode) {
+        setIsQRModalOpen(true);
+      }
       toast({
-        title: "Estrutura da instância criada",
-        description: "Agora clique em 'Ativar Conexão' para gerar o QR Code.",
+        title: "Instância WhatsApp criada",
+        description: "Instância criada com sucesso! QR Code será exibido quando disponível.",
       });
       setIsCreateDialogOpen(false);
       setPhoneNumber("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao criar instância",
-        description: error.message || "Falha ao criar estrutura da instância",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const activateInstanceMutation = useMutation({
-    mutationFn: async (agentId: number) => {
-      const response = await apiRequest("POST", `/api/agents/${agentId}/whatsapp/activate-instance`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agents", selectedAgentId, "whatsapp"] });
-      toast({
-        title: "Conexão ativada",
-        description: "QR Code gerado! Escaneie para conectar.",
-      });
       startPolling();
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao ativar conexão",
-        description: error.message || "Falha ao ativar a instância",
+        title: "Erro ao criar instância",
+        description: error.message || "Falha ao criar instância WhatsApp",
         variant: "destructive",
       });
     },
@@ -216,55 +194,6 @@ export default function WhatsAppManagementPage() {
     },
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "CONNECTED":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
-      case "PENDING":
-      case "CREATED":
-        return <Badge className="bg-yellow-100 text-yellow-800"><QrCode className="w-3 h-3 mr-1" />Aguardando</Badge>;
-      case "close":
-      case "DISCONNECTED":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>;
-      default:
-        return <Badge variant="secondary">{status || "Desconhecido"}</Badge>;
-    }
-  };
-
-  const renderQRCode = () => {
-    if (!instance?.qrCode) return null;
-    
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            QR Code de Conexão
-          </CardTitle>
-          <CardDescription>
-            Escaneie com o WhatsApp para conectar sua instância
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center">
-          <img 
-            src={instance.qrCode} 
-            alt="QR Code WhatsApp" 
-            className="max-w-xs mx-auto rounded-lg shadow-md"
-          />
-          <div className="mt-4 text-sm text-gray-600">
-            <p><strong>Como conectar:</strong></p>
-            <ol className="text-left mt-2 space-y-1">
-              <li>1. Abra o WhatsApp no seu celular</li>
-              <li>2. Toque em "Dispositivos conectados"</li>
-              <li>3. Toque em "Conectar um dispositivo"</li>
-              <li>4. Escaneie este QR Code</li>
-            </ol>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -306,7 +235,7 @@ export default function WhatsAppManagementPage() {
       </Card>
 
       {selectedAgentId && (
-        <>
+        <div>
           {instanceLoading ? (
             <Card>
               <CardContent className="flex items-center justify-center py-8">
@@ -316,200 +245,122 @@ export default function WhatsAppManagementPage() {
             </Card>
           ) : hasInstance ? (
             <div className="space-y-6">
-              {/* Show PENDING state first */}
-              {isPending ? (
-                <Card className="border-yellow-200 bg-yellow-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-yellow-800">
-                      <Clock className="w-5 h-5" />
-                      Instância Criada - Pendente de Ativação
-                    </CardTitle>
-                    <CardDescription>
-                      Instância: {instanceName}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center space-y-4">
-                      <p className="text-sm text-yellow-700">
-                        A estrutura da instância foi criada com sucesso. 
-                        Agora você precisa ativar a conexão para gerar o QR Code.
-                      </p>
+              {/* Instance Management Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Gerenciamento da Instância
+                  </CardTitle>
+                  <CardDescription>
+                    Controle e configurações da instância WhatsApp
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => refreshStatusMutation.mutate(selectedAgentId)}
+                      disabled={refreshStatusMutation.isPending}
+                      variant="outline"
+                    >
+                      {refreshStatusMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Atualizar Status
+                    </Button>
+                    
+                    {!isConnected && (
                       <Button
-                        onClick={() => activateInstanceMutation.mutate(selectedAgentId)}
-                        disabled={activateInstanceMutation.isPending}
+                        onClick={startPolling}
+                        disabled={isPolling}
+                        variant="outline"
+                      >
+                        {isPolling ? "Verificando..." : "Iniciar Monitoramento"}
+                      </Button>
+                    )}
+
+                    {status === "AWAITING_QR_SCAN" && !instance?.qrCode && (
+                      <Button
+                        onClick={() => fetchQRMutation.mutate(selectedAgentId)}
+                        disabled={fetchQRMutation.isPending}
                         style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
                         className="hover:opacity-90"
-                        size="lg"
                       >
-                        {activateInstanceMutation.isPending ? (
+                        {fetchQRMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         ) : (
                           <QrCode className="w-4 h-4 mr-2" />
                         )}
-                        Ativar Conexão e Gerar QR Code
+                        Buscar QR Code
                       </Button>
-                      <div className="pt-2">
-                        <Button
-                          onClick={() => removeInstanceMutation.mutate(selectedAgentId)}
-                          disabled={removeInstanceMutation.isPending}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          {removeInstanceMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <Trash2 className="w-4 h-4 mr-2" />
-                          )}
-                          Excluir Instância
-                        </Button>
-                      </div>
+                    )}
+                    
+                    <Button
+                      onClick={() => removeInstanceMutation.mutate(selectedAgentId)}
+                      disabled={removeInstanceMutation.isPending}
+                      variant="destructive"
+                    >
+                      {removeInstanceMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 mr-2" />
+                      )}
+                      Excluir Instância
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Status and Activity */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-1">
+                  <WhatsAppStatusIndicator
+                    status={status}
+                    instanceName={instanceName}
+                    lastActivity={lastUpdated}
+                    isPolling={isPolling}
+                  />
+                </div>
+                
+                <div className="lg:col-span-2">
+                  <WhatsAppActivityMonitor
+                    agentId={selectedAgentId}
+                    status={status}
+                  />
+                </div>
+              </div>
+
+              {/* Connection Status Messages */}
+              {status === "open" || isConnected ? (
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="pt-6">
+                    <div className="text-center text-green-800">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-sm font-medium">WhatsApp Conectado!</p>
+                      <p className="text-xs mt-1">
+                        Seu agente está pronto para receber mensagens.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
+              ) : status === "close" || status === "disconnected" ? (
+                <Alert variant="destructive">
+                  <XCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    <strong>Atenção!</strong> A conexão WhatsApp foi perdida. Clique em "Atualizar Status" para gerar um novo QR Code.
+                  </AlertDescription>
+                </Alert>
               ) : (
-                <>
-                  {/* Instance Management Section */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Settings className="w-5 h-5" />
-                        Gerenciamento da Instância
-                      </CardTitle>
-                      <CardDescription>
-                        Controle e configurações da instância WhatsApp
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-3">
-                        <Button
-                          onClick={() => refreshStatusMutation.mutate(selectedAgentId)}
-                          disabled={refreshStatusMutation.isPending}
-                          variant="outline"
-                        >
-                          {refreshStatusMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                          )}
-                          Atualizar Status
-                        </Button>
-                        
-                        {!isConnected && (
-                          <Button
-                            onClick={startPolling}
-                            disabled={isPolling}
-                            variant="outline"
-                          >
-                            {isPolling ? "Verificando..." : "Iniciar Monitoramento"}
-                          </Button>
-                        )}
-
-                        {status === "AWAITING_QR_SCAN" && !instance?.qrCode && (
-                          <Button
-                            onClick={() => fetchQRMutation.mutate(selectedAgentId)}
-                            disabled={fetchQRMutation.isPending}
-                            style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
-                            className="hover:opacity-90"
-                          >
-                            {fetchQRMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <QrCode className="w-4 h-4 mr-2" />
-                            )}
-                            Buscar QR Code
-                          </Button>
-                        )}
-                        
-                        <Button
-                          onClick={() => removeInstanceMutation.mutate(selectedAgentId)}
-                          disabled={removeInstanceMutation.isPending}
-                          variant="destructive"
-                        >
-                          {removeInstanceMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <Trash2 className="w-4 h-4 mr-2" />
-                          )}
-                          Excluir Instância
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Status and Activity */}
-                  <div className="grid gap-6 lg:grid-cols-3">
-                    <div className="lg:col-span-1">
-                      <WhatsAppStatusIndicator
-                        status={status}
-                        instanceName={instanceName}
-                        lastActivity={lastUpdated}
-                        isPolling={isPolling}
-                      />
-                    </div>
-                    
-                    <div className="lg:col-span-2">
-                      <WhatsAppActivityMonitor
-                        agentId={selectedAgentId}
-                        status={status}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Connection Status Messages */}
-                  {status === "open" || isConnected ? (
-                    <Card className="border-green-200 bg-green-50">
-                      <CardContent className="pt-6">
-                        <div className="text-center text-green-800">
-                          <CheckCircle className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm font-medium">WhatsApp Conectado!</p>
-                          <p className="text-xs mt-1">
-                            Seu agente está pronto para receber mensagens.
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : status === "close" || status === "disconnected" ? (
-                    <Alert variant="destructive">
-                      <XCircle className="w-4 h-4" />
-                      <AlertDescription>
-                        <strong>Atenção!</strong> A conexão WhatsApp foi perdida. Clique em "Atualizar Status" para gerar um novo QR Code.
-                      </AlertDescription>
-                    </Alert>
-                  ) : status === "connecting" ? (
-                    <Card className="border-orange-200 bg-orange-50">
-                      <CardContent className="pt-6">
-                        <div className="text-center text-orange-800">
-                          <Clock className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-                          <p className="text-sm font-medium">Instância Antiga - Necessita Reconfiguração</p>
-                          <p className="text-xs mt-1 mb-4">
-                            Esta instância foi criada com o método antigo. Para usar o novo sistema de 2 etapas, exclua e recrie.
-                          </p>
-                          <Button
-                            onClick={() => removeInstanceMutation.mutate(selectedAgentId)}
-                            disabled={removeInstanceMutation.isPending}
-                            variant="destructive"
-                          >
-                            {removeInstanceMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <Trash2 className="w-4 h-4 mr-2" />
-                            )}
-                            Excluir e Recriar Instância
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Pronto para Configurar</CardTitle>
-                        <CardDescription>
-                          Instância configurada mas aguardando conexão. Escaneie o QR Code quando disponível.
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  )}
-                </>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pronto para Configurar</CardTitle>
+                    <CardDescription>
+                      Instância configurada mas aguardando conexão. Escaneie o QR Code quando disponível.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
               )}
             </div>
           ) : (
@@ -530,14 +381,14 @@ export default function WhatsAppManagementPage() {
                         size="lg"
                       >
                         <Smartphone className="w-4 h-4 mr-2" />
-                        Criar Estrutura da Instância
+                        Criar Instância WhatsApp
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Criar Nova Instância WhatsApp</DialogTitle>
+                        <DialogTitle>Criar Instância WhatsApp</DialogTitle>
                         <DialogDescription>
-                          Configure uma nova instância para conectar este agente ao WhatsApp.
+                          Crie uma instância completa com QR Code para conectar este agente ao WhatsApp.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -573,7 +424,7 @@ export default function WhatsAppManagementPage() {
               </Card>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* QR Code Modal */}

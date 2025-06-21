@@ -552,17 +552,25 @@ export function registerRoutes(app: Express): Server {
       // Generate unique instance name using phone number
       const instanceName = `whatsapp-${phoneNumber}`;
       
-      // Only create the basic instance structure - no webhook, no QR code
-      console.log(`📱 Criando estrutura básica da instância: ${instanceName}`);
+      // Create complete instance: create + webhook + connect + QR code
+      console.log(`📱 Criando instância WhatsApp: ${instanceName}`);
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
-      console.log(`✅ Instância criada no gateway Evolution: ${instanceName}`);
+      console.log(`✅ Instância criada: ${instanceName}, Status: ${gatewayResponse.instance.status}`);
       
-      // Save to database with PENDING status
+      console.log(`🔗 Configurando webhook para: ${instanceName}`);
+      await whatsappGatewayService.setWebhook(instanceName);
+      console.log(`✅ Webhook configurado para: ${instanceName}`);
+      
+      console.log(`📱 Conectando e gerando QR Code para: ${instanceName}`);
+      const connectResponse = await whatsappGatewayService.connectInstance(instanceName);
+      console.log(`✅ Conexão iniciada para: ${instanceName}`);
+      
+      // Save to database with complete data
       console.log(`💾 Salvando instância no banco de dados: ${instanceName}`);
       const whatsappInstance = await storage.createWhatsappInstance({
         instanceName,
-        status: "PENDING", // Mark as pending activation
-        qrCode: null, // No QR code yet
+        status: connectResponse.instance.status || "connecting",
+        qrCode: connectResponse.qrcode?.base64 || null,
         agentId: parseInt(agentId)
       });
       
