@@ -1,0 +1,52 @@
+// Em src/controllers/whatsappController.js, substitua a função createInstance por esta:
+
+// Importe o serviço no topo do arquivo, se ainda não estiver lá
+const evolutionApiService = require('../services/evolutionApiService');
+const prisma = require('../prismaClient'); // ou o caminho para seu cliente prisma
+
+exports.createInstance = async (req, res) => {
+  const { agentId } = req.params;
+  const userId = req.user.id; // Vindo do middleware de autenticação
+
+  try {
+    // 1. Verificação de Propriedade (Segurança)
+    const agent = await prisma.agent.findUnique({ where: { id: parseInt(agentId) } });
+    if (!agent || agent.ownerId !== userId) {
+      return res.status(403).json({ error: 'Acesso não autorizado a este agente.' });
+    }
+
+    // 2. Verificar se já existe uma instância
+    const existingInstance = await prisma.whatsAppInstance.findUnique({ where: { agentId: parseInt(agentId) } });
+    if (existingInstance) {
+      return res.status(409).json({ error: 'Este agente já possui uma instância do WhatsApp conectada.' });
+    }
+
+    // 3. Geração do Nome da Instância
+    const instanceName = `agent-${agentId}-${Date.now()}`; // Adiciona timestamp para garantir unicidade
+
+    // 4. Criação e Configuração Atômica
+    console.log(`Iniciando criação da instância ${instanceName}...`);
+    const creationResponse = await evolutionApiService.createInstance(instanceName);
+
+    console.log(`Instância criada, configurando webhook para ${instanceName}...`);
+    await evolutionApiService.setWebhook(instanceName);
+
+    // 5. Salvar no Banco de Dados
+    console.log(`Salvando instância ${instanceName} no banco de dados...`);
+    const newInstanceInDb = await prisma.whatsAppInstance.create({
+      data: {
+        instanceName,
+        qrCode: creationResponse.qrcode?.base64,
+        status: 'CREATED',
+        agentId: parseInt(agentId),
+      },
+    });
+
+    res.status(201).json(newInstanceInDb);
+
+  } catch (error) {
+    console.error("Erro no processo de criação da instância do WhatsApp:", error.message);
+    // Adicionar lógica de limpeza aqui se necessário
+    res.status(500).json({ error: "Falha ao criar e configurar a instância do WhatsApp.", details: error.message });
+  }
+};

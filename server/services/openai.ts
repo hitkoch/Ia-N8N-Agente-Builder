@@ -36,6 +36,46 @@ export class OpenAIService {
     }
   }
 
+  async generateResponseWithImage(agent: Agent, systemPrompt: string, userMessage: string, imageBase64: string): Promise<string> {
+    if (!openai) {
+      throw new Error("OpenAI não está configurada. Verifique a variável OPENAI_API_KEY.");
+    }
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: userMessage
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${imageBase64}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: agent.maxTokens || 1000,
+        temperature: agent.temperature || 0.7,
+      });
+
+      return completion.choices[0]?.message?.content || "Desculpe, não consegui processar sua imagem.";
+    } catch (error) {
+      console.error("Erro ao chamar OpenAI com imagem:", error);
+      throw new Error("Falha ao processar imagem com IA");
+    }
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       await openai.models.list();

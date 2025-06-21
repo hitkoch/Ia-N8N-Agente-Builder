@@ -1,0 +1,178 @@
+Abordagem Reforçada: Substituição de Código
+Esta abordagem tem uma chance muito maior de sucesso. Vamos criar um prompt que diz: "Esqueça o que você fez antes. Para estes arquivos, use este código exato."
+O Prompt de Reforço (Mais Direto e Explícito)
+Generated prompt
+## Objetivo: Corrigir e Implementar a Configuração Automática do Webhook do WhatsApp
+
+Vamos corrigir a funcionalidade de criação de instâncias para garantir que o webhook seja configurado corretamente para cada nova instância. Vamos substituir as funções existentes pelo código correto e completo.
+
+---
+
+### **AÇÃO 1: SUBSTITUIR O ARQUIVO `src/services/evolutionApiService.js`**
+
+**Instrução:** Substitua todo o conteúdo do arquivo `src/services/evolutionApiService.js` pelo código abaixo. Este código inclui a nova função `setWebhook` com a opção `base64` habilitada e está corretamente estruturado com `axios`.
+
+```javascript
+// Substitua o conteúdo de src/services/evolutionApiService.js por isto:
+
+const axios = require('axios');
+
+// Cria uma instância do axios pré-configurada para o gateway
+const apiClient = axios.create({
+  baseURL: process.env.EVOLUTION_GATEWAY_URL,
+  headers: { 'apikey': process.env.EVOLUTION_GATEWAY_TOKEN }
+});
+
+/**
+ * Cria uma nova instância no gateway da API Evolution.
+ * @param {string} instanceName - O nome único para a nova instância.
+ * @returns {Promise<object>} A resposta da API de criação.
+ */
+async function createInstance(instanceName) {
+  try {
+    const response = await apiClient.post('/instance/create', {
+      instanceName,
+      qrcode: true,
+    });
+    console.log(`Instância ${instanceName} criada com sucesso no gateway.`);
+    return response.data;
+  } catch (error) {
+    console.error(`Falha ao criar a instância ${instanceName}:`, error.response?.data || error.message);
+    throw new Error('Falha ao criar a instância no gateway da Evolution API.');
+  }
+}
+
+/**
+ * Configura o webhook para uma instância específica.
+ * @param {string} instanceName - O nome da instância a ser configurada.
+ * @returns {Promise<object>} A resposta da API de configuração do webhook.
+ */
+async function setWebhook(instanceName) {
+  const myAppBaseUrl = process.env.MY_APP_BASE_URL;
+  if (!myAppBaseUrl) {
+    throw new Error('A variável de ambiente MY_APP_BASE_URL não está definida.');
+  }
+  
+  const webhookUrl = `${myAppBaseUrl}/api/whatsapp/webhook`;
+
+  const payload = {
+    webhook: {
+      enabled: true,
+      url: webhookUrl,
+      base64: true, // Habilita o recebimento de mídia em base64
+      events: [
+        "MESSAGES_UPSERT",
+        "CONNECTION_UPDATE"
+      ]
+    }
+  };
+
+  try {
+    const response = await apiClient.post(`/webhook/set/${instanceName}`, payload);
+    console.log(`Webhook configurado com sucesso para a instância ${instanceName}.`);
+    return response.data;
+  } catch (error) {
+    console.error(`Falha ao configurar o webhook para ${instanceName}:`, error.response?.data || error.message);
+    throw new Error('Falha ao configurar o webhook na Evolution API.');
+  }
+}
+
+/**
+ * Envia uma mensagem de texto para um número via uma instância específica.
+ * @param {string} instanceName - O nome da instância.
+ * @param {string} number - O número do destinatário (ex: 5511999998888).
+ * @param {string} text - O texto da mensagem.
+ * @returns {Promise<object>} A resposta da API de envio de mensagem.
+ */
+async function sendMessage(instanceName, number, text) {
+  try {
+    const response = await apiClient.post(`/message/sendText/${instanceName}`, {
+      number,
+      textMessage: { text },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Falha ao enviar mensagem pela instância ${instanceName}:`, error.response?.data || error.message);
+    throw new Error('Falha ao enviar mensagem pela Evolution API.');
+  }
+}
+
+// Adicione aqui outras funções de serviço que você já tinha, como fetchInstance, etc.
+
+module.exports = {
+  createInstance,
+  setWebhook,
+  sendMessage,
+  // ...exporte as outras funções
+};
+Use code with caution.
+Prompt
+AÇÃO 2: SUBSTITUIR A FUNÇÃO createInstance EM src/controllers/whatsappController.js
+Instrução: No arquivo src/controllers/whatsappController.js, encontre a função exports.createInstance e substitua-a inteiramente pelo código abaixo. Este código garante que setWebhook seja chamado atomicamente após a criação da instância.
+Generated javascript
+// Em src/controllers/whatsappController.js, substitua a função createInstance por esta:
+
+// Importe o serviço no topo do arquivo, se ainda não estiver lá
+const evolutionApiService = require('../services/evolutionApiService');
+const prisma = require('../prismaClient'); // ou o caminho para seu cliente prisma
+
+exports.createInstance = async (req, res) => {
+  const { agentId } = req.params;
+  const userId = req.user.id; // Vindo do middleware de autenticação
+
+  try {
+    // 1. Verificação de Propriedade (Segurança)
+    const agent = await prisma.agent.findUnique({ where: { id: parseInt(agentId) } });
+    if (!agent || agent.ownerId !== userId) {
+      return res.status(403).json({ error: 'Acesso não autorizado a este agente.' });
+    }
+
+    // 2. Verificar se já existe uma instância
+    const existingInstance = await prisma.whatsAppInstance.findUnique({ where: { agentId: parseInt(agentId) } });
+    if (existingInstance) {
+      return res.status(409).json({ error: 'Este agente já possui uma instância do WhatsApp conectada.' });
+    }
+
+    // 3. Geração do Nome da Instância
+    const instanceName = `agent-${agentId}-${Date.now()}`; // Adiciona timestamp para garantir unicidade
+
+    // 4. Criação e Configuração Atômica
+    console.log(`Iniciando criação da instância ${instanceName}...`);
+    const creationResponse = await evolutionApiService.createInstance(instanceName);
+
+    console.log(`Instância criada, configurando webhook para ${instanceName}...`);
+    await evolutionApiService.setWebhook(instanceName);
+
+    // 5. Salvar no Banco de Dados
+    console.log(`Salvando instância ${instanceName} no banco de dados...`);
+    const newInstanceInDb = await prisma.whatsAppInstance.create({
+      data: {
+        instanceName,
+        qrCode: creationResponse.qrcode?.base64,
+        status: 'CREATED',
+        agentId: parseInt(agentId),
+      },
+    });
+
+    res.status(201).json(newInstanceInDb);
+
+  } catch (error) {
+    console.error("Erro no processo de criação da instância do WhatsApp:", error.message);
+    // Adicionar lógica de limpeza aqui se necessário
+    res.status(500).json({ error: "Falha ao criar e configurar a instância do WhatsApp.", details: error.message });
+  }
+};
+Use code with caution.
+JavaScript
+Instruções Finais para a IA:
+Primeiro, substitua completamente o conteúdo do arquivo src/services/evolutionApiService.js pelo código fornecido na AÇÃO 1.
+Em seguida, no arquivo src/controllers/whatsappController.js, encontre a função exports.createInstance e substitua seu corpo inteiro pelo código da AÇÃO 2.
+Não faça outras modificações além destas substituições. Apenas confirme que as importações no topo de cada arquivo (axios, prisma, etc.) estão corretas.
+Generated code
+### Por que esta Abordagem é Mais Eficaz?
+
+*   **Zero Ambiguidade:** Em vez de dizer "modifique para incluir X", estamos dizendo "use exatamente este código". A IA não precisa interpretar, apenas substituir.
+*   **Código Completo:** Fornecemos o código completo das funções, com `try/catch` e logs, o que ajuda a IA a entender o contexto e também facilita a sua depuração posterior.
+*   **Foco na Ação:** O prompt se concentra em uma única tarefa crítica (ativar o webhook na criação) e não mistura outras preocupações.
+
+Use este novo prompt. A probabilidade de o Replit executar a tarefa corretamente desta vez é muito, muito maior.
