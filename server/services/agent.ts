@@ -91,11 +91,11 @@ export class AgentService {
         console.log(`📄 Documento: ${doc.originalName}`);
         console.log(`   - ID: ${doc.id}`);
         console.log(`   - Conteúdo: ${doc.content ? doc.content.length : 0} caracteres`);
-        console.log(`   - Has embedding: ${!!doc.embedding}`);
+        console.log(`   - Has embedding: ${!!doc.embeddings}`);
         
-        if (doc.embedding) {
+        if (doc.embeddings) {
           try {
-            const chunks = JSON.parse(doc.embedding);
+            const chunks = JSON.parse(doc.embeddings);
             console.log(`   - Chunks: ${chunks.length}`);
             if (chunks.length > 0) {
               console.log(`   - Primeiro chunk: ${chunks[0].text?.substring(0, 100)}...`);
@@ -109,9 +109,9 @@ export class AgentService {
       
       // Verificar se temos documentos com embeddings válidos
       const docsWithEmbeddings = ragDocs.filter(doc => {
-        if (!doc.embedding) return false;
+        if (!doc.embeddings) return false;
         try {
-          const chunks = JSON.parse(doc.embedding);
+          const chunks = JSON.parse(doc.embeddings);
           return chunks && chunks.length > 0 && chunks[0].embedding;
         } catch {
           return false;
@@ -134,13 +134,15 @@ export class AgentService {
       console.log('📄 Usando fallback: retornando conteúdo completo');
       const allContent = ragDocs
         .filter(doc => {
-          const validContent = doc.content && 
-                              !doc.content.includes('[ERRO') && 
-                              !doc.content.includes('[FORMATO NÃO SUPORTADO') &&
-                              doc.content.length > 50 &&
-                              doc.content.includes('n8n') // Conteúdo relevante para teste
-          console.log(`📄 ${doc.originalName}: ${validContent ? 'válido' : 'inválido'}`);
-          return validContent;
+          const hasContent = doc.content && doc.content.length > 50;
+          const isValid = hasContent && 
+                         !doc.content.includes('[ERRO') && 
+                         !doc.content.includes('[FORMATO NÃO SUPORTADO');
+          console.log(`📄 ${doc.originalName}: conteúdo=${hasContent}, válido=${isValid}`);
+          if (hasContent) {
+            console.log(`📄 Primeiros 200 chars: ${doc.content.substring(0, 200)}`);
+          }
+          return isValid;
         })
         .map(doc => `=== ${doc.originalName} ===\n${doc.content.substring(0, 2000)}`) // Limitar tamanho
         .join('\n\n---\n\n');
@@ -166,13 +168,13 @@ export class AgentService {
       for (const doc of ragDocs) {
         console.log(`📄 Processando documento: ${doc.originalName}`);
         
-        if (!doc.embedding) {
+        if (!doc.embeddings) {
           console.log(`❌ Documento sem embedding: ${doc.originalName}`);
           continue;
         }
         
         try {
-          const docChunks = JSON.parse(doc.embedding);
+          const docChunks = JSON.parse(doc.embeddings);
           console.log(`🔮 Chunks no documento: ${docChunks.length}`);
           
           for (let i = 0; i < docChunks.length; i++) {

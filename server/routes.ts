@@ -534,13 +534,22 @@ export function registerRoutes(app: Express): Server {
         req.file.mimetype
       );
 
+      // Verificar se o documento foi processado corretamente
+      if (!processedDoc.content || processedDoc.content.length < 50) {
+        console.log('❌ Documento sem conteúdo válido');
+        return res.status(400).json({ message: "Documento não contém texto válido" });
+      }
+
+      console.log(`📄 Salvando documento com ${processedDoc.content.length} caracteres`);
+      console.log(`🔮 Embeddings: ${processedDoc.embedding ? 'presentes' : 'ausentes'}`);
+
       // Salvar diretamente na tabela RAG
       const ragDoc = await storage.createRagDocument({
         agentId: parseInt(agentId),
         filename: processedDoc.filename,
         originalName: processedDoc.originalName,
         content: processedDoc.content,
-        embedding: processedDoc.embedding,
+        embeddings: processedDoc.embedding || null,
         fileSize: processedDoc.fileSize,
         mimeType: processedDoc.mimeType,
         uploadedBy: user.id
