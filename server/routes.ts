@@ -898,9 +898,10 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('debug-menu.html', { root: process.cwd() });
   });
 
-  // Serve cleanup test
-  app.get("/cleanup-test", (req, res) => {
-    res.sendFile('cleanup-test.html', { root: process.cwd() });
+  // Serve debug script
+  app.get("/debug-whatsapp.js", (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile('debug-whatsapp.js', { root: process.cwd() });
   });
 
   const httpServer = createServer(app);

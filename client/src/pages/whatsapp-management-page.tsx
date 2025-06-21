@@ -232,14 +232,14 @@ export default function WhatsAppManagementPage() {
 
       {selectedAgentId && (
         <>
-          {instanceLoading && !instanceError ? (
+          {instanceLoading ? (
             <Card>
               <CardContent className="flex items-center justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin mr-2" />
                 Carregando informações da instância...
               </CardContent>
             </Card>
-          ) : instance && !instanceError ? (
+          ) : instance ? (
             <div className="space-y-6">
               {/* Real-time Status and Activity in a 2-column layout */}
               <div className="grid gap-6 lg:grid-cols-3">
@@ -337,7 +337,7 @@ export default function WhatsAppManagementPage() {
                 </Card>
               )}
             </div>
-          ) : (!instance || instanceError) ? (
+          ) : (
             <Card>
               <CardHeader>
                 <CardTitle>Nenhuma Instância Encontrada</CardTitle>
@@ -361,7 +361,7 @@ export default function WhatsAppManagementPage() {
                 </Button>
               </CardContent>
             </Card>
-          ) : null}
+          )}
         </>
       )}
     </div>

@@ -39,7 +39,6 @@ export function useWhatsAppStatus({
     enabled: enabled && !!agentId,
     retry: false,
     retryOnMount: false,
-    throwOnError: false,
     refetchInterval: (data) => {
       // Only poll if instance exists and is not connected
       if (!data || data.status === "CONNECTED") {
