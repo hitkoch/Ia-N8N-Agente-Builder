@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -39,15 +39,16 @@ export const agents = pgTable("agents", {
 // Nova tabela para documentos RAG
 export const ragDocuments = pgTable("rag_documents", {
   id: serial("id").primaryKey(),
-  agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
-  filename: text("filename").notNull(),
-  originalName: text("original_name").notNull(),
-  fileSize: integer("file_size").notNull(),
-  mimeType: text("mime_type").notNull(),
-  content: text("content"), // Extracted text content
-  embedding: text("embedding"), // JSON string of vector embeddings for similarity search
-  uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  agentId: integer("agent_id").references(() => agents.id, { onDelete: "cascade" }),
+  filename: varchar("filename").notNull(),
+  content: text("content").notNull(),
+  embedding: text("embedding"), // JSON string of embedding vector
+  fileType: varchar("file_type"),
+  fileSize: integer("file_size"),
+  chunkIndex: integer("chunk_index").default(0),
+  totalChunks: integer("total_chunks").default(1),
+  originalFilename: varchar("original_filename"),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
 // Nova tabela para configurações de APIs externas

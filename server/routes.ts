@@ -233,35 +233,62 @@ export function registerRoutes(app: Express): Server {
 
       console.log(`📄 Processando upload: ${req.file.originalname}`);
       
-      // Process document using document processor
-      const documentProcessor = require('./services/document-processor');
-      const processedDoc = await documentProcessor.processDocument(
-        req.file.buffer,
-        req.file.originalname,
-        req.file.mimetype
-      );
-      
-      // Create RAG document
-      const ragDocument = await storage.createRagDocument({
-        agentId,
-        originalName: req.file.originalname,
-        content: processedDoc.content,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype,
-        processingStatus: processedDoc.status,
-        uploadedBy: user.id,
-        embedding: processedDoc.embedding
-      });
-      
-      res.json({
-        id: ragDocument.id,
-        originalName: ragDocument.originalName,
-        fileSize: ragDocument.fileSize,
-        mimeType: ragDocument.mimeType,
-        processingStatus: ragDocument.processingStatus,
-        hasEmbedding: !!ragDocument.embedding,
-        uploadedAt: ragDocument.uploadedAt
-      });
+      try {
+        // Import document processor
+        const { processDocument, cleanupTempFile } = await import('./services/document-processor.js');
+        
+        // Process the document and generate embeddings
+        const processedDoc = await processDocument(req.file.path, req.file.originalname);
+        
+        // Store each chunk as a separate RAG document
+        const ragDocumentPromises = processedDoc.chunks.map(async (chunk, index) => {
+          return await storage.createRagDocument({
+            agentId: parseInt(req.params.agentId),
+            filename: `${processedDoc.metadata.filename}_chunk_${index}`,
+            content: chunk.content,
+            embedding: JSON.stringify(chunk.embedding),
+            fileType: processedDoc.metadata.fileType,
+            fileSize: processedDoc.metadata.fileSize,
+            chunkIndex: chunk.chunkIndex,
+            totalChunks: processedDoc.chunks.length,
+            originalFilename: processedDoc.metadata.filename,
+            uploadedAt: processedDoc.metadata.processedAt
+          });
+        });
+        
+        const ragDocuments = await Promise.all(ragDocumentPromises);
+        
+        // Clean up uploaded file
+        cleanupTempFile(req.file.path);
+        
+        console.log(`✅ Upload concluído: ${ragDocuments.length} chunks salvos`);
+        
+        res.json({
+          message: "Documento processado com sucesso",
+          document: {
+            filename: processedDoc.metadata.filename,
+            fileType: processedDoc.metadata.fileType,
+            fileSize: processedDoc.metadata.fileSize,
+            chunkCount: processedDoc.chunks.length,
+            processedAt: processedDoc.metadata.processedAt
+          },
+          chunksCreated: ragDocuments.length
+        });
+        
+      } catch (processingError) {
+        // Clean up file even if processing fails
+        if (req.file?.path) {
+          try {
+            const fs = await import('fs');
+            if (fs.default.existsSync(req.file.path)) {
+              fs.default.unlinkSync(req.file.path);
+            }
+          } catch (cleanupError) {
+            console.error('❌ Erro ao limpar arquivo:', cleanupError);
+          }
+        }
+        throw processingError;
+      }
       
     } catch (error) {
       console.error('❌ Erro no upload de documento:', error);
@@ -280,6 +307,12 @@ export function registerRoutes(app: Express): Server {
       if (!agent) {
         return res.status(404).json({ message: "Agente não encontrado" });
       }
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({ message: "ID do documento inválido" });
+      }
+
+      console.log(`🗑️ Deletando documento RAG ${documentId} do usuário ${user.id}`);
 
       const deleted = await storage.deleteRagDocument(documentId, user.id);
       

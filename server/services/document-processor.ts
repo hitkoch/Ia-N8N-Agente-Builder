@@ -1,158 +1,180 @@
-import * as mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
-import { embeddingService } from './embeddings';
+import fs from 'fs';
+import path from 'path';
+import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
+import xlsx from 'xlsx';
+import { generateEmbedding } from './embedding.js';
 
 export interface ProcessedDocument {
-  filename: string;
-  originalName: string;
   content: string;
-  embedding?: string;
-  fileSize: number;
-  mimeType: string;
-  processingStatus: 'success' | 'error' | 'unsupported';
-  error?: string;
+  chunks: Array<{
+    content: string;
+    embedding: number[];
+    chunkIndex: number;
+  }>;
+  metadata: {
+    filename: string;
+    fileType: string;
+    fileSize: number;
+    chunkCount: number;
+    processedAt: Date;
+  };
 }
 
-export class DocumentProcessor {
-  async processFile(fileBuffer: Buffer, filename: string, mimeType: string): Promise<ProcessedDocument> {
-    const result: ProcessedDocument = {
-      filename,
-      originalName: filename,
-      fileSize: fileBuffer.length,
-      mimeType,
-      content: '',
-      processingStatus: 'error'
-    };
-
-    try {
-      console.log(`🔄 Processando arquivo: ${filename}, tipo: ${mimeType}, tamanho: ${fileBuffer.length}`);
-
-      if (mimeType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-        result.content = await this.processPDF(fileBuffer);
-        result.processingStatus = 'success';
-      }
-      else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-               filename.toLowerCase().endsWith('.docx')) {
-        result.content = await this.processDOCX(fileBuffer);
-        result.processingStatus = 'success';
-      }
-      else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-               mimeType === 'application/vnd.ms-excel' ||
-               filename.toLowerCase().endsWith('.xlsx') ||
-               filename.toLowerCase().endsWith('.xls')) {
-        result.content = await this.processExcel(fileBuffer);
-        result.processingStatus = 'success';
-      }
-      else if (mimeType.startsWith('text/') || 
-               filename.toLowerCase().endsWith('.txt') || 
-               filename.toLowerCase().endsWith('.md')) {
-        result.content = fileBuffer.toString('utf-8');
-        result.processingStatus = 'success';
-      }
-      else {
-        result.content = `[FORMATO NÃO SUPORTADO: ${filename}]\n\nTipo de arquivo: ${mimeType}\nTamanho: ${(fileBuffer.length / 1024).toFixed(1)} KB\n\nFormatos suportados: PDF, DOCX, XLSX, XLS, TXT, MD`;
-        result.processingStatus = 'unsupported';
-      }
-    } catch (error) {
-      console.error(`❌ Erro ao processar ${filename}:`, error);
-      result.content = `[ERRO AO PROCESSAR: ${filename}]\n\nErro: ${error.message}\n\nTente converter o arquivo para um formato mais simples (TXT ou MD).`;
-      result.processingStatus = 'error';
-      result.error = error.message;
-    }
-
-    // Criar embeddings apenas para processamento bem-sucedido
-    if (result.processingStatus === 'success' && result.content && result.content.length > 50) {
-      try {
-        const cleanContent = this.cleanTextForDatabase(result.content);
-        result.content = cleanContent;
-        
-        console.log(`🔮 Criando embeddings para documento com ${cleanContent.length} caracteres`);
-        const chunks = await embeddingService.processDocumentForRAG(cleanContent);
-        
-        if (chunks && chunks.length > 0) {
-          result.embedding = JSON.stringify(chunks);
-          console.log(`✅ Embeddings criados: ${chunks.length} chunks salvos`);
-        }
-      } catch (embeddingError) {
-        console.error('❌ Falha ao criar embeddings:', embeddingError.message);
-      }
-    }
-
-    return result;
-  }
-
-  private async processPDF(buffer: Buffer): Promise<string> {
-    try {
-      console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
+/**
+ * Extract text content from different file types
+ */
+export async function extractTextFromFile(filePath: string, filename: string): Promise<string> {
+  const fileExtension = path.extname(filename).toLowerCase();
+  
+  try {
+    switch (fileExtension) {
+      case '.txt':
+        return fs.readFileSync(filePath, 'utf-8');
       
-      const data = await pdfParse(buffer);
-      console.log('📄 PDF processado:', data.text.length, 'caracteres extraídos');
+      case '.pdf':
+        const pdfBuffer = fs.readFileSync(filePath);
+        const pdfData = await pdfParse(pdfBuffer);
+        return pdfData.text;
       
-      if (!data.text || data.text.trim().length < 10) {
-        throw new Error('PDF não contém texto extraível suficiente');
-      }
+      case '.docx':
+        const docxBuffer = fs.readFileSync(filePath);
+        const docxResult = await mammoth.extractRawText({ buffer: docxBuffer });
+        return docxResult.value;
       
-      const cleanedText = this.cleanTextForDatabase(data.text);
-      
-      if (cleanedText.length < 20) {
-        throw new Error('Texto extraído muito curto após limpeza');
-      }
-      
-      console.log('✅ Texto extraído e limpo:', cleanedText.length, 'caracteres');
-      return cleanedText;
-      
-    } catch (error) {
-      console.log('❌ Erro no processamento PDF:', error.message);
-      throw new Error(`Falha ao processar PDF: ${error.message}`);
-    }
-  }
-
-  private async processDOCX(buffer: Buffer): Promise<string> {
-    try {
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value || '[Documento DOCX vazio]';
-    } catch (error) {
-      throw new Error(`Erro ao processar DOCX: ${error.message}`);
-    }
-  }
-
-  private async processExcel(buffer: Buffer): Promise<string> {
-    try {
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
-      let content = '';
-      
-      workbook.SheetNames.forEach((sheetName, index) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        if (index > 0) content += '\n\n';
-        content += `=== PLANILHA: ${sheetName} ===\n`;
-        
-        jsonData.forEach((row: any[]) => {
-          if (row.length > 0) {
-            content += row.join(' | ') + '\n';
-          }
+      case '.xlsx':
+      case '.xls':
+        const workbook = xlsx.readFile(filePath);
+        let xlsxText = '';
+        workbook.SheetNames.forEach(sheetName => {
+          const worksheet = workbook.Sheets[sheetName];
+          xlsxText += xlsx.utils.sheet_to_txt(worksheet) + '\n';
         });
-      });
+        return xlsxText;
       
-      return content || '[Planilha vazia]';
-    } catch (error) {
-      throw new Error(`Erro ao processar Excel: ${error.message}`);
+      default:
+        throw new Error(`Tipo de arquivo não suportado: ${fileExtension}`);
+    }
+  } catch (error) {
+    console.error(`❌ Erro ao extrair texto do arquivo ${filename}:`, error);
+    throw new Error(`Falha ao processar arquivo ${fileExtension}`);
+  }
+}
+
+/**
+ * Split text into chunks for embedding processing
+ */
+export function splitTextIntoChunks(text: string, maxChunkSize: number = 1000, overlap: number = 200): string[] {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    const trimmedSentence = sentence.trim();
+    
+    if (currentChunk.length + trimmedSentence.length + 1 <= maxChunkSize) {
+      currentChunk += (currentChunk ? '. ' : '') + trimmedSentence;
+    } else {
+      if (currentChunk) {
+        chunks.push(currentChunk + '.');
+        
+        // Create overlap by taking last words
+        const words = currentChunk.split(' ');
+        const overlapWords = Math.min(overlap / 10, words.length);
+        currentChunk = words.slice(-overlapWords).join(' ');
+      }
+      
+      if (trimmedSentence.length <= maxChunkSize) {
+        currentChunk += (currentChunk ? '. ' : '') + trimmedSentence;
+      } else {
+        // Split very long sentences by words
+        const longWords = trimmedSentence.split(' ');
+        for (let i = 0; i < longWords.length; i += 100) {
+          const wordChunk = longWords.slice(i, i + 100).join(' ');
+          chunks.push(wordChunk);
+        }
+      }
     }
   }
+  
+  if (currentChunk) {
+    chunks.push(currentChunk + '.');
+  }
+  
+  return chunks.filter(chunk => chunk.trim().length > 0);
+}
 
-  private cleanTextForDatabase(text: string): string {
-    if (!text || text.trim().length === 0) {
-      throw new Error('Texto vazio após processamento');
+/**
+ * Process a document file and generate embeddings
+ */
+export async function processDocument(filePath: string, filename: string): Promise<ProcessedDocument> {
+  console.log(`📄 Processando documento: ${filename}`);
+  
+  try {
+    // Extract text content
+    const content = await extractTextFromFile(filePath, filename);
+    
+    if (!content || content.trim().length === 0) {
+      throw new Error('Arquivo não contém texto válido');
     }
     
-    return text
-      .replace(/\0/g, '') // Remove null characters
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
+    console.log(`📝 Texto extraído: ${content.length} caracteres`);
+    
+    // Split into chunks
+    const textChunks = splitTextIntoChunks(content);
+    console.log(`🔄 Dividido em ${textChunks.length} chunks`);
+    
+    // Generate embeddings for each chunk
+    const chunks = [];
+    for (let i = 0; i < textChunks.length; i++) {
+      console.log(`⚡ Gerando embedding para chunk ${i + 1}/${textChunks.length}`);
+      const embedding = await generateEmbedding(textChunks[i]);
+      
+      chunks.push({
+        content: textChunks[i],
+        embedding,
+        chunkIndex: i
+      });
+      
+      // Small delay to avoid rate limiting
+      if (i < textChunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    const fileStats = fs.statSync(filePath);
+    
+    const processedDocument: ProcessedDocument = {
+      content,
+      chunks,
+      metadata: {
+        filename,
+        fileType: path.extname(filename).toLowerCase(),
+        fileSize: fileStats.size,
+        chunkCount: chunks.length,
+        processedAt: new Date()
+      }
+    };
+    
+    console.log(`✅ Documento processado: ${filename} (${chunks.length} chunks)`);
+    return processedDocument;
+    
+  } catch (error) {
+    console.error(`❌ Erro ao processar documento ${filename}:`, error);
+    throw error;
   }
 }
 
-export const documentProcessor = new DocumentProcessor();
+/**
+ * Clean up temporary files
+ */
+export function cleanupTempFile(filePath: string): void {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`🗑️ Arquivo temporário removido: ${filePath}`);
+    }
+  } catch (error) {
+    console.error(`❌ Erro ao remover arquivo temporário:`, error);
+  }
+}
