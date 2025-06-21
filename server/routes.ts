@@ -512,14 +512,17 @@ export function registerRoutes(app: Express): Server {
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       
       if (!whatsappInstance) {
-        return res.status(404).json({ 
-          message: "Instância WhatsApp não encontrada",
+        return res.json({ 
+          hasInstance: false,
           agentId: parseInt(agentId),
-          hasInstance: false
+          message: "Nenhuma instância WhatsApp configurada para este agente"
         });
       }
       
-      res.json(whatsappInstance);
+      res.json({ 
+        hasInstance: true,
+        ...whatsappInstance
+      });
     } catch (error: any) {
       console.error("❌ Erro ao buscar instância WhatsApp:", error);
       res.status(500).json({ message: "Falha ao buscar instância WhatsApp", error: error.message });

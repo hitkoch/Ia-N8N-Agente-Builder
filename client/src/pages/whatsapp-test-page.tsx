@@ -111,7 +111,16 @@ export default function WhatsAppTestPage() {
       addTestResult("Verificar Status", "pending", {});
     },
     onSuccess: ({ data, duration }) => {
-      addTestResult("Verificar Status", "success", data, duration);
+      const status = data.hasInstance ? 'success' : 'error';
+      addTestResult("Verificar Status", status, data, duration);
+      
+      if (!data.hasInstance) {
+        toast({
+          title: "Instância não encontrada",
+          description: "Este agente não possui uma instância WhatsApp configurada.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       addTestResult("Verificar Status", "error", { error: error.message });
