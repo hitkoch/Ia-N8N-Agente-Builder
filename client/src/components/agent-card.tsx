@@ -132,9 +132,9 @@ export default function AgentCard({ agent, onTest }: AgentCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setLocation(`/agents/${agent.id}/edit`)}>
+                  <DropdownMenuItem disabled>
                     <Edit className="h-4 w-4 mr-2" />
-                    Editar Agente
+                    Editar Agente (Em breve)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDuplicate}>
                     <Copy className="h-4 w-4 mr-2" />
@@ -174,7 +174,7 @@ export default function AgentCard({ agent, onTest }: AgentCardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setLocation(`/agents/${agent.id}/edit`)}
+                disabled
                 className="flex-1"
               >
                 <Edit className="h-4 w-4 mr-1" />
