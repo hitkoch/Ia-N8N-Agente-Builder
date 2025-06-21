@@ -182,7 +182,22 @@ export class DatabaseStorage implements IStorage {
     try {
       const documents = await db.select().from(ragDocuments).where(eq(ragDocuments.agentId, agentId));
       console.log(`📄 Encontrados ${documents.length} documentos para o agente ${agentId}`);
-      return documents;
+      
+      // Clean and format documents to ensure JSON serialization works
+      const cleanDocuments = documents.map(doc => ({
+        id: doc.id,
+        agentId: doc.agentId,
+        originalName: doc.originalName || '',
+        content: doc.content || '',
+        fileSize: doc.fileSize || 0,
+        mimeType: doc.mimeType || '',
+        processingStatus: doc.processingStatus || 'pending',
+        uploadedBy: doc.uploadedBy,
+        uploadedAt: doc.uploadedAt,
+        embedding: doc.embedding ? 'present' : null // Don't serialize raw embedding data
+      }));
+      
+      return cleanDocuments;
     } catch (error) {
       console.error('❌ Erro ao buscar documentos RAG:', error);
       return [];

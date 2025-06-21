@@ -183,6 +183,118 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get agent documents
+  app.get("/api/agents/:agentId/documents", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const documents = await storage.getRagDocumentsByAgent(agentId);
+      
+      // Ensure documents are properly formatted for JSON response
+      const formattedDocuments = documents.map(doc => ({
+        id: doc.id,
+        originalName: doc.originalName || '',
+        fileSize: doc.fileSize || 0,
+        mimeType: doc.mimeType || '',
+        processingStatus: doc.processingStatus || 'pending',
+        contentPreview: doc.content ? doc.content.substring(0, 200) + '...' : '',
+        hasEmbedding: doc.embedding === 'present',
+        uploadedAt: doc.uploadedAt || new Date().toISOString(),
+        agentId: doc.agentId
+      }));
+      
+      res.json(formattedDocuments);
+    } catch (error) {
+      console.error('❌ Erro ao buscar documentos:', error);
+      res.status(500).json({ message: "Erro ao buscar documentos", error: error.message });
+    }
+  });
+
+  // Upload document to agent
+  app.post("/api/agents/:agentId/upload-document", requireAuth, upload.single('document'), async (req: MulterRequest, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Arquivo não enviado" });
+      }
+
+      console.log(`📄 Processando upload: ${req.file.originalname}`);
+      
+      // Process document using document processor
+      const documentProcessor = require('./services/document-processor');
+      const processedDoc = await documentProcessor.processDocument(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+      
+      // Create RAG document
+      const ragDocument = await storage.createRagDocument({
+        agentId,
+        originalName: req.file.originalname,
+        content: processedDoc.content,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        processingStatus: processedDoc.status,
+        uploadedBy: user.id,
+        embedding: processedDoc.embedding
+      });
+      
+      res.json({
+        id: ragDocument.id,
+        originalName: ragDocument.originalName,
+        fileSize: ragDocument.fileSize,
+        mimeType: ragDocument.mimeType,
+        processingStatus: ragDocument.processingStatus,
+        hasEmbedding: !!ragDocument.embedding,
+        uploadedAt: ragDocument.uploadedAt
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro no upload de documento:', error);
+      res.status(500).json({ message: "Erro no upload", error: error.message });
+    }
+  });
+
+  // Delete document from agent
+  app.delete("/api/agents/:agentId/documents/:documentId", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    const documentId = parseInt(req.params.documentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const deleted = await storage.deleteRagDocument(documentId, user.id);
+      
+      if (deleted) {
+        res.json({ message: "Documento excluído com sucesso" });
+      } else {
+        res.status(404).json({ message: "Documento não encontrado" });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao excluir documento:', error);
+      res.status(500).json({ message: "Erro ao excluir documento", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
