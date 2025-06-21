@@ -298,8 +298,8 @@ export default function WhatsAppManagementPage() {
                         />
                       </div>
                       <Button
-                        onClick={() => createInstanceMutation.mutate()}
-                        disabled={createInstanceMutation.isPending || !phoneNumber}
+                        onClick={() => createInstanceMutation.mutate({ agentId: selectedAgentId!, phoneNumber })}
+                        disabled={createInstanceMutation.isPending || !phoneNumber || !selectedAgentId}
                         className="w-full"
                         style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
                       >
