@@ -555,6 +555,16 @@ export function registerRoutes(app: Express): Server {
       // Create instance via gateway
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
       
+      // Configure webhook immediately after instance creation
+      console.log(`🔗 Configurando webhook automaticamente para: ${instanceName}`);
+      try {
+        const webhookResult = await whatsappGatewayService.setWebhook(instanceName);
+        console.log(`✅ Webhook configurado automaticamente para: ${instanceName}`);
+      } catch (webhookError) {
+        console.error(`❌ Falha ao configurar webhook automaticamente:`, webhookError);
+        // Continue with instance creation even if webhook fails
+      }
+      
       // Save to database
       const whatsappInstance = await storage.createWhatsappInstance({
         instanceName,

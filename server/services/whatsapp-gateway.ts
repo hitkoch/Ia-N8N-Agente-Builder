@@ -234,6 +234,83 @@ export class WhatsAppGatewayService {
   }
 
   /**
+   * Configura o webhook para uma instância usando o formato correto da Evolution API
+   */
+  async setWebhook(instanceName: string): Promise<any> {
+    console.log(`🔗 Configurando webhook para instância: ${instanceName}`);
+    
+    // Get the app base URL from environment or construct it
+    const baseUrl = process.env.REPL_SLUG 
+      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`
+      : 'http://localhost:5000';
+    
+    const webhookUrl = `${baseUrl}/api/whatsapp/webhook`;
+    
+    // Use the exact body structure provided by the user
+    const requestData = {
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        byEvents: false,
+        base64: true, // Enable base64 for media
+        events: [
+          "APPLICATION_STARTUP",
+          "QRCODE_UPDATED", 
+          "MESSAGES_SET",
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "MESSAGES_DELETE",
+          "SEND_MESSAGE",
+          "CONTACTS_SET",
+          "CONTACTS_UPSERT",
+          "CONTACTS_UPDATE",
+          "PRESENCE_UPDATE",
+          "CHATS_SET",
+          "CHATS_UPSERT",
+          "CHATS_UPDATE",
+          "CHATS_DELETE",
+          "GROUPS_UPSERT",
+          "GROUP_UPDATE",
+          "GROUP_PARTICIPANTS_UPDATE",
+          "CONNECTION_UPDATE",
+          "LABELS_EDIT",
+          "LABELS_ASSOCIATION",
+          "CALL",
+          "TYPEBOT_START",
+          "TYPEBOT_CHANGE_STATUS"
+        ]
+      }
+    };
+
+    console.log(`📋 Configurando webhook com URL: ${webhookUrl}`);
+    console.log(`📋 Payload:`, JSON.stringify(requestData, null, 2));
+
+    const response = await fetch(`${this.baseUrl}/webhook/set/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': this.globalToken
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`❌ Erro ao configurar webhook: ${response.status} - ${error}`);
+      throw new Error(`Falha ao configurar webhook: ${response.statusText} - ${error}`);
+    }
+
+    const data = await response.json();
+    console.log(`✅ Webhook configurado com sucesso para: ${instanceName}`);
+    console.log(`📋 Resposta da API:`, JSON.stringify(data, null, 2));
+    
+    return data;
+  }
+
+  /**
    * Remove uma instância
    */
   async deleteInstance(instanceName: string): Promise<boolean> {

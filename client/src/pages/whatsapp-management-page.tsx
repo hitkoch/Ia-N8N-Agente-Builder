@@ -30,6 +30,7 @@ export default function WhatsAppManagementPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -358,7 +359,50 @@ export default function WhatsAppManagementPage() {
                   </CardContent>
                 </Card>
               ) : hasQRCode ? (
-                renderQRCode()
+                <>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <Button
+                          onClick={() => setIsQRModalOpen(true)}
+                          style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                          className="hover:opacity-90"
+                          size="lg"
+                        >
+                          <QrCode className="w-4 h-4 mr-2" />
+                          Mostrar QR Code
+                        </Button>
+                        <p className="text-xs mt-2 text-gray-500">
+                          Clique para abrir o QR Code em uma janela maior
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Dialog open={isQRModalOpen} onOpenChange={setIsQRModalOpen}>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>QR Code para Conexão WhatsApp</DialogTitle>
+                        <DialogDescription>
+                          Escaneie este código com seu WhatsApp para conectar a instância
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex justify-center p-4">
+                        <img 
+                          src={`data:image/png;base64,${qrCode}`} 
+                          alt="QR Code WhatsApp" 
+                          className="max-w-full h-auto border rounded-lg"
+                        />
+                      </div>
+                      <div className="text-center text-sm text-gray-600">
+                        <p>1. Abra o WhatsApp no seu celular</p>
+                        <p>2. Vá em Menu → Dispositivos conectados</p>
+                        <p>3. Toque em "Conectar um dispositivo"</p>
+                        <p>4. Escaneie este QR Code</p>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
               ) : status === "connecting" ? (
                 <Card className="border-blue-200 bg-blue-50">
                   <CardContent className="pt-6">
