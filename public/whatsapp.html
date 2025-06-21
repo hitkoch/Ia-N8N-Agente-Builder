@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador WhatsApp - AI Agent Builder</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>AI Agent Builder</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="/dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a></li>
+                    <li><a href="/agents.html" class="nav-link">
+                        <i class="fas fa-robot"></i>
+                        <span>Agentes</span>
+                    </a></li>
+                    <li><a href="/whatsapp.html" class="nav-link active">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </a></li>
+                    <li><a href="/evolution.html" class="nav-link">
+                        <i class="fas fa-cogs"></i>
+                        <span>Evolution API</span>
+                    </a></li>
+                    <li><a href="/settings.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <h1><i class="fab fa-whatsapp"></i> Gerenciador de Conexão - WhatsApp</h1>
+                <p class="content-subtitle">Configure e gerencie as conexões WhatsApp dos seus agentes</p>
+            </div>
+
+            <!-- Agent Selection -->
+            <div class="agent-selection">
+                <div class="form-group">
+                    <label for="agent-selector">Selecione um Agente para Gerenciar:</label>
+                    <select id="agent-selector" class="form-select">
+                        <option value="">Carregando agentes...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Management Area -->
+            <div id="management-area" class="management-area hidden">
+                <!-- State 1: No Connection -->
+                <div id="no-connection-state" class="state-container">
+                    <div class="no-connection-card">
+                        <div class="card-icon">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <h3>Nenhuma conexão encontrada para este agente</h3>
+                        <p>Configure uma nova instância do WhatsApp para permitir que este agente receba e responda mensagens automaticamente.</p>
+                        <button id="create-instance-btn" class="btn btn-primary btn-large">
+                            <i class="fas fa-plus"></i>
+                            Criar Nova Instância do WhatsApp
+                        </button>
+                    </div>
+                </div>
+
+                <!-- State 2: With Connection -->
+                <div id="with-connection-state" class="state-container hidden">
+                    <div class="management-grid">
+                        <!-- Status Card -->
+                        <div class="management-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-signal"></i> Status da Conexão</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="status-info">
+                                    <div class="status-indicator">
+                                        <span id="connection-status" class="status-dot disconnected">
+                                            <i class="fas fa-circle"></i>
+                                            Desconectado
+                                        </span>
+                                    </div>
+                                    <div class="instance-info">
+                                        <label>Nome da Instância:</label>
+                                        <span id="instance-name">-</span>
+                                    </div>
+                                    <div class="last-activity">
+                                        <label>Última Atividade:</label>
+                                        <span id="last-activity">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QR Code Card -->
+                        <div class="management-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-qrcode"></i> Escanear para Conectar</h3>
+                            </div>
+                            <div class="card-content">
+                                <div id="qrcode-container" class="qrcode-container">
+                                    <div class="qrcode-placeholder">
+                                        <i class="fas fa-qrcode"></i>
+                                        <p>QR Code será exibido aqui</p>
+                                    </div>
+                                </div>
+                                <div class="qrcode-actions">
+                                    <button id="refresh-qrcode-btn" class="btn btn-secondary">
+                                        <i class="fas fa-sync-alt"></i>
+                                        Gerar Novo QR Code
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Card -->
+                        <div class="management-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-bar"></i> Uso (Últimos 30 dias)</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-value">
+                                            <span id="stats-received">0</span>
+                                        </div>
+                                        <div class="stat-label">Mensagens Recebidas</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">
+                                            <span id="stats-sent">0</span>
+                                        </div>
+                                        <div class="stat-label">Mensagens Enviadas</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">
+                                            <span id="stats-uptime">0%</span>
+                                        </div>
+                                        <div class="stat-label">Tempo Online</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions Card -->
+                        <div class="management-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-tools"></i> Gerenciamento da Instância</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="action-buttons">
+                                    <button id="edit-instance-btn" class="btn btn-secondary">
+                                        <i class="fas fa-edit"></i>
+                                        Editar Instância
+                                    </button>
+                                    <button id="test-instance-btn" class="btn btn-info">
+                                        <i class="fas fa-vial"></i>
+                                        Testar Conexão
+                                    </button>
+                                    <button id="delete-instance-btn" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                        Desconectar e Excluir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading-state" class="state-container hidden">
+                    <div class="loading-card">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h3>Configurando Instância WhatsApp...</h3>
+                        <p>Por favor, aguarde enquanto criamos sua conexão.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div id="notifications" class="notifications-container"></div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Edit Instance Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Configurações da Instância</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="instance-webhook">URL do Webhook:</label>
+                    <input type="url" id="instance-webhook" class="form-input" placeholder="https://seu-site.com/webhook">
+                </div>
+                <div class="form-group">
+                    <label for="instance-timeout">Timeout (segundos):</label>
+                    <input type="number" id="instance-timeout" class="form-input" value="30" min="10" max="300">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancelar</button>
+                <button class="btn btn-primary" id="save-instance-btn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirmar Exclusão</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Atenção:</strong> Esta ação irá desconectar permanentemente a instância WhatsApp e remover todas as configurações associadas.</p>
+                <p>Tem certeza que deseja continuar?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('delete-modal')">Cancelar</button>
+                <button class="btn btn-danger" id="confirm-delete-btn">Sim, Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/whatsapp-manager.js"></script>
+</body>
+</html>

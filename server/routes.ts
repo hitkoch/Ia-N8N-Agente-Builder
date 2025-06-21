@@ -852,6 +852,11 @@ export function registerRoutes(app: Express): Server {
     res.sendFile('test-whatsapp-interface.html', { root: process.cwd() });
   });
 
+  // Serve demo page
+  app.get("/demo", (req, res) => {
+    res.sendFile('demo-whatsapp.html', { root: process.cwd() });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
