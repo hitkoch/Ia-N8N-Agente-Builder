@@ -57,7 +57,7 @@ export function setupAuth(app: Express) {
         try {
           const user = await storage.getUserByUsername(username) || await storage.getUserByEmail(username);
           if (!user || !(await comparePasswords(password, user.password))) {
-            return done(null, false, { message: "Invalid credentials" });
+            return done(null, false, { message: "Credenciais inválidas" });
           }
           return done(null, user);
         } catch (error) {

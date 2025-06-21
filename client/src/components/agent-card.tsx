@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Agent } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bot, MoreVertical, Edit, Copy, Trash2, Play } from "lucide-react";
+import { Bot, MoreVertical, Edit, Copy, Trash2, Play, Code } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import WebchatCodeModal from "./webchat-code-modal";
 
 interface AgentCardProps {
   agent: Agent;
@@ -27,13 +29,13 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
-        title: "Agent deleted",
-        description: "The agent has been successfully deleted.",
+        title: "Agente deletado",
+        description: "O agente foi deletado com sucesso.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete failed",
+        title: "Falha ao deletar",
         description: error.message,
         variant: "destructive",
       });
@@ -45,7 +47,7 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
       const { id, ownerId, createdAt, updatedAt, ...agentData } = agent;
       const duplicatedAgent = {
         ...agentData,
-        name: `${agent.name} (Copy)`,
+        name: `${agent.name} (Cópia)`,
         status: "draft" as const,
       };
       await apiRequest("POST", "/api/agents", duplicatedAgent);
@@ -54,13 +56,13 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
-        title: "Agent duplicated",
-        description: "The agent has been successfully duplicated.",
+        title: "Agente duplicado",
+        description: "O agente foi duplicado com sucesso.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Duplicate failed",
+        title: "Falha ao duplicar",
         description: error.message,
         variant: "destructive",
       });
@@ -68,7 +70,7 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
   });
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this agent? This action cannot be undone.")) {
+    if (confirm("Tem certeza de que deseja deletar este agente? Esta ação não pode ser desfeita.")) {
       deleteMutation.mutate(agent.id);
     }
   };
@@ -99,75 +101,102 @@ export default function AgentCard({ agent, onEdit, onTest }: AgentCardProps) {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "active":
+        return "Ativo";
+      case "testing":
+        return "Testando";
+      default:
+        return "Rascunho";
+    }
+  };
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Bot className="h-6 w-6 text-primary" />
+    <>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Bot className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant={getStatusVariant(agent.status)}>
+                {getStatusText(agent.status)}
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Agente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDuplicate}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsWebchatModalOpen(true)}>
+                    <Code className="h-4 w-4 mr-2" />
+                    Código do Webchat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Deletar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Badge variant={getStatusVariant(agent.status)}>
-              {agent.status === "active" ? "Active" : agent.status === "testing" ? "Testing" : "Draft"}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Agent
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDuplicate}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-lg text-foreground truncate">
+                {agent.name}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {agent.description || "Sem descrição"}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Modelo: {agent.model || "GPT-4"}</span>
+              <span className={getStatusColor(agent.status)}>
+                {getStatusText(agent.status)}
+              </span>
+            </div>
+
+            <div className="flex space-x-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="flex-1"
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                onClick={onTest}
+                className="flex-1"
+              >
+                <Play className="h-4 w-4 mr-1" />
+                Testar
+              </Button>
+            </div>
           </div>
-        </div>
-        
-        <h4 className="text-lg font-semibold text-slate-900 mb-2">{agent.name}</h4>
-        <p className="text-sm text-slate-600 mb-4 line-clamp-2">
-          {agent.systemPrompt.length > 100 
-            ? `${agent.systemPrompt.substring(0, 100)}...`
-            : agent.systemPrompt
-          }
-        </p>
-        
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Model:</span>
-            <span className="text-slate-900 font-medium">{agent.model}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Temperature:</span>
-            <span className="text-slate-900 font-medium">{agent.temperature}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Max Tokens:</span>
-            <span className="text-slate-900 font-medium">{agent.maxTokens}</span>
-          </div>
-        </div>
-        
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1">
-            <Edit className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
-          <Button size="sm" onClick={onTest} className="flex-1">
-            <Play className="h-4 w-4 mr-1" />
-            Test
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <WebchatCodeModal
+        isOpen={isWebchatModalOpen}
+        onClose={() => setIsWebchatModalOpen(false)}
+        agentId={agent.id}
+      />
+    </>
   );
 }
