@@ -29,6 +29,7 @@ export default function HomePage() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -134,24 +135,57 @@ export default function HomePage() {
                 recentAgents.map((agent) => (
                   <div key={agent.id} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-b-0">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Bot className="h-5 w-5 text-slate-600" />
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(2, 43, 68, 0.1)' }}>
+                        <Bot className="h-5 w-5" style={{ color: '#022b44' }} />
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-slate-900">{agent.name}</p>
+                        <p className="text-sm font-medium" style={{ color: '#022b44' }}>{agent.name}</p>
                         <p className="text-xs text-slate-500">{agent.model}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        agent.status === "active" 
-                          ? "bg-green-100 text-green-700"
-                          : agent.status === "testing"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}>
-                        {agent.status === "active" ? "Active" : agent.status === "testing" ? "Testing" : "Draft"}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}
+                        style={{
+                          backgroundColor: agent.status === "active" ? '#b8ec00' : agent.status === "testing" ? '#fbbf24' : '#f1f5f9',
+                          color: agent.status === "active" ? '#022b44' : agent.status === "testing" ? '#ffffff' : '#64748b'
+                        }}
+                      >
+                        {agent.status === "active" ? "Ativo" : agent.status === "testing" ? "Testando" : "Rascunho"}
                       </span>
+                      
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setLocation(`/edit-agent/${agent.id}`)}
+                          className="h-8 w-8 p-0 transition-all"
+                          style={{ color: '#022b44' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(2, 43, 68, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestAgent(agent.id)}
+                          className="h-8 w-8 p-0 transition-all"
+                          style={{ color: '#022b44' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(184, 236, 0, 0.2)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Play className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))
