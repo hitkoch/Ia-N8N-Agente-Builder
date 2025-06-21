@@ -66,37 +66,58 @@ export class DocumentProcessor {
   }
 
   private async processPDF(buffer: Buffer): Promise<string> {
+    console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
+    
+    // Estratégia simplificada: extrair texto básico diretamente do buffer
     try {
-      console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
+      const pdfString = buffer.toString('latin1');
       
-      const pdfjsLib = await import('pdfjs-dist');
-      console.log('📄 pdfjs-dist importado com sucesso');
+      // Procurar por padrões de texto em PDFs
+      const textMatches = pdfString.match(/\(([^)]+)\)/g);
+      const streamMatches = pdfString.match(/stream\s*(.*?)\s*endstream/gs);
       
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(buffer),
-      });
+      let extractedText = '';
       
-      const pdf = await loadingTask.promise;
-      console.log('📄 PDF carregado, páginas:', pdf.numPages);
-      
-      let fullText = '';
-      
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        
-        const pageText = textContent.items
-          .map((item: any) => item.str)
+      // Extrair texto de strings em parênteses (método básico)
+      if (textMatches) {
+        const cleanTexts = textMatches
+          .map(match => match.slice(1, -1)) // Remove parênteses
+          .filter(text => text.length > 2 && /[a-zA-ZÀ-ÿ]/.test(text)) // Filtra textos válidos
+          .filter(text => !text.includes('\\') || text.includes(' ')) // Remove códigos de controle
           .join(' ');
         
-        fullText += pageText + '\n';
+        extractedText += cleanTexts;
       }
       
-      console.log('📄 PDF processado, texto extraído:', fullText.length, 'caracteres');
+      // Tentar extrair de streams de texto (método avançado)
+      if (streamMatches && extractedText.length < 100) {
+        for (const stream of streamMatches) {
+          const streamContent = stream.replace(/^stream\s*/, '').replace(/\s*endstream$/, '');
+          // Procurar por texto legível no stream
+          const readableText = streamContent.match(/[a-zA-ZÀ-ÿ\s]{10,}/g);
+          if (readableText) {
+            extractedText += ' ' + readableText.join(' ');
+          }
+        }
+      }
       
-      return fullText.trim() || '[PDF sem texto extraível - pode ser um PDF de imagens]';
+      // Limpar e formatar o texto extraído
+      extractedText = extractedText
+        .replace(/\s+/g, ' ')
+        .replace(/[^\w\sÀ-ÿ.,!?;:()\-]/g, '')
+        .trim();
+      
+      console.log('📄 Texto extraído do PDF:', extractedText.length, 'caracteres');
+      
+      if (extractedText.length > 50) {
+        return extractedText;
+      }
+      
+      // Se não conseguiu extrair texto suficiente, usar fallback
+      throw new Error('Texto insuficiente extraído');
+      
     } catch (error) {
-      console.error('❌ Erro detalhado ao processar PDF:', error);
+      console.log('📄 Extração direta falhou, usando fallback informativo');
       
       // Fallback: retornar conteúdo processável ao invés de falhar
       return `[PDF DETECTADO: ${buffer.length} bytes]
