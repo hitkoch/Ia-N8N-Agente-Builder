@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste WhatsApp - Plataforma AI Agent</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #022b44;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .step h3 {
+            color: #022b44;
+            margin-top: 0;
+        }
+        .step-number {
+            background: #b8ec00;
+            color: #022b44;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .endpoint {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .test-button {
+            background: #b8ec00;
+            color: #022b44;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            opacity: 0.9;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Completo - Sistema WhatsApp</h1>
+        
+        <div class="step">
+            <h3><span class="step-number">1</span>Criar Instância WhatsApp</h3>
+            <p>Primeiro, vamos criar uma nova instância WhatsApp para um agente:</p>
+            <div class="endpoint">POST /api/agents/2/whatsapp/create-instance</div>
+            
+            <button class="test-button" onclick="createInstance()">Criar Instância</button>
+            <button class="test-button" onclick="checkInstance()">Verificar Status</button>
+            
+            <div id="create-result" class="result" style="display:none;"></div>
+            
+            <div class="warning">
+                <strong>Resultado Esperado:</strong> QR Code gerado automaticamente e webhook configurado
+            </div>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">2</span>Testar Webhook - Mensagem Recebida</h3>
+            <p>Simular o recebimento de uma mensagem via webhook:</p>
+            <div class="endpoint">POST /api/whatsapp/webhook</div>
+            
+            <button class="test-button" onclick="testWebhookMessage()">Enviar Mensagem Teste</button>
+            
+            <div id="webhook-message-result" class="result" style="display:none;"></div>
+            
+            <div class="success">
+                <strong>Resultado Esperado:</strong> Agente processa mensagem e responde via IA
+            </div>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">3</span>Testar Webhook - Status Conexão</h3>
+            <p>Simular mudança de status da conexão WhatsApp:</p>
+            <div class="endpoint">POST /api/whatsapp/webhook</div>
+            
+            <button class="test-button" onclick="testWebhookConnection()">Conectar WhatsApp</button>
+            <button class="test-button" onclick="testWebhookDisconnect()">Desconectar WhatsApp</button>
+            
+            <div id="webhook-connection-result" class="result" style="display:none;"></div>
+            
+            <div class="success">
+                <strong>Resultado Esperado:</strong> Status atualizado no banco de dados
+            </div>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">4</span>Buscar QR Code</h3>
+            <p>Buscar QR Code manualmente (útil para depuração):</p>
+            <div class="endpoint">GET /api/agents/2/whatsapp/fetch-qr</div>
+            
+            <button class="test-button" onclick="fetchQRCode()">Buscar QR Code</button>
+            
+            <div id="qr-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">5</span>Limpeza</h3>
+            <p>Remover instância de teste:</p>
+            <div class="endpoint">DELETE /api/agents/2/whatsapp</div>
+            
+            <button class="test-button" onclick="deleteInstance()" style="background: #dc3545; color: white;">Remover Instância</button>
+            
+            <div id="delete-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>📊 Log de Testes</h3>
+            <div id="test-log" class="result">
+Aguardando execução dos testes...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+        }
+
+        async function apiCall(method, url, data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                log(`${method} ${url} - Status: ${response.status}`);
+                return { status: response.status, data: result };
+            } catch (error) {
+                log(`Erro: ${error.message}`);
+                return { status: 'error', data: { error: error.message } };
+            }
+        }
+
+        async function createInstance() {
+            log('Criando instância WhatsApp...');
+            const result = await apiCall('POST', '/api/agents/2/whatsapp/create-instance', {
+                phoneNumber: '41999888777'
+            });
+            
+            document.getElementById('create-result').style.display = 'block';
+            document.getElementById('create-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 201) {
+                log('✅ Instância criada com sucesso');
+            } else {
+                log('❌ Falha ao criar instância');
+            }
+        }
+
+        async function checkInstance() {
+            log('Verificando status da instância...');
+            const result = await apiCall('GET', '/api/agents/2/whatsapp');
+            
+            document.getElementById('create-result').style.display = 'block';
+            document.getElementById('create-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ Status verificado');
+            } else {
+                log('❌ Instância não encontrada');
+            }
+        }
+
+        async function testWebhookMessage() {
+            log('Enviando mensagem de teste via webhook...');
+            const webhookData = {
+                event: "MESSAGES_UPSERT",
+                instance: "whatsapp-41999888777",
+                data: {
+                    messages: [{
+                        key: {
+                            remoteJid: "5541999888777@s.whatsapp.net",
+                            fromMe: false,
+                            id: "test_" + Date.now()
+                        },
+                        message: {
+                            conversation: "Olá! Este é um teste do webhook. Como você está?"
+                        },
+                        messageTimestamp: Math.floor(Date.now() / 1000).toString()
+                    }]
+                }
+            };
+            
+            const result = await apiCall('POST', '/api/whatsapp/webhook', webhookData);
+            
+            document.getElementById('webhook-message-result').style.display = 'block';
+            document.getElementById('webhook-message-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ Webhook processado - mensagem enviada');
+            } else {
+                log('❌ Falha no webhook');
+            }
+        }
+
+        async function testWebhookConnection() {
+            log('Simulando conexão WhatsApp via webhook...');
+            const webhookData = {
+                event: "CONNECTION_UPDATE",
+                instance: "whatsapp-41999888777",
+                data: {
+                    state: "open"
+                }
+            };
+            
+            const result = await apiCall('POST', '/api/whatsapp/webhook', webhookData);
+            
+            document.getElementById('webhook-connection-result').style.display = 'block';
+            document.getElementById('webhook-connection-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ Status de conexão atualizado');
+            }
+        }
+
+        async function testWebhookDisconnect() {
+            log('Simulando desconexão WhatsApp via webhook...');
+            const webhookData = {
+                event: "CONNECTION_UPDATE",
+                instance: "whatsapp-41999888777",
+                data: {
+                    state: "close"
+                }
+            };
+            
+            const result = await apiCall('POST', '/api/whatsapp/webhook', webhookData);
+            
+            document.getElementById('webhook-connection-result').style.display = 'block';
+            document.getElementById('webhook-connection-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ Status de desconexão atualizado');
+            }
+        }
+
+        async function fetchQRCode() {
+            log('Buscando QR Code...');
+            const result = await apiCall('GET', '/api/agents/2/whatsapp/fetch-qr');
+            
+            document.getElementById('qr-result').style.display = 'block';
+            document.getElementById('qr-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ QR Code obtido');
+            } else {
+                log('❌ QR Code não disponível');
+            }
+        }
+
+        async function deleteInstance() {
+            log('Removendo instância...');
+            const result = await apiCall('DELETE', '/api/agents/2/whatsapp');
+            
+            document.getElementById('delete-result').style.display = 'block';
+            document.getElementById('delete-result').textContent = JSON.stringify(result.data, null, 2);
+            
+            if (result.status === 200) {
+                log('✅ Instância removida');
+            } else {
+                log('❌ Falha ao remover');
+            }
+        }
+
+        // Auto-start test log
+        log('Sistema de testes carregado');
+        log('Clique nos botões para executar os testes');
+    </script>
+</body>
+</html>
