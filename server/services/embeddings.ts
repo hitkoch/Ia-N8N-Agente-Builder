@@ -19,8 +19,15 @@ export class EmbeddingService {
         dimensions: 1536, // Dimensões específicas para melhor qualidade
       });
       
-      console.log('✅ Embedding criado com sucesso');
-      return response.data[0].embedding;
+      const embedding = response.data[0].embedding;
+      console.log('✅ Embedding criado com sucesso:', embedding.length, 'dimensões');
+      
+      // Verificar se é realmente um vetor numérico
+      if (!Array.isArray(embedding) || embedding.length === 0 || typeof embedding[0] !== 'number') {
+        throw new Error('Embedding retornado não é um vetor válido');
+      }
+      
+      return embedding;
     } catch (error) {
       console.error('❌ Erro ao criar embedding:', error);
       throw new Error(`Falha ao criar embedding: ${error.message}`);
