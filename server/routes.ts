@@ -12,7 +12,7 @@ import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
-import { registerCleanupRoutes } from "./routes/cleanup";
+
 import type { Agent } from "@shared/schema";
 
 function requireAuth(req: any, res: any, next: any) {
@@ -47,8 +47,7 @@ export function registerRoutes(app: Express): Server {
   // Register WhatsApp status routes
   registerWhatsAppStatusRoutes(app);
   
-  // Register cleanup routes
-  registerCleanupRoutes(app);
+
 
   // Configurar multer para upload de arquivos
   const upload = multer({ 
@@ -513,7 +512,11 @@ export function registerRoutes(app: Express): Server {
       const whatsappInstance = await storage.getWhatsappInstance(parseInt(agentId));
       
       if (!whatsappInstance) {
-        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+        return res.status(404).json({ 
+          message: "Instância WhatsApp não encontrada",
+          agentId: parseInt(agentId),
+          hasInstance: false
+        });
       }
       
       res.json(whatsappInstance);
@@ -658,15 +661,22 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
       }
       
-      // Delete from gateway
-      await whatsappGatewayService.deleteInstance(whatsappInstance.instanceName);
+      // Delete from gateway (silently fail if already deleted)
+      try {
+        await whatsappGatewayService.deleteInstance(whatsappInstance.instanceName);
+      } catch (gatewayError) {
+        console.warn(`⚠️ Erro ao deletar do gateway (pode já estar deletada): ${gatewayError.message}`);
+      }
       
       // Delete from database
       const deleted = await storage.deleteWhatsappInstance(parseInt(agentId));
       
       if (deleted) {
         console.log(`🗑️ Instância WhatsApp removida: ${whatsappInstance.instanceName}`);
-        res.status(200).json({ message: "Instância removida com sucesso" });
+        res.status(200).json({ 
+          message: "Instância removida com sucesso",
+          instanceName: whatsappInstance.instanceName
+        });
       } else {
         res.status(500).json({ message: "Falha ao remover instância do banco de dados" });
       }
