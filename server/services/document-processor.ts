@@ -70,7 +70,7 @@ export class DocumentProcessor {
     
     try {
       // Usar pdf-parse que é mais estável
-      const pdfParse = require('pdf-parse');
+      const pdfParse = await import('pdf-parse');
       
       const options = {
         // Configurações para melhor extração
@@ -78,7 +78,7 @@ export class DocumentProcessor {
         version: 'v1.10.100' // Versão específica do PDF.js
       };
       
-      const data = await pdfParse(buffer, options);
+      const data = await pdfParse.default(buffer, options);
       
       console.log('📄 PDF processado com sucesso');
       console.log('📄 Páginas:', data.numpages);
@@ -87,10 +87,15 @@ export class DocumentProcessor {
       
       if (data.text && data.text.trim().length > 20) {
         // Limpar o texto extraído
-        const cleanText = data.text
+        let cleanText = data.text
           .replace(/\s+/g, ' ') // Normalizar espaços
           .replace(/\n+/g, '\n') // Normalizar quebras de linha
           .trim();
+        
+        // Limitar tamanho para evitar problemas de payload
+        if (cleanText.length > 5000) {
+          cleanText = cleanText.substring(0, 5000) + '... [texto truncado para otimização]';
+        }
         
         return cleanText;
       }
@@ -108,12 +113,17 @@ export class DocumentProcessor {
         // Extrair texto básico
         const textMatches = pdfString.match(/\(([^)]+)\)/g);
         if (textMatches) {
-          const extractedText = textMatches
+          let extractedText = textMatches
             .map(match => match.slice(1, -1))
             .filter(text => text.length > 2 && /[a-zA-ZÀ-ÿ]/.test(text))
             .join(' ')
             .replace(/\s+/g, ' ')
             .trim();
+          
+          // Limitar o tamanho do texto para evitar problemas de payload
+          if (extractedText.length > 5000) {
+            extractedText = extractedText.substring(0, 5000) + '... [texto truncado para otimização]';
+          }
           
           if (extractedText.length > 20) {
             console.log('📄 Extração manual bem-sucedida:', extractedText.length, 'caracteres');
