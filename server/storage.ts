@@ -175,14 +175,14 @@ export class DatabaseStorage implements IStorage {
       console.log(`   - Agent ID: ${document.agentId}`);
       console.log(`   - Nome: ${document.originalName}`);
       console.log(`   - Conteúdo: ${document.content?.length || 0} chars`);
-      console.log(`   - Embeddings: ${document.embeddings ? 'presente' : 'ausente'}`);
+      console.log(`   - Embeddings: ${document.embedding ? 'presente' : 'ausente'}`);
       
       const [created] = await db.insert(ragDocuments).values(document).returning();
       console.log(`✅ Documento RAG criado com ID: ${created.id}`);
       
       // Verificar se foi salvo corretamente
       const [verified] = await db.select().from(ragDocuments).where(eq(ragDocuments.id, created.id));
-      console.log(`🔍 Verificação: embedding salvo = ${!!verified.embeddings}`);
+      console.log(`🔍 Verificação: embedding salvo = ${!!verified.embedding}`);
       
       return created;
     } catch (error) {

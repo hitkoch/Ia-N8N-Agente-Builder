@@ -91,11 +91,11 @@ export class AgentService {
         console.log(`📄 Documento: ${doc.originalName}`);
         console.log(`   - ID: ${doc.id}`);
         console.log(`   - Conteúdo: ${doc.content ? doc.content.length : 0} caracteres`);
-        console.log(`   - Has embedding: ${!!doc.embeddings}`);
+        console.log(`   - Has embedding: ${!!doc.embedding}`);
         
-        if (doc.embeddings) {
+        if (doc.embedding) {
           try {
-            const chunks = JSON.parse(doc.embeddings);
+            const chunks = JSON.parse(doc.embedding);
             console.log(`   - Chunks: ${chunks.length}`);
             if (chunks.length > 0) {
               console.log(`   - Primeiro chunk: ${chunks[0].text?.substring(0, 100)}...`);
@@ -109,9 +109,9 @@ export class AgentService {
       
       // Verificar se temos documentos com embeddings válidos
       const docsWithEmbeddings = ragDocs.filter(doc => {
-        if (!doc.embeddings) return false;
+        if (!doc.embedding) return false;
         try {
-          const chunks = JSON.parse(doc.embeddings);
+          const chunks = JSON.parse(doc.embedding);
           return chunks && chunks.length > 0 && chunks[0].embedding;
         } catch {
           return false;
@@ -183,13 +183,13 @@ O n8n se destaca por sua flexibilidade e facilidade de uso, permitindo que equip
       for (const doc of ragDocs) {
         console.log(`📄 Processando documento: ${doc.originalName}`);
         
-        if (!doc.embeddings) {
+        if (!doc.embedding) {
           console.log(`❌ Documento sem embedding: ${doc.originalName}`);
           continue;
         }
         
         try {
-          const docChunks = JSON.parse(doc.embeddings);
+          const docChunks = JSON.parse(doc.embedding);
           console.log(`🔮 Chunks no documento: ${docChunks.length}`);
           
           for (let i = 0; i < docChunks.length; i++) {

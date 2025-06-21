@@ -549,7 +549,7 @@ export function registerRoutes(app: Express): Server {
         filename: processedDoc.filename,
         originalName: processedDoc.originalName,
         content: processedDoc.content,
-        embeddings: processedDoc.embedding || null,
+        embedding: processedDoc.embedding || null,
         fileSize: processedDoc.fileSize,
         mimeType: processedDoc.mimeType,
         uploadedBy: user.id
