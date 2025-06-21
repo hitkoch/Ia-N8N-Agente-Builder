@@ -28,6 +28,15 @@ export interface IStorage {
   getConversationsByAgent(agentId: number): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   
+  getRagDocumentsByAgent(agentId: number): Promise<RagDocument[]>;
+  createRagDocument(document: InsertRagDocument & { agentId: number, uploadedBy: number }): Promise<RagDocument>;
+  deleteRagDocument(id: number, ownerId: number): Promise<boolean>;
+  
+  getExternalApiConfigsByAgent(agentId: number): Promise<ExternalApiConfig[]>;
+  createExternalApiConfig(config: InsertExternalApiConfig & { agentId: number }): Promise<ExternalApiConfig>;
+  updateExternalApiConfig(id: number, agentId: number, updates: Partial<InsertExternalApiConfig>): Promise<ExternalApiConfig | undefined>;
+  deleteExternalApiConfig(id: number, agentId: number): Promise<boolean>;
+  
   sessionStore: any;
 }
 
@@ -146,6 +155,55 @@ export class DatabaseStorage implements IStorage {
       .values(conversation)
       .returning();
     return newConversation;
+  }
+
+  async getRagDocumentsByAgent(agentId: number): Promise<RagDocument[]> {
+    return await db.select().from(ragDocuments).where(eq(ragDocuments.agentId, agentId));
+  }
+
+  async createRagDocument(document: InsertRagDocument & { agentId: number, uploadedBy: number }): Promise<RagDocument> {
+    const [newDocument] = await db
+      .insert(ragDocuments)
+      .values(document)
+      .returning();
+    return newDocument;
+  }
+
+  async deleteRagDocument(id: number, ownerId: number): Promise<boolean> {
+    const result = await db
+      .delete(ragDocuments)
+      .where(eq(ragDocuments.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getExternalApiConfigsByAgent(agentId: number): Promise<ExternalApiConfig[]> {
+    return await db.select().from(externalApiConfigs).where(eq(externalApiConfigs.agentId, agentId));
+  }
+
+  async createExternalApiConfig(config: InsertExternalApiConfig & { agentId: number }): Promise<ExternalApiConfig> {
+    const [newConfig] = await db
+      .insert(externalApiConfigs)
+      .values(config)
+      .returning();
+    return newConfig;
+  }
+
+  async updateExternalApiConfig(id: number, agentId: number, updates: Partial<InsertExternalApiConfig>): Promise<ExternalApiConfig | undefined> {
+    const [updatedConfig] = await db
+      .update(externalApiConfigs)
+      .set({ ...updates })
+      .where(eq(externalApiConfigs.id, id))
+      .returning();
+    return updatedConfig || undefined;
+  }
+
+  async deleteExternalApiConfig(id: number, agentId: number): Promise<boolean> {
+    const result = await db
+      .delete(externalApiConfigs)
+      .where(eq(externalApiConfigs.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 

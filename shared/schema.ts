@@ -26,11 +26,41 @@ export const agents = pgTable("agents", {
   capabilities: text("capabilities").array(), // Array of capabilities like "web_search", "image_analysis", etc.
   tools: text("tools").array(), // Array of enabled tools
   knowledgeBase: text("knowledge_base"), // Custom knowledge/context
+  ragDocuments: text("rag_documents").array(), // Uploaded documents for RAG
+  googleServices: text("google_services").array(), // Google integrations: calendar, drive, sheets, docs
+  externalApis: text("external_apis"), // JSON string of API configurations
   responseStyle: text("response_style").default("professional"), // professional, casual, technical, creative
-  language: text("language").default("en"), // Default language
+  language: text("language").default("pt"), // Default language
   ownerId: integer("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Nova tabela para documentos RAG
+export const ragDocuments = pgTable("rag_documents", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  content: text("content"), // Extracted text content
+  embeddings: text("embeddings"), // Vector embeddings for similarity search
+  uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Nova tabela para configurações de APIs externas
+export const externalApiConfigs = pgTable("external_api_configs", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  authType: text("auth_type").notNull(), // bearer, api_key, oauth, basic
+  authConfig: text("auth_config"), // JSON with auth details
+  endpoints: text("endpoints"), // JSON with available endpoints
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const evolutionInstances = pgTable("evolution_instances", {
@@ -100,6 +130,19 @@ export const insertAgentSchema = createInsertSchema(agents).omit({
   updatedAt: true,
 });
 
+export const insertRagDocumentSchema = createInsertSchema(ragDocuments).omit({
+  id: true,
+  agentId: true,
+  uploadedBy: true,
+  createdAt: true,
+});
+
+export const insertExternalApiConfigSchema = createInsertSchema(externalApiConfigs).omit({
+  id: true,
+  agentId: true,
+  createdAt: true,
+});
+
 export const insertEvolutionInstanceSchema = createInsertSchema(evolutionInstances).omit({
   id: true,
   ownerId: true,
@@ -115,6 +158,10 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
+export type RagDocument = typeof ragDocuments.$inferSelect;
+export type InsertRagDocument = z.infer<typeof insertRagDocumentSchema>;
+export type ExternalApiConfig = typeof externalApiConfigs.$inferSelect;
+export type InsertExternalApiConfig = z.infer<typeof insertExternalApiConfigSchema>;
 export type EvolutionInstance = typeof evolutionInstances.$inferSelect;
 export type InsertEvolutionInstance = z.infer<typeof insertEvolutionInstanceSchema>;
 export type Conversation = typeof conversations.$inferSelect;
