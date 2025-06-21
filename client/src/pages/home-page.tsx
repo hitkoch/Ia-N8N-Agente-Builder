@@ -110,7 +110,7 @@ export default function HomePage() {
         {/* Recent Agents */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Agents</CardTitle>
+            <CardTitle>Seus Agentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
