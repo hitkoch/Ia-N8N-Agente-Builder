@@ -15,9 +15,19 @@ export async function apiRequest(
 ): Promise<Response> {
   const isFormData = data instanceof FormData;
   
-  const headers: HeadersInit = isFormData 
-    ? (customHeaders ? Object.fromEntries(Object.entries(customHeaders).filter(([_, v]) => v !== undefined)) : {})
-    : { "Content-Type": "application/json", ...(customHeaders ? Object.fromEntries(Object.entries(customHeaders).filter(([_, v]) => v !== undefined)) : {}) };
+  const headers: Record<string, string> = {};
+  
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (customHeaders) {
+    Object.entries(customHeaders).forEach(([key, value]) => {
+      if (value !== undefined) {
+        headers[key] = value;
+      }
+    });
+  }
 
   const res = await fetch(url, {
     method,

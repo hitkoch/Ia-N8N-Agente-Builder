@@ -67,14 +67,35 @@ export class DocumentProcessor {
 
   private async processPDF(buffer: Buffer): Promise<string> {
     try {
-      console.log('📄 Iniciando processamento de PDF, tamanho:', buffer.length);
-      const pdfParse = await import('pdf-parse');
-      console.log('📄 pdf-parse importado com sucesso');
+      console.log('📄 Iniciando processamento de PDF com pdfjs-dist, tamanho:', buffer.length);
       
-      const data = await pdfParse.default(buffer);
-      console.log('📄 PDF processado, texto extraído:', data.text?.length || 0, 'caracteres');
+      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+      console.log('📄 pdfjs-dist importado com sucesso');
       
-      return data.text || '[PDF sem texto extraível - pode ser um PDF de imagens]';
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(buffer),
+        useSystemFonts: true,
+      });
+      
+      const pdf = await loadingTask.promise;
+      console.log('📄 PDF carregado, páginas:', pdf.numPages);
+      
+      let fullText = '';
+      
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += pageText + '\n';
+      }
+      
+      console.log('📄 PDF processado, texto extraído:', fullText.length, 'caracteres');
+      
+      return fullText.trim() || '[PDF sem texto extraível - pode ser um PDF de imagens]';
     } catch (error) {
       console.error('❌ Erro detalhado ao processar PDF:', error);
       throw new Error(`Erro ao processar PDF: ${error.message}`);
