@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -54,6 +54,7 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
   const [ragDocuments, setRagDocuments] = useState<any[]>([]);
   const [apiConfigs, setApiConfigs] = useState<any[]>([]);
   const [newApiConfig, setNewApiConfig] = useState({ name: "", baseUrl: "", authType: "none" });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const form = useForm<UpdateAgentForm>({
     resolver: zodResolver(updateAgentSchema),
@@ -117,13 +118,9 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
     },
   });
 
-  // Separate ref to track if we've already loaded the agent data
-  const loadedAgentIdRef = React.useRef<number | null>(null);
-
-  useEffect(() => {
-    if (agent && isOpen && agent.id !== loadedAgentIdRef.current) {
-      loadedAgentIdRef.current = agent.id;
-      
+  // Initialize data when modal opens and agent data is available
+  React.useEffect(() => {
+    if (isOpen && agent && !isInitialized) {
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
@@ -133,33 +130,18 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         status: agent.status || "draft",
       });
       
-      // Carregar ferramentas selecionadas
       setSelectedTools(agent.tools ? agent.tools.split(',').filter(Boolean) : []);
-      
-      // Carregar Google Services selecionados
       setSelectedGoogleServices(agent.googleServices ? agent.googleServices.split(',').filter(Boolean) : []);
+      setRagDocuments(documents || []);
+      setApiConfigs(configs || []);
+      setIsInitialized(true);
     }
-    
+  }, [isOpen, agent, documents, configs, isInitialized, form]);
+
+  // Reset when modal closes
+  React.useEffect(() => {
     if (!isOpen) {
-      loadedAgentIdRef.current = null;
-    }
-  }, [agent, isOpen]);
-
-  useEffect(() => {
-    if (documents && isOpen) {
-      setRagDocuments(documents);
-    }
-  }, [documents, isOpen]);
-
-  useEffect(() => {
-    if (configs && isOpen) {
-      setApiConfigs(configs);
-    }
-  }, [configs, isOpen]);
-
-  // Reset states when modal closes
-  useEffect(() => {
-    if (!isOpen) {
+      setIsInitialized(false);
       setSelectedTools([]);
       setSelectedGoogleServices([]);
       setRagDocuments([]);
@@ -174,34 +156,34 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         status: "draft",
       });
     }
-  }, [isOpen]);
+  }, [isOpen, form]);
 
-  const onSubmit = (data: UpdateAgentForm) => {
+  const onSubmit = useCallback((data: UpdateAgentForm) => {
     const updateData = {
       ...data,
       tools: selectedTools.join(','),
       googleServices: selectedGoogleServices.join(','),
     };
     updateMutation.mutate(updateData);
-  };
+  }, [selectedTools, selectedGoogleServices, updateMutation]);
 
-  const handleToolToggle = (toolId: string) => {
+  const handleToolToggle = useCallback((toolId: string) => {
     setSelectedTools(prev => 
       prev.includes(toolId) 
         ? prev.filter(id => id !== toolId)
         : [...prev, toolId]
     );
-  };
+  }, []);
 
-  const handleGoogleServiceToggle = (serviceId: string) => {
+  const handleGoogleServiceToggle = useCallback((serviceId: string) => {
     setSelectedGoogleServices(prev => 
       prev.includes(serviceId) 
         ? prev.filter(id => id !== serviceId)
         : [...prev, serviceId]
     );
-  };
+  }, []);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const newDoc = {
@@ -219,18 +201,18 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         description: `${file.name} foi adicionado à base de conhecimento.`,
       });
     }
-  };
+  }, [toast]);
 
-  const removeDocument = (docId: number) => {
+  const removeDocument = useCallback((docId: number) => {
     setRagDocuments(prev => prev.filter(doc => doc.id !== docId));
     
     toast({
       title: "Arquivo removido",
       description: "O arquivo foi removido da base de conhecimento.",
     });
-  };
+  }, [toast]);
 
-  const addApiConfig = () => {
+  const addApiConfig = useCallback(() => {
     if (newApiConfig.name && newApiConfig.baseUrl) {
       const config = {
         id: Date.now(),
@@ -247,16 +229,16 @@ export default function EditAgentModal({ isOpen, onClose, agentId }: EditAgentMo
         description: `Configuração da API ${config.name} foi adicionada.`,
       });
     }
-  };
+  }, [newApiConfig, toast]);
 
-  const removeApiConfig = (configId: number) => {
+  const removeApiConfig = useCallback((configId: number) => {
     setApiConfigs(prev => prev.filter(config => config.id !== configId));
     
     toast({
       title: "API removida",
       description: "A configuração da API foi removida.",
     });
-  };
+  }, [toast]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
