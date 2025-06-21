@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
-import { documentProcessor } from "./services/document-processor";
+
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -14,6 +14,8 @@ import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
+
+import { embeddingService } from "./services/embeddings";
 
 import type { Agent } from "@shared/schema";
 
@@ -251,26 +253,81 @@ export function registerRoutes(app: Express): Server {
       console.log(`📄 Processando upload: ${req.file.originalname}`);
       
       try {
-        // Simple document storage without complex processing
         console.log(`📄 Processando arquivo: ${req.file.originalname}, tamanho: ${req.file.size} bytes`);
         
-        // Convert buffer to text for simple files
-        let content = `[Arquivo ${req.file.originalname}]`;
-        if (req.file.mimetype.includes('text/')) {
-          content = req.file.buffer.toString('utf8');
+        // Extract text content based on file type
+        let extractedContent = '';
+        const fileExtension = path.extname(req.file.originalname).toLowerCase();
+        
+        // Process document based on file type
+        try {
+          if (fileExtension === '.xlsx' || fileExtension === '.xls') {
+            // Process Excel files
+            const xlsx = await import('xlsx');
+            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+            let extractedText = '';
+            
+            workbook.SheetNames.forEach(sheetName => {
+              const worksheet = workbook.Sheets[sheetName];
+              const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+              
+              extractedText += `=== PLANILHA: ${sheetName} ===\n`;
+              jsonData.forEach((row: any[]) => {
+                if (Array.isArray(row) && row.some(cell => cell !== '')) {
+                  const rowText = row.join(' | ');
+                  extractedText += `${rowText}\n`;
+                }
+              });
+              extractedText += '\n';
+            });
+            
+            extractedContent = extractedText.trim() || `Planilha ${req.file.originalname} processada`;
+          } else if (fileExtension === '.pdf') {
+            // Process PDF files
+            const pdfParse = await import('pdf-parse');
+            const pdfData = await pdfParse.default(req.file.buffer);
+            extractedContent = pdfData.text || 'Conteúdo PDF não pôde ser extraído';
+          } else if (req.file.mimetype.includes('text/') || fileExtension === '.txt' || fileExtension === '.md') {
+            // Process text files
+            extractedContent = req.file.buffer.toString('utf-8');
+          } else {
+            // Default fallback
+            extractedContent = req.file.buffer.toString('utf-8');
+          }
+          
+          console.log(`📝 Conteúdo extraído: ${extractedContent.length} caracteres`);
+        } catch (extractError) {
+          console.error('❌ Erro na extração de conteúdo:', extractError);
+          extractedContent = `[Arquivo ${req.file.originalname} - Erro na extração: ${extractError.message}]`;
         }
         
-        // Create simple RAG document record
+        // Generate embeddings for the extracted content
+        let embeddingVector = null;
+        let processingStatus = 'completed';
+        
+        if (extractedContent.length > 50) { // Only generate embeddings for meaningful content
+          try {
+            console.log('🔮 Gerando embeddings para o documento...');
+            const embedding = await embeddingService.createEmbedding(extractedContent);
+            embeddingVector = JSON.stringify(embedding);
+            console.log(`✅ Embedding gerado com ${embedding.length} dimensões`);
+          } catch (embeddingError) {
+            console.error('❌ Erro ao gerar embedding:', embeddingError);
+            processingStatus = 'embedding_failed';
+          }
+        }
+        
+        // Create RAG document record with processed content
         const ragDocument = await storage.createRagDocument({
           agentId: agentId,
           filename: req.file.originalname,
           originalName: req.file.originalname,
-          content: content,
-          fileType: path.extname(req.file.originalname).toLowerCase(),
+          content: extractedContent,
+          fileType: fileExtension,
           fileSize: req.file.size,
           mimeType: req.file.mimetype,
-          embedding: null,
-          processingStatus: 'completed',
+          embedding: embeddingVector,
+          processingStatus: processingStatus,
           uploadedBy: user.id,
           chunkIndex: 0,
           totalChunks: 1
