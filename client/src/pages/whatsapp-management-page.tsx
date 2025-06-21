@@ -253,7 +253,69 @@ export default function WhatsAppManagementPage() {
                 Carregando informações da instância...
               </CardContent>
             </Card>
-          ) : hasInstance ? (
+          ) : !hasInstance ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Smartphone className="w-5 h-5" />
+                  Criar Instância WhatsApp
+                </CardTitle>
+                <CardDescription>
+                  Configure uma nova instância WhatsApp para este agente
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Alert>
+                  <XCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    Nenhuma instância WhatsApp configurada para este agente.
+                  </AlertDescription>
+                </Alert>
+
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full mt-4" style={{ backgroundColor: '#b8ec00', color: '#022b44' }}>
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      Criar Instância WhatsApp
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Criar Nova Instância WhatsApp</DialogTitle>
+                      <DialogDescription>
+                        Configure uma nova instância para conectar este agente ao WhatsApp
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="phone">Número de Telefone</Label>
+                        <Input
+                          id="phone"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="Ex: 5511999999999"
+                          className="mt-1"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => createInstanceMutation.mutate()}
+                        disabled={createInstanceMutation.isPending || !phoneNumber}
+                        className="w-full"
+                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
+                      >
+                        {createInstanceMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Smartphone className="w-4 h-4 mr-2" />
+                        )}
+                        Criar Instância
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          ) : (
             <div className="space-y-6">
               {/* Instance Management Section */}
               <Card>
@@ -440,78 +502,18 @@ export default function WhatsAppManagementPage() {
                 </Card>
               )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nenhuma Instância Encontrada</CardTitle>
-                  <CardDescription>
-                    Este agente ainda não possui uma instância WhatsApp configurada.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
-                        className="hover:opacity-90 w-full"
-                        size="lg"
-                      >
-                        <Smartphone className="w-4 h-4 mr-2" />
-                        Criar Instância WhatsApp
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Criar Instância WhatsApp</DialogTitle>
-                        <DialogDescription>
-                          Crie uma instância completa com QR Code para conectar este agente ao WhatsApp.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="phoneNumber">Número de Telefone</Label>
-                          <Input
-                            id="phoneNumber"
-                            placeholder="41999887766"
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                          Cancelar
-                        </Button>
-                        <Button
-                          onClick={() => createInstanceMutation.mutate({ agentId: selectedAgentId, phoneNumber })}
-                          disabled={createInstanceMutation.isPending || !phoneNumber}
-                          style={{ backgroundColor: '#b8ec00', color: '#022b44' }}
-                          className="hover:opacity-90"
-                        >
-                          {createInstanceMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : null}
-                          Criar Instância
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </CardContent>
-              </Card>
-            </div>
           )}
         </div>
       )}
 
       {/* QR Code Modal */}
       <Dialog open={isQRModalOpen} onOpenChange={setIsQRModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5" />
-              QR Code WhatsApp
-            </DialogTitle>
+            <DialogTitle>QR Code WhatsApp</DialogTitle>
+            <DialogDescription>
+              Escaneie este código com seu WhatsApp para conectar
+            </DialogDescription>
           </DialogHeader>
           {instance?.qrCode && (
             <div className="text-center space-y-4">

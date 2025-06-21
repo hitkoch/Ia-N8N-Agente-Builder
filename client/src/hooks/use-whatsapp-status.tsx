@@ -30,29 +30,25 @@ export function useWhatsAppStatus({
   const queryClient = useQueryClient();
 
   const { 
-    data: instance, 
+    data: rawResponse, 
     isLoading, 
     error,
     refetch 
-  } = useQuery<WhatsAppInstance | null>({
+  } = useQuery<any>({
     queryKey: ["/api/agents", agentId, "whatsapp"],
     queryFn: async () => {
+      if (!agentId) return { hasInstance: false };
+      
       try {
         const response = await fetch(`/api/agents/${agentId}/whatsapp`, {
           credentials: "include",
         });
-        if (response.status === 404) {
-          return null; // Return null for 404, this is expected when no instance exists
-        }
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
         return response.json();
       } catch (error) {
-        if (error instanceof Error && error.message.includes('404')) {
-          return null;
-        }
-        throw error;
+        return { hasInstance: false };
       }
     },
     enabled: enabled && !!agentId,
@@ -60,7 +56,7 @@ export function useWhatsAppStatus({
     retryOnMount: false,
     refetchInterval: (data) => {
       // Only poll if instance exists and is not connected
-      if (!data || data.status === "CONNECTED") {
+      if (!data?.hasInstance || data?.status === "CONNECTED") {
         setIsPolling(false);
         return false;
       }
@@ -69,6 +65,10 @@ export function useWhatsAppStatus({
     },
     refetchIntervalInBackground: false,
   });
+
+  // Extract instance data properly
+  const instance = rawResponse?.hasInstance ? rawResponse : null;
+  const hasInstanceFlag = rawResponse?.hasInstance === true;
 
   // Handle status changes
   useEffect(() => {
@@ -175,7 +175,7 @@ export function useWhatsAppStatus({
     hasQRCode: hasQRCode(),
     needsAttention: needsAttention(),
     isConnected: instance?.status === "CONNECTED" || instance?.status === "open",
-    hasInstance: !isLoading && !!instance,
+    hasInstance: hasInstanceFlag,
     
     // Actions
     refreshStatus,
