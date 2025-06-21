@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Upload, FileText, Trash2, Settings, Database, Smartphone, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import Sidebar from "@/components/sidebar";
 
 interface AgentEditProps {
   agentId: string;
@@ -189,69 +190,79 @@ export default function AgentEditNew({ agentId }: AgentEditProps) {
     );
   }
 
+  const handleSectionChange = (section: string) => {
+    setLocation("/");
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">{agent.name}</h1>
-                <p className="text-sm text-gray-500">Editando agente</p>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar onSectionChange={handleSectionChange} />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Navigation Bar */}
+        <div className="bg-white border-b shadow-sm flex-shrink-0">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Dashboard
+                </Button>
+                <div className="h-6 w-px bg-gray-300"></div>
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900">{agent.name}</h1>
+                  <p className="text-sm text-gray-500">Editando agente</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <Badge variant={agent.status === "active" ? "default" : "secondary"}>
-                {agent.status === "active" ? "Ativo" : "Rascunho"}
-              </Badge>
               
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? "Salvando..." : "Salvar"}
-              </Button>
+              <div className="flex items-center space-x-3">
+                <Badge variant={agent.status === "active" ? "default" : "secondary"}>
+                  {agent.status === "active" ? "Ativo" : "Rascunho"}
+                </Badge>
+                
+                <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateMutation.isPending ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {[
-              { id: "basic", label: "Configurações Básicas", icon: Settings },
-              { id: "knowledge", label: "Base de Conhecimento", icon: Database },
-              { id: "whatsapp", label: "WhatsApp", icon: Smartphone }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setCurrentTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    currentTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+        {/* Tab Navigation */}
+        <div className="bg-white border-b flex-shrink-0">
+          <div className="px-6">
+            <nav className="flex space-x-8">
+              {[
+                { id: "basic", label: "Configurações Básicas", icon: Settings },
+                { id: "knowledge", label: "Base de Conhecimento", icon: Database },
+                { id: "whatsapp", label: "WhatsApp", icon: Smartphone }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setCurrentTab(tab.id)}
+                    className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      currentTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="px-6 py-8 max-w-5xl mx-auto w-full">
         {/* Basic Tab */}
         {currentTab === "basic" && (
           <div className="space-y-6">
@@ -475,6 +486,8 @@ export default function AgentEditNew({ agentId }: AgentEditProps) {
             </CardContent>
           </Card>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
