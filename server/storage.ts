@@ -194,7 +194,7 @@ export class DatabaseStorage implements IStorage {
         processingStatus: doc.processingStatus || 'pending',
         uploadedBy: doc.uploadedBy,
         uploadedAt: doc.uploadedAt,
-        embedding: doc.embedding ? 'present' : null // Don't serialize raw embedding data
+        embedding: doc.embedding ? JSON.parse(doc.embedding) : null
       }));
       
       return cleanDocuments;

@@ -51,8 +51,15 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/agents/${agentId}`);
-      return await res.json();
+      const response = await fetch(`/api/agents/${agentId}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
     },
   });
 
@@ -95,11 +102,19 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
 
   const loadRagDocuments = async () => {
     try {
-      const response = await apiRequest("GET", `/api/agents/${agentId}/documents`);
+      const response = await fetch(`/api/agents/${agentId}/documents`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const docs = await response.json();
-      setRagDocuments(docs);
+      setRagDocuments(Array.isArray(docs) ? docs : []);
     } catch (error) {
       console.error("Erro ao carregar documentos:", error);
+      setRagDocuments([]);
     }
   };
 
@@ -159,8 +174,10 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
       const formDataFile = new FormData();
       formDataFile.append('document', file);
       
-      const response = await apiRequest("POST", `/api/agents/${agentId}/upload-document`, formDataFile, {
-        'Content-Type': undefined
+      const response = await fetch(`/api/agents/${agentId}/upload-document`, {
+        method: 'POST',
+        body: formDataFile,
+        credentials: 'include'
       });
       
       const ragDoc = await response.json();
@@ -200,7 +217,14 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
     }
 
     try {
-      await apiRequest("DELETE", `/api/agents/${agentId}/documents/${documentId}`);
+      const response = await fetch(`/api/agents/${agentId}/documents/${documentId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       setRagDocuments(prev => prev.filter(doc => doc.id !== documentId));
       

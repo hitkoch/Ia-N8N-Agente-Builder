@@ -204,7 +204,7 @@ export function registerRoutes(app: Express): Server {
         mimeType: doc.mimeType || '',
         processingStatus: doc.processingStatus || 'pending',
         contentPreview: doc.content ? doc.content.substring(0, 200) + '...' : '',
-        hasEmbedding: doc.embedding === 'present',
+        hasEmbedding: !!doc.embedding,
         uploadedAt: doc.uploadedAt || new Date().toISOString(),
         agentId: doc.agentId
       }));
