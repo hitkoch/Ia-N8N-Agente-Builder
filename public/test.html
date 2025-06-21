@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste WhatsApp</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px; cursor: pointer; }
+        .result { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; margin: 10px 0; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Teste Sistema WhatsApp</h1>
+    
+    <button class="btn" onclick="testStatus()">Verificar Status</button>
+    <button class="btn" onclick="testWebhook()">Testar Webhook</button>
+    <button class="btn" onclick="testConnection()">Testar Conexão</button>
+    
+    <div id="result" class="result">Clique nos botões para testar...</div>
+
+    <script>
+        async function apiCall(method, url, data) {
+            try {
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                return { status: response.status, data: result };
+            } catch (error) {
+                return { status: 'error', data: { error: error.message } };
+            }
+        }
+
+        async function testStatus() {
+            const result = await apiCall('GET', '/api/agents/2/whatsapp');
+            document.getElementById('result').textContent = `Status Test:\n${JSON.stringify(result, null, 2)}`;
+        }
+
+        async function testWebhook() {
+            const data = {
+                event: "MESSAGES_UPSERT",
+                instance: "whatsapp-41985656666",
+                data: {
+                    messages: [{
+                        key: {
+                            remoteJid: "5541999888777@s.whatsapp.net",
+                            fromMe: false,
+                            id: "test_" + Date.now()
+                        },
+                        message: {
+                            conversation: "Teste: O agente está funcionando?"
+                        },
+                        messageTimestamp: Math.floor(Date.now() / 1000).toString()
+                    }]
+                }
+            };
+            
+            const result = await apiCall('POST', '/api/whatsapp/webhook', data);
+            document.getElementById('result').textContent = `Webhook Test:\n${JSON.stringify(result, null, 2)}`;
+        }
+
+        async function testConnection() {
+            const data = {
+                event: "CONNECTION_UPDATE",
+                instance: "whatsapp-41985656666",
+                data: { state: "open" }
+            };
+            
+            const result = await apiCall('POST', '/api/whatsapp/webhook', data);
+            document.getElementById('result').textContent = `Connection Test:\n${JSON.stringify(result, null, 2)}`;
+        }
+    </script>
+</body>
+</html>
