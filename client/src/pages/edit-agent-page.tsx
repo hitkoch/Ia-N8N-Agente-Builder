@@ -21,6 +21,32 @@ export default function EditAgentPage({ agentId }: EditAgentPageProps) {
   const [, setLocation] = useLocation();
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
+  // Handle sidebar navigation
+  const handleSectionChange = (section: string) => {
+    switch (section) {
+      case "dashboard":
+        setLocation("/");
+        break;
+      case "agents":
+        setLocation("/");
+        break;
+      case "templates":
+        setLocation("/");
+        break;
+      case "testing":
+        setLocation("/");
+        break;
+      case "evolution":
+        setLocation("/");
+        break;
+      case "settings":
+        setLocation("/");
+        break;
+      default:
+        setLocation("/");
+    }
+  };
+
   const { data: agent, isLoading } = useQuery({
     queryKey: ["/api/agents", agentId],
     queryFn: async () => {

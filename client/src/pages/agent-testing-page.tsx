@@ -138,8 +138,8 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Chat exportado",
-      description: "Histórico do chat foi baixado como arquivo JSON.",
+      title: "Conversa exportada",
+      description: "Histórico da conversa foi baixado como arquivo JSON.",
     });
   };
 
@@ -254,8 +254,8 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 <Badge 
                   variant={currentAgent.status === "active" ? "default" : "secondary"}
                   style={{ 
-                    backgroundColor: currentAgent.status === "active" ? '#b8ec00' : '#gray', 
-                    color: '#022b44' 
+                    backgroundColor: currentAgent.status === "active" ? '#b8ec00' : '#94a3b8', 
+                    color: currentAgent.status === "active" ? '#022b44' : '#ffffff'
                   }}
                 >
                   {currentAgent.status === "active" ? "Ativo" : 
@@ -268,16 +268,16 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Modelo:</span>
-                  <span className="font-medium">{currentAgent.model}</span>
+                  <span className="font-medium" style={{ color: '#022b44' }}>{currentAgent.model}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Temperatura:</span>
-                  <span className="font-medium">{currentAgent.temperature}</span>
+                  <span className="font-medium" style={{ color: '#022b44' }}>{currentAgent.temperature}</span>
                 </div>
                 {currentAgent.language && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Idioma:</span>
-                    <span className="font-medium">{currentAgent.language}</span>
+                    <span className="font-medium" style={{ color: '#022b44' }}>{currentAgent.language}</span>
                   </div>
                 )}
               </div>
@@ -340,7 +340,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                       {currentAgent.name}
                     </h2>
                     <div className="flex items-center space-x-1">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: '#b8ec00' }}></div>
                       <span className="text-sm text-gray-500">Online</span>
                     </div>
                   </div>
@@ -389,7 +389,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                   </div>
                   
                   <div className={`max-w-2xl ${message.role === 'user' ? 'text-right' : ''}`}>
-                    <div className={`inline-block p-4 rounded-2xl ${
+                    <div className={`inline-block p-4 rounded-2xl shadow-sm ${
                       message.role === 'user'
                         ? 'text-white'
                         : 'bg-white border border-gray-200'
@@ -483,7 +483,7 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
                 Selecione um Agente
               </h3>
               <p className="text-gray-500 max-w-md">
-                Escolha um agente no painel lateral para começar a testar suas respostas
+                Escolha um agente no painel lateral para começar a testar suas conversas
               </p>
             </div>
           </div>
@@ -500,9 +500,9 @@ export default function AgentTestingPage({ selectedAgentId }: AgentTestingPagePr
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">📋 Como usar:</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'rgba(2, 43, 68, 0.05)', borderColor: '#022b44', borderWidth: '1px' }}>
+              <h4 className="text-sm font-medium mb-2" style={{ color: '#022b44' }}>📋 Como usar:</h4>
+              <ul className="text-sm space-y-1" style={{ color: '#022b44' }}>
                 <li>• Copie o código abaixo e cole no HTML do seu site</li>
                 <li>• O webchat aparecerá automaticamente no canto da página</li>
                 <li>• Personalize as cores e posição através dos parâmetros</li>
