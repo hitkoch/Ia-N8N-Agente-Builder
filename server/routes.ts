@@ -14,6 +14,7 @@ import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter, agentOwnershipMiddleware } from "./middleware/security";
 import { registerWhatsAppStatusRoutes } from "./routes/whatsapp-status";
+import { performanceMonitor } from "./middleware/performance-monitor";
 
 import { embeddingService } from "./services/embeddings";
 

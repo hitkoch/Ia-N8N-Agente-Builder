@@ -14,25 +14,26 @@ export interface ChatMessage {
 export class OpenAIService {
   async generateResponse(agent: Agent, messages: ChatMessage[]): Promise<string> {
     try {
-      const systemMessage: ChatMessage = {
-        role: "system",
-        content: agent.systemPrompt,
-      };
-
-      const allMessages = [systemMessage, ...messages];
+      // Don't duplicate system message if it's already in messages
+      const hasSystemMessage = messages.some(msg => msg.role === "system");
+      const finalMessages = hasSystemMessage ? messages : [
+        { role: "system", content: agent.systemPrompt },
+        ...messages
+      ];
 
       const response = await openai.chat.completions.create({
-        model: agent.model === "gpt-4" ? "gpt-4o" : agent.model,
-        messages: allMessages,
-        temperature: agent.temperature,
-        max_tokens: agent.maxTokens,
-        top_p: agent.topP,
+        model: agent.model === "gpt-4" ? "gpt-4o-mini" : (agent.model || "gpt-4o-mini"), // Use faster mini model for speed
+        messages: finalMessages,
+        temperature: agent.temperature || 0.7,
+        max_tokens: Math.min(agent.maxTokens || 500, 500), // Limit tokens for faster response
+        top_p: agent.topP || 1,
+        stream: false, // Ensure no streaming for consistent timing
       });
 
-      return response.choices[0]?.message?.content || "I apologize, but I couldn't generate a response.";
+      return response.choices[0]?.message?.content || "Desculpe, não consegui gerar uma resposta no momento.";
     } catch (error) {
       console.error("OpenAI API error:", error);
-      throw new Error("Failed to generate AI response. Please check your API configuration.");
+      throw new Error("Falha ao gerar resposta da IA. Verifique a configuração da API.");
     }
   }
 

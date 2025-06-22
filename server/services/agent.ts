@@ -1,22 +1,28 @@
 import { Agent } from "@shared/schema";
 import { openaiService, ChatMessage } from "./openai";
 import { storage } from "../storage";
+import { responseCache } from "../middleware/response-cache";
 
 export class AgentService {
   private cache = new Map();
 
   async testAgent(agent: Agent, userMessage: string): Promise<string> {
     try {
-      // Cache key for repeated queries
-      const cacheKey = `${agent.id}-${userMessage.toLowerCase()}`;
+      // Check response cache first (fastest)
+      const cachedResponse = responseCache.get(agent.id, userMessage);
+      if (cachedResponse) {
+        console.log(`⚡ Cache hit para agente ${agent.name}`);
+        return cachedResponse;
+      }
+
+      // Fallback to local cache
+      const cacheKey = `${agent.id}-${userMessage.toLowerCase().substring(0, 50)}`;
       if (this.cache.has(cacheKey)) {
         return this.cache.get(cacheKey);
       }
 
-      // Parallel execution for maximum speed
-      const [knowledgeContext] = await Promise.all([
-        this.getKnowledgeContext(agent, userMessage)
-      ]);
+      // Start knowledge context search and OpenAI call preparation in parallel
+      const knowledgePromise = this.getKnowledgeContext(agent, userMessage);
       
       let systemContent = agent.systemPrompt;
       
@@ -25,32 +31,50 @@ export class AgentService {
         systemContent += `\n\nBase de Conhecimento Adicional:\n${agent.knowledgeBase}`;
       }
 
-      const messages: ChatMessage[] = [
+      const baseMessages: ChatMessage[] = [
         {
           role: "system",
           content: systemContent
         }
       ];
 
+      // Wait for knowledge context with timeout
+      let knowledgeContext: string | null = null;
+      try {
+        knowledgeContext = await Promise.race([
+          knowledgePromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)) // 1 second timeout
+        ]);
+      } catch (error) {
+        console.log("Knowledge context timeout, proceeding without it");
+        knowledgeContext = null;
+      }
+
       if (knowledgeContext) {
-        messages.push({
+        baseMessages.push({
           role: "system", 
           content: `Documentos da Base de Conhecimento:\n\n${knowledgeContext}`
         });
       }
 
-      messages.push({
+      baseMessages.push({
         role: "user",
         content: userMessage
       });
 
-      const response = await openaiService.generateResponse(agent, messages);
+      const response = await openaiService.generateResponse(agent, baseMessages);
       
-      // Cache successful responses
-      this.cache.set(cacheKey, response);
-      if (this.cache.size > 100) {
-        const firstKey = this.cache.keys().next().value;
-        this.cache.delete(firstKey);
+      // Cache successful responses in both caches
+      if (response && response.length < 1000) {
+        // Response cache (faster, with TTL)
+        responseCache.set(agent.id, userMessage, response);
+        
+        // Local cache (fallback)
+        this.cache.set(cacheKey, response);
+        if (this.cache.size > 50) {
+          const firstKey = this.cache.keys().next().value;
+          this.cache.delete(firstKey);
+        }
       }
       
       return response;
@@ -109,18 +133,21 @@ export class AgentService {
       
       if (!ragDocs?.length) return null;
       
-      // Busca otimizada para máxima velocidade
-      const words = userMessage.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      // Ultra-fast keyword matching
+      const keywords = userMessage.toLowerCase().split(/\s+/).filter(w => w.length > 2).slice(0, 3);
+      const keywordSet = new Set(keywords);
       
-      for (const doc of ragDocs) {
+      // Search through documents with early termination
+      for (const doc of ragDocs.slice(0, 5)) { // Limit to first 5 docs for speed
         if (!doc.content) continue;
         
         const content = doc.content.toLowerCase();
         
-        // Primeira palavra encontrada = retorna imediatamente
-        for (const word of words.slice(0, 2)) {
-          if (content.includes(word)) {
-            return doc.content.substring(0, 600);
+        // Check if any keyword exists in the document
+        for (const keyword of keywordSet) {
+          if (content.includes(keyword)) {
+            // Return truncated content immediately
+            return doc.content.substring(0, 400); // Reduced from 600 for faster processing
           }
         }
       }

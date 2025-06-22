@@ -6,6 +6,7 @@
 import { storage } from "./storage";
 import { whatsappInstances } from "@shared/schema";
 import { db } from "./db";
+import { fastCache } from "./middleware/fast-cache";
 
 class WebhookOptimizer {
   private agentCache = new Map();
@@ -42,35 +43,55 @@ class WebhookOptimizer {
   }
 
   async getOptimizedInstance(instanceName: string) {
+    // Check fast cache first
+    const cacheKey = `instance:${instanceName}`;
+    const cached = fastCache.get(cacheKey);
+    if (cached) return cached;
+
+    // Check memory cache
     if (this.instanceCache.has(instanceName)) {
-      return this.instanceCache.get(instanceName);
+      const instance = this.instanceCache.get(instanceName);
+      fastCache.set(cacheKey, instance);
+      return instance;
     }
     
+    // Fallback to database
     const instance = await storage.getWhatsappInstanceByName(instanceName);
     if (instance) {
       this.instanceCache.set(instanceName, instance);
+      fastCache.set(cacheKey, instance);
     }
     return instance;
   }
 
   async getOptimizedAgent(agentId: number, ownerId: number) {
+    // Check fast cache first
+    const fastCacheKey = `agent:${agentId}:${ownerId}`;
+    const cached = fastCache.get(fastCacheKey);
+    if (cached) return cached;
+
+    // Check memory cache
     const cacheKey = `${agentId}-${ownerId}`;
     if (this.agentCache.has(cacheKey)) {
-      return this.agentCache.get(cacheKey);
+      const agent = this.agentCache.get(cacheKey);
+      fastCache.set(fastCacheKey, agent);
+      return agent;
     }
     
+    // Fallback to database
     const agent = await storage.getAgent(agentId, ownerId);
     if (agent) {
       this.agentCache.set(cacheKey, agent);
+      fastCache.set(fastCacheKey, agent);
     }
     return agent;
   }
 
   startPeriodicWarmup() {
-    // Re-warm caches every 10 minutes
+    // Re-warm caches every 5 minutes for better cache hit rates
     this.warmupInterval = setInterval(() => {
       this.preWarmCaches();
-    }, 10 * 60 * 1000);
+    }, 5 * 60 * 1000);
   }
 
   stop() {

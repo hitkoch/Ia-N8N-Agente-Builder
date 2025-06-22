@@ -5,6 +5,7 @@ import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter } from "./middleware/security";
 import { webhookOptimizer } from "./webhook-optimizer";
+import { performanceMonitor } from "./middleware/performance-monitor";
 
 export function setupWebhookRoutes(app: Express) {
   // GET endpoint for webhook verification - MUST be accessible externally
@@ -152,14 +153,11 @@ export function setupWebhookRoutes(app: Express) {
 
           console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
 
-          // Use optimized agent lookup
+          // Use optimized agent lookup with immediate fallback
           let agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, whatsappInstance.agentId);
           if (!agent) {
-            // Fast fallback for cross-user agents
-            for (let userId = 1; userId <= 5; userId++) {
-              agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, userId);
-              if (agent) break;
-            }
+            // Try direct storage lookup as fallback (faster than loop)
+            agent = await storage.getAgent(whatsappInstance.agentId, 1); // Default to user 1
           }
 
           if (!agent) {
@@ -175,19 +173,24 @@ export function setupWebhookRoutes(app: Express) {
 
           console.log(`🤖 Processando com agente: ${agent.name}`);
 
+          // Start performance monitoring
+          const endTimer = performanceMonitor.startTimer('whatsapp-response');
+
           // Generate AI response with multimedia context
           const contextualPrompt = mediaAnalysis 
             ? `${messageText}\n\n[Contexto de mídia: ${JSON.stringify(mediaAnalysis)}]`
             : messageText;
 
+          // Execute AI response generation
           const aiResponse = await agentService.testAgent(agent, contextualPrompt);
+          
           if (aiResponse?.trim()) {
             try {
-              // Usar o nome da instância registrada no banco (sem prefixo)
-              await whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
-              console.log(`✅ Resposta enviada para ${phoneNumber}`);
-
-              await storage.createConversation({
+              // Send message immediately without waiting for conversation storage
+              const sendPromise = whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
+              
+              // Store conversation in background (non-blocking)
+              const storePromise = storage.createConversation({
                 agentId: agent.id,
                 contactId: phoneNumber,
                 messages: [
@@ -200,9 +203,24 @@ export function setupWebhookRoutes(app: Express) {
                   { role: 'assistant', content: aiResponse, timestamp: new Date() }
                 ]
               });
-              console.log(`💾 Conversa salva`);
+
+              // Wait for message to be sent, store conversation in background
+              await sendPromise;
+              console.log(`✅ Resposta enviada para ${phoneNumber}`);
+              
+              // End performance monitoring
+              const responseTime = endTimer(agent.id, true);
+              
+              // Don't wait for storage completion to avoid delays
+              storePromise.then(() => {
+                console.log(`💾 Conversa salva`);
+              }).catch(error => {
+                console.error(`❌ Erro ao salvar conversa:`, error);
+              });
+              
             } catch (sendError) {
               console.error(`❌ Erro ao enviar resposta para ${phoneNumber}:`, sendError.message);
+              endTimer(agent.id, false); // Mark as failed
               // Continue processing other messages even if one fails
             }
           }
