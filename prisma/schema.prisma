@@ -2,7 +2,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"] 
 }
 
 datasource db {
@@ -46,7 +45,11 @@ model Agent {
 model DocumentChunk {
   id        Int      @id @default(autoincrement())
   content   String   @db.Text
-  embedding Vector(1536)? // Vetor para pgvector. 1536 é a dimensão do 'text-embedding-3-small' da OpenAI
+  
+  // --- MUDANÇA CRÍTICA AQUI ---
+  // Usamos Unsupported e o Prisma vai mapear o tipo 'vector' do banco para ele.
+  // A biblioteca pgvector vai nos dar o tipo correto no código.
+  embedding Unsupported("vector(1536)")?
   
   agentId   Int
   agent     Agent    @relation(fields: [agentId], references: [id])
