@@ -151,23 +151,28 @@ export function setupWebhookRoutes(app: Express) {
 
           const aiResponse = await agentService.testAgent(agent, contextualPrompt);
           if (aiResponse?.trim()) {
-            await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
-            console.log(`✅ Resposta enviada para ${phoneNumber}`);
+            try {
+              await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
+              console.log(`✅ Resposta enviada para ${phoneNumber}`);
 
-            await storage.createConversation({
-              agentId: agent.id,
-              contactId: phoneNumber,
-              messages: [
-                { 
-                  role: 'user', 
-                  content: messageText, 
-                  timestamp: new Date(),
-                  metadata: mediaAnalysis ? { media: mediaAnalysis } : undefined
-                },
-                { role: 'assistant', content: aiResponse, timestamp: new Date() }
-              ]
-            });
-            console.log(`💾 Conversa salva no banco`);
+              await storage.createConversation({
+                agentId: agent.id,
+                contactId: phoneNumber,
+                messages: [
+                  { 
+                    role: 'user', 
+                    content: messageText, 
+                    timestamp: new Date(),
+                    metadata: mediaAnalysis ? { media: mediaAnalysis } : undefined
+                  },
+                  { role: 'assistant', content: aiResponse, timestamp: new Date() }
+                ]
+              });
+              console.log(`💾 Conversa salva no banco`);
+            } catch (sendError) {
+              console.error(`❌ Erro ao enviar resposta para ${phoneNumber}:`, sendError.message);
+              // Continue processing other messages even if one fails
+            }
           }
         }
       }

@@ -27,22 +27,24 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
   const [showQrCode, setShowQrCode] = useState(false);
 
   // Buscar instância WhatsApp do agente
-  const { data: whatsappInstance, isLoading: isLoadingInstance } = useQuery<WhatsAppInstance | null>({
+  const { data: whatsappData, isLoading: isLoadingInstance } = useQuery({
     queryKey: ['/api/agents', agent.id, 'whatsapp'],
     queryFn: async () => {
       try {
         const response = await apiRequest('GET', `/api/agents/${agent.id}/whatsapp`);
         return await response.json();
       } catch (error) {
-        return null; // Instância não existe
+        return { hasInstance: false }; // Instância não existe
       }
     },
   });
 
+  const whatsappInstance = whatsappData?.hasInstance ? whatsappData : null;
+
   // Criar instância WhatsApp
   const createInstanceMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', `/api/agents/${agent.id}/whatsapp/create`);
+      const response = await apiRequest('POST', `/api/agents/${agent.id}/whatsapp/create-instance`);
       return await response.json();
     },
     onSuccess: () => {
@@ -233,8 +235,34 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
               {getStatusBadge(whatsappInstance.status)}
             </div>
 
-            {/* Ações */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Botão de Ativar Monitoramento - Destaque Principal */}
+            <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-green-800">Monitoramento WhatsApp</h4>
+                  <p className="text-sm text-green-600">Configure webhooks para receber mensagens automaticamente</p>
+                </div>
+                <Button
+                  onClick={() => enableMonitoringMutation.mutate()}
+                  disabled={enableMonitoringMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                >
+                  {enableMonitoringMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Ativando...
+                    </>
+                  ) : (
+                    <>
+                      🔗 Ativar Monitoramento
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Ações secundárias */}
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 onClick={() => checkStatusMutation.mutate()}
@@ -259,19 +287,6 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
                   <QrCode className="w-4 h-4 mr-2" />
                 )}
                 Gerar QR Code
-              </Button>
-
-              <Button
-                variant="default"
-                onClick={() => enableMonitoringMutation.mutate()}
-                disabled={enableMonitoringMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {enableMonitoringMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  "🔗 Ativar Monitoramento"
-                )}
               </Button>
             </div>
 
