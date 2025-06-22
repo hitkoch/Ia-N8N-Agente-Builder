@@ -33,6 +33,15 @@ export function setupWebhookRoutes(app: Express) {
   app.post("/api/webhook", webhookHandler);
   app.post("/whatsapp/webhook", webhookHandler);
   
+  // Also handle on root webhook path
+  app.post("/", (req, res) => {
+    if (req.headers['content-type']?.includes('application/json') && req.body?.event) {
+      webhookHandler(req, res);
+    } else {
+      res.status(404).send('Not Found');
+    }
+  });
+  
   // GET endpoint for verification
   app.get("/api/whatsapp/webhook", (req, res) => {
     res.setHeader('Content-Type', 'application/json');
