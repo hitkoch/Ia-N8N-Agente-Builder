@@ -63,8 +63,11 @@ export function validateWebhookData(req: Request, res: Response, next: NextFunct
   }
   
   // Validate instance name format (prevents injection)
-  const instancePattern = /^whatsapp-\d{8,15}$/;
-  if (!instancePattern.test(instance)) {
+  // Accept both formats: "41996488281" (direct) and "whatsapp-41996488281" (with prefix)
+  const isDirectFormat = /^\d{8,15}$/.test(instance);
+  const isPrefixedFormat = /^whatsapp-\d{8,15}$/.test(instance);
+  
+  if (!isDirectFormat && !isPrefixedFormat) {
     console.warn(`🚨 Webhook validation failed: invalid instance name format: ${instance}`);
     return res.status(400).json({ 
       status: 'validation_failed',

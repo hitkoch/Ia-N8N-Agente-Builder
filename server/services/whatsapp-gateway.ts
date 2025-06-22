@@ -350,10 +350,15 @@ export class WhatsAppGatewayService {
    * Envia uma mensagem via WhatsApp
    */
   async sendMessage(instanceName: string, number: string, text: string): Promise<SendMessageResponse> {
-    const requestData: SendMessageRequest = {
+    // Use the correct Evolution API format as specified
+    const requestData = {
       number: number,
       text: text
     };
+
+    console.log(`📤 Enviando mensagem via Evolution API:`);
+    console.log(`📋 URL: ${this.baseUrl}/message/sendText/${instanceName}`);
+    console.log(`📋 Payload: ${JSON.stringify(requestData, null, 2)}`);
 
     const response = await fetch(`${this.baseUrl}/message/sendText/${instanceName}`, {
       method: 'POST',
