@@ -38,7 +38,16 @@ export function setupWebhookRoutes(app: Express) {
       const { event, instance, data } = req.body;
 
       // Verificar se a instância existe no sistema
-      const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+      // Evolution API adiciona prefixo "whatsapp-" automaticamente, então tentamos ambos os formatos
+      let whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+      
+      if (!whatsappInstance && instance.startsWith('whatsapp-')) {
+        // Tentar sem o prefixo "whatsapp-"
+        const instanceNameWithoutPrefix = instance.replace('whatsapp-', '');
+        whatsappInstance = await storage.getWhatsappInstanceByName(instanceNameWithoutPrefix);
+        console.log(`🔍 Tentando instância sem prefixo: ${instanceNameWithoutPrefix}`);
+      }
+      
       if (!whatsappInstance) {
         console.log(`⚠️ Mensagem recebida para instância não registrada: ${instance}`);
         return res.json({ 
@@ -157,7 +166,8 @@ export function setupWebhookRoutes(app: Express) {
           const aiResponse = await agentService.testAgent(agent, contextualPrompt);
           if (aiResponse?.trim()) {
             try {
-              await whatsappGatewayService.sendMessage(instance, phoneNumber, aiResponse);
+              // Usar o nome da instância registrada no banco (sem prefixo)
+              await whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
               console.log(`✅ Resposta enviada para ${phoneNumber}`);
 
               await storage.createConversation({
