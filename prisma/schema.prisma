@@ -1,0 +1,79 @@
+// Conteúdo completo para o arquivo prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo para Usuários da plataforma
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+
+  agents     Agent[]
+  googleAuth GoogleAuth? // Um usuário pode ter uma autenticação do Google
+}
+
+// Modelo para os Agentes de IA criados pelos usuários
+model Agent {
+  id             Int      @id @default(autoincrement())
+  name           String
+  systemPrompt   String   @db.Text
+  model          String   @default("gpt-4o") // Modelo padrão atualizado e robusto
+
+  // Ferramentas do Google ativadas para este agente
+  enabledTools   String[] @default([]) // Ex: ["GOOGLE_CALENDAR_CREATE_EVENT"]
+  
+  ownerId        Int
+  owner          User     @relation(fields: [ownerId], references: [id])
+  
+  documentChunks   DocumentChunk[]
+  whatsAppInstance WhatsAppInstance?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Modelo para armazenar os "pedaços" de documentos para o RAG
+model DocumentChunk {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  embedding Vector(1536)? // Vetor para pgvector. 1536 é a dimensão do 'text-embedding-3-small' da OpenAI
+  
+  agentId   Int
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  
+  createdAt DateTime @default(now())
+}
+
+// Modelo para a instância do WhatsApp conectada a um agente
+model WhatsAppInstance {
+  id           Int      @id @default(autoincrement())
+  instanceName String   @unique
+  status       String   @default("PENDING") // PENDING, CREATED, CONNECTED, DISCONNECTED
+  qrCode       String?  @db.Text
+  
+  agentId      Int      @unique
+  agent        Agent    @relation(fields: [agentId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Modelo para armazenar os tokens de autenticação do Google por usuário
+model GoogleAuth {
+  id           Int      @id @default(autoincrement())
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiryDate   BigInt
+  
+  userId       Int      @unique
+  user         User     @relation(fields: [userId], references: [id])
+}
