@@ -9,6 +9,8 @@ import { webhookOptimizer } from "./webhook-optimizer";
 import { messagePollerService } from "./services/message-poller";
 import { directMonitor } from "./services/direct-monitor";
 import { whatsappListener } from "./services/whatsapp-listener";
+import { realMessageDetector } from "./services/real-message-detector";
+import { evolutionWebhookListener } from "./services/evolution-webhook-listener";
 
 const app = express();
 
@@ -146,6 +148,8 @@ app.use((req, res, next) => {
         messagePollerService.start();
         directMonitor.start();
         whatsappListener.start();
+        realMessageDetector.start();
+        evolutionWebhookListener.startListening();
       } catch (error) {
         console.log('Cache warmup will retry later');
       }

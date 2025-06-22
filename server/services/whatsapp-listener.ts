@@ -30,7 +30,7 @@ class WhatsAppListener {
     while (this.isActive) {
       try {
         await this.scanForMessages();
-        await this.delay(1500); // Check every 1.5 seconds
+        await this.delay(1000); // Check every 1 second for faster detection
       } catch (error) {
         await this.delay(3000); // Wait longer on error
       }
@@ -41,30 +41,74 @@ class WhatsAppListener {
     const instanceName = '5541996488281';
     
     try {
-      // Get recent messages from Evolution API
-      const response = await fetch(`https://apizap.ecomtools.com.br/chat/findMessages/${instanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx'
-        },
-        body: JSON.stringify({
-          where: {
-            messageTimestamp: {
-              $gte: Math.floor((this.lastMessageTime - 5000) / 1000) // 5 seconds buffer
+      // Try multiple Evolution API endpoints to find messages
+      const endpoints = [
+        {
+          url: `https://apizap.ecomtools.com.br/chat/findMessages/${instanceName}`,
+          body: {
+            where: {
+              messageTimestamp: { $gte: Math.floor((this.lastMessageTime - 10000) / 1000) },
+              key: { fromMe: false }
             },
-            key: { fromMe: false }
-          },
-          limit: 5
-        })
-      });
+            limit: 10
+          }
+        },
+        {
+          url: `https://apizap.ecomtools.com.br/message/findMessages/${instanceName}`,
+          body: {
+            where: { key: { fromMe: false } },
+            limit: 10
+          }
+        },
+        {
+          url: `https://apizap.ecomtools.com.br/chat/fetchMessages/${instanceName}`,
+          body: {
+            where: { key: { fromMe: false } },
+            limit: 10
+          }
+        }
+      ];
 
-      if (response.ok) {
-        const data = await response.json();
-        const messages = Array.isArray(data) ? data : [];
-        
-        for (const message of messages) {
-          await this.handleMessage(message, instanceName);
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx'
+            },
+            body: JSON.stringify(endpoint.body)
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            let messages = [];
+            
+            if (Array.isArray(data)) {
+              messages = data;
+            } else if (data.messages) {
+              messages = data.messages;
+            } else if (data.data) {
+              messages = data.data;
+            }
+            
+            // Filter to only recent messages (last 30 seconds)
+            const recentMessages = messages.filter(msg => {
+              const msgTime = msg.messageTimestamp * 1000;
+              return (Date.now() - msgTime) < 30000;
+            });
+            
+            for (const message of recentMessages) {
+              await this.handleMessage(message, instanceName);
+            }
+            
+            if (messages.length > 0) {
+              console.log(`Verificando ${messages.length} mensagens, ${recentMessages.length} recentes`);
+            }
+            break; // Success, exit loop
+          }
+        } catch (endpointError) {
+          continue; // Try next endpoint
         }
       }
       
