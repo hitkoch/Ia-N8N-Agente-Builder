@@ -18,17 +18,24 @@ export class AgentService {
         this.getKnowledgeContext(agent, userMessage)
       ]);
       
+      let systemContent = agent.systemPrompt;
+      
+      // Add knowledge base to system prompt
+      if (agent.knowledgeBase) {
+        systemContent += `\n\nBase de Conhecimento Adicional:\n${agent.knowledgeBase}`;
+      }
+
       const messages: ChatMessage[] = [
         {
           role: "system",
-          content: agent.systemPrompt
+          content: systemContent
         }
       ];
 
       if (knowledgeContext) {
         messages.push({
           role: "system", 
-          content: `Base de Conhecimento:\n\n${knowledgeContext}`
+          content: `Documentos da Base de Conhecimento:\n\n${knowledgeContext}`
         });
       }
 
@@ -62,19 +69,26 @@ export class AgentService {
 
       const knowledgeContext = await this.getKnowledgeContext(agent, lastUserMessage);
       
+      let systemContent = agent.systemPrompt;
+      
+      // Add knowledge base to system prompt
+      if (agent.knowledgeBase) {
+        systemContent += `\n\nBase de Conhecimento Adicional:\n${agent.knowledgeBase}`;
+      }
+
       const messages: ChatMessage[] = [];
       
       // Adicionar prompt do sistema
       messages.push({
         role: "system",
-        content: agent.systemPrompt
+        content: systemContent
       });
 
       // Se há contexto da base de conhecimento, incluir
       if (knowledgeContext) {
         messages.push({
           role: "system",
-          content: `Base de Conhecimento:\n\n${knowledgeContext}`
+          content: `Documentos da Base de Conhecimento:\n\n${knowledgeContext}`
         });
       }
 
