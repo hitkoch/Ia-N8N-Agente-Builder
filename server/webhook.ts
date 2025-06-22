@@ -29,14 +29,20 @@ export function setupWebhookRoutes(app: Express) {
   });
 
   // POST endpoint for webhook processing - MUST be accessible externally
-  app.post("/api/whatsapp/webhook", async (req, res) => {
+  app.post("/api/whatsapp/webhook", (req, res) => {
     // Set CORS headers first
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    try {
-      const { event, instance, data } = req.body;
+    console.log('🔍 WEBHOOK RECEBIDO - IP:', req.ip);
+    console.log('📋 BODY COMPLETO:', JSON.stringify(req.body, null, 2));
+    console.log('📋 HEADERS:', JSON.stringify(req.headers, null, 2));
+    
+    // Handle async processing
+    (async () => {
+      try {
+        const { event, instance, data } = req.body;
       
       console.log('📨 Webhook recebido:', {
         event: event,
@@ -232,18 +238,16 @@ export function setupWebhookRoutes(app: Express) {
         }
       }
       
-      res.json({ 
-        status: 'processed',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('❌ Erro no webhook:', error);
-      res.status(500).json({ 
-        status: 'error',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
+      } catch (error) {
+        console.error('❌ Erro no webhook:', error);
+      }
+    })();
+    
+    // Send immediate response to avoid Evolution API timeout
+    res.json({ 
+      status: 'received',
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Test endpoint for external connectivity
