@@ -246,7 +246,7 @@ Aguardando execução dos testes...
             log('Enviando mensagem de teste via webhook...');
             const webhookData = {
                 event: "MESSAGES_UPSERT",
-                instance: "whatsapp-41999888777",
+                instance: "41999888777",
                 data: {
                     messages: [{
                         key: {
@@ -298,7 +298,7 @@ Aguardando execução dos testes...
             log('Simulando desconexão WhatsApp via webhook...');
             const webhookData = {
                 event: "CONNECTION_UPDATE",
-                instance: "whatsapp-41999888777",
+                instance: "41999888777",
                 data: {
                     state: "close"
                 }

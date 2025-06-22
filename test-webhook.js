@@ -3,7 +3,7 @@
 async function testWebhook() {
   const webhookData = {
     event: "MESSAGES_UPSERT",
-    instance: "whatsapp-41988470604",
+    instance: "41988470604",
     data: {
       messages: [{
         key: {
