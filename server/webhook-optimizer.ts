@@ -5,6 +5,7 @@
 
 import { storage } from "./storage";
 import { whatsappInstances } from "@shared/schema";
+import { db } from "./db";
 
 class WebhookOptimizer {
   private agentCache = new Map();
@@ -16,23 +17,27 @@ class WebhookOptimizer {
       console.log('🔥 Pre-aquecendo caches do sistema...');
       
       // Cache all WhatsApp instances
-      const instances = await storage.db.select().from(whatsappInstances);
+      const instances = await db.select().from(whatsappInstances);
       for (const instance of instances) {
         this.instanceCache.set(instance.instanceName, instance);
         
-        // Pre-load agents
-        const agent = await storage.getAgent(instance.agentId, instance.agentId);
-        if (agent) {
-          this.agentCache.set(instance.agentId, agent);
-          
-          // Pre-load RAG documents
-          await storage.getRagDocumentsByAgent(agent.id);
+        // Pre-load agents with error handling
+        try {
+          const agent = await storage.getAgent(instance.agentId, instance.agentId);
+          if (agent) {
+            this.agentCache.set(`${instance.agentId}-${instance.agentId}`, agent);
+            
+            // Pre-load RAG documents
+            await storage.getRagDocumentsByAgent(agent.id);
+          }
+        } catch (agentError) {
+          console.log(`Cache skip for agent ${instance.agentId}`);
         }
       }
       
-      console.log(`✅ Cache pré-aquecido: ${instances.length} instâncias, ${this.agentCache.size} agentes`);
+      console.log(`✅ Cache pré-aquecido: ${instances.length} instâncias`);
     } catch (error) {
-      console.error('❌ Erro no pré-aquecimento:', error);
+      console.log('Cache warmup failed, will continue without cache');
     }
   }
 

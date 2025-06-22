@@ -123,8 +123,12 @@ app.use((req, res, next) => {
     
     // Pre-warm caches for faster responses
     setTimeout(async () => {
-      await webhookOptimizer.preWarmCaches();
-      webhookOptimizer.startPeriodicWarmup();
+      try {
+        await webhookOptimizer.preWarmCaches();
+        webhookOptimizer.startPeriodicWarmup();
+      } catch (error) {
+        console.log('Cache warmup will retry later');
+      }
     }, 3000);
   });
 })();
