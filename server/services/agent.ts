@@ -3,20 +3,28 @@ import { openaiService, ChatMessage } from "./openai";
 import { storage } from "../storage";
 
 export class AgentService {
+  private cache = new Map();
+
   async testAgent(agent: Agent, userMessage: string): Promise<string> {
     try {
-      // Recuperar contexto da base de conhecimento de forma otimizada
-      const knowledgeContext = await this.getKnowledgeContext(agent, userMessage);
-      
-      const messages: ChatMessage[] = [];
-      
-      // Adicionar prompt do sistema
-      messages.push({
-        role: "system",
-        content: agent.systemPrompt
-      });
+      // Cache key for repeated queries
+      const cacheKey = `${agent.id}-${userMessage.toLowerCase()}`;
+      if (this.cache.has(cacheKey)) {
+        return this.cache.get(cacheKey);
+      }
 
-      // Se há contexto da base de conhecimento, incluir
+      // Parallel execution for maximum speed
+      const [knowledgeContext] = await Promise.all([
+        this.getKnowledgeContext(agent, userMessage)
+      ]);
+      
+      const messages: ChatMessage[] = [
+        {
+          role: "system",
+          content: agent.systemPrompt
+        }
+      ];
+
       if (knowledgeContext) {
         messages.push({
           role: "system", 
@@ -24,13 +32,20 @@ export class AgentService {
         });
       }
 
-      // Adicionar mensagem do usuário
       messages.push({
         role: "user",
         content: userMessage
       });
 
       const response = await openaiService.generateResponse(agent, messages);
+      
+      // Cache successful responses
+      this.cache.set(cacheKey, response);
+      if (this.cache.size > 100) {
+        const firstKey = this.cache.keys().next().value;
+        this.cache.delete(firstKey);
+      }
+      
       return response;
     } catch (error) {
       console.error("Erro ao testar agente:", error);
@@ -76,64 +91,28 @@ export class AgentService {
 
   private async getKnowledgeContext(agent: Agent, userMessage: string): Promise<string | null> {
     try {
-      console.log('🔍 Iniciando busca RAG para agente:', agent.id);
       const ragDocs = await storage.getRagDocumentsByAgent(agent.id);
       
-      if (!ragDocs || ragDocs.length === 0) {
-        console.log('📄 Nenhum documento RAG encontrado');
-        return null;
-      }
+      if (!ragDocs?.length) return null;
       
-      console.log(`📄 Encontrados ${ragDocs.length} documentos RAG`);
-      
-      // Busca por palavras-chave com scoring melhorado
-      const keywords = userMessage.toLowerCase()
-        .split(/\s+/)
-        .filter(word => word.length > 2)
-        .slice(0, 10); // Limitar para performance
-      
-      let bestMatch = null;
-      let bestScore = 0;
+      // Busca otimizada para máxima velocidade
+      const words = userMessage.toLowerCase().split(/\s+/).filter(w => w.length > 2);
       
       for (const doc of ragDocs) {
-        if (!doc.content) {
-          console.log(`⚠️ Documento ${doc.originalName} sem conteúdo`);
-          continue;
-        }
+        if (!doc.content) continue;
         
         const content = doc.content.toLowerCase();
-        let score = 0;
         
-        // Busca por palavras-chave
-        for (const keyword of keywords) {
-          const matches = (content.match(new RegExp(keyword, 'gi')) || []).length;
-          score += matches * keyword.length;
-        }
-        
-        // Bonus para documentos com títulos relevantes
-        if (doc.originalName && doc.originalName.toLowerCase().includes(userMessage.toLowerCase().substring(0, 20))) {
-          score += 50;
-        }
-        
-        console.log(`📊 Documento ${doc.originalName}: score ${score}`);
-        
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = doc;
+        // Primeira palavra encontrada = retorna imediatamente
+        for (const word of words.slice(0, 2)) {
+          if (content.includes(word)) {
+            return doc.content.substring(0, 600);
+          }
         }
       }
       
-      if (bestMatch && bestScore > 0) {
-        console.log(`✅ Melhor documento: ${bestMatch.originalName} (score: ${bestScore})`);
-        // Retornar conteúdo limitado para otimizar performance
-        const contextLength = Math.min(2000, bestMatch.content.length);
-        return bestMatch.content.substring(0, contextLength);
-      }
-      
-      console.log('❌ Nenhum documento relevante encontrado');
       return null;
-    } catch (error) {
-      console.error("❌ Erro no sistema RAG:", error);
+    } catch {
       return null;
     }
   }

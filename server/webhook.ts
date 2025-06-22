@@ -202,7 +202,7 @@ export function setupWebhookRoutes(app: Express) {
                   { role: 'assistant', content: aiResponse, timestamp: new Date() }
                 ]
               });
-              console.log(`💾 Conversa salva no banco`);
+              console.log(`💾 Conversa salva`);
             } catch (sendError) {
               console.error(`❌ Erro ao enviar resposta para ${phoneNumber}:`, sendError.message);
               // Continue processing other messages even if one fails
