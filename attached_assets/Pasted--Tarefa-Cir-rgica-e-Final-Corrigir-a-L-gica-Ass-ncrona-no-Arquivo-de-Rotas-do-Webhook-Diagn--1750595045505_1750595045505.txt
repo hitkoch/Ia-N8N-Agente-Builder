@@ -1,0 +1,83 @@
+## Tarefa Cirúrgica e Final: Corrigir a Lógica Assíncrona no Arquivo de Rotas do Webhook
+
+**Diagnóstico:** O arquivo principal `server/index.ts` chama uma função `setupWebhookRoutes(app)` para definir as rotas do webhook. A lógica dentro deste arquivo está respondendo às requisições de forma síncrona, antes de processar a chamada à IA. Precisamos corrigir a função de callback da rota `POST /api/whatsapp/webhook` para ser totalmente assíncrona e funcional, usando Drizzle ORM.
+
+**Ação:**
+1.  **Localize o arquivo** onde a função `setupWebhookRoutes` é definida (provavelmente `src/webhook.ts` ou `server/webhook.ts`).
+2.  **Substitua o conteúdo completo** desse arquivo pelo código correto e funcional abaixo.
+
+---
+
+### Substituir o Conteúdo do Arquivo de Rotas do Webhook (ex: `server/webhook.ts`)
+
+```typescript
+// Conteúdo completo para o arquivo que define setupWebhookRoutes
+
+import { type Express } from "express";
+import { db } from '../db'; // Ajuste o caminho para a sua conexão Drizzle
+import { whatsAppInstances, agents } from '../db/schema'; // Ajuste o caminho para seus schemas Drizzle
+import { eq } from 'drizzle-orm';
+import openai from '../openaiClient'; // Ajuste o caminho se necessário
+import evolutionApiService from '../services/evolutionApiService'; // Ajuste o caminho se necessário
+
+export const setupWebhookRoutes = (app: Express) => {
+  // Rota principal para receber eventos da API Evolution via n8n
+  app.post('/api/whatsapp/webhook', async (req, res) => {
+    console.log("--- INÍCIO DO PROCESSAMENTO DO WEBHOOK (DRIZZLE) ---");
+    const eventData = req.body;
+
+    // Responde imediatamente ao remetente para evitar timeouts
+    res.status(200).json({ status: "received", message: "Webhook recebido, processando em segundo plano." });
+
+    // Inicia o processamento assíncrono real
+    try {
+      if (eventData.event === "messages.upsert" && eventData.data && !eventData.data.key?.fromMe) {
+        console.log("[ETAPA 1/5] Evento de nova mensagem detectado.");
+
+        const message = eventData.data.message;
+        const userMessageText = message?.conversation || message?.extendedTextMessage?.text || message?.imageMessage?.caption;
+
+        if (userMessageText) {
+          console.log(`[ETAPA 2/5] Texto extraído: "${userMessageText}". Buscando agente...`);
+          
+          const results = await db.select()
+            .from(whatsAppInstances)
+            .innerJoin(agents, eq(whatsAppInstances.agentId, agents.id))
+            .where(eq(whatsAppInstances.instanceName, eventData.instance))
+            .limit(1);
+
+          if (results.length === 0) {
+            throw new Error(`Agente para a instância ${eventData.instance} não foi encontrado.`);
+          }
+          
+          const agent = results[0].agents;
+          console.log(`[ETAPA 3/5] Agente '${agent.name}' encontrado. Chamando OpenAI...`);
+
+          const completion = await openai.chat.completions.create({
+            model: agent.model,
+            messages: [
+              { role: "system", content: agent.systemPrompt },
+              { role: "user", content: userMessageText }
+            ],
+          });
+
+          const responseText = completion.choices[0].message.content;
+          console.log(`[ETAPA 4/5] Resposta da OpenAI recebida. Enviando para o WhatsApp...`);
+
+          const recipientJid = eventData.data.key.remoteJid;
+          await evolutionApiService.sendMessage(eventData.instance, recipientJid, responseText);
+          
+          console.log("[ETAPA 5/5] Resposta enviada com sucesso para o WhatsApp.");
+        } else {
+          console.log("Mensagem ignorada: sem conteúdo de texto processável.");
+        }
+      } else {
+        console.log("Evento ignorado (não é uma nova mensagem de usuário ou é do próprio bot).");
+      }
+    } catch (error) {
+      console.error("--- ERRO NO PROCESSAMENTO EM SEGUNDO PLANO DO WEBHOOK ---:", error);
+    }
+  });
+
+  console.log("✔️  Rotas de Webhook configuradas.");
+};

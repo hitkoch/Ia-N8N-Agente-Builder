@@ -1,5 +1,3 @@
-# Dockerfile para Aplicação Node.js com Drizzle ORM
-
 # 1. Estágio de Dependências
 FROM node:18-alpine AS deps
 WORKDIR /app
