@@ -1,0 +1,89 @@
+O Prompt para Corrigir a Rota Faltante
+Generated prompt
+## Tarefa de Depuração: Corrigir a Rota "Cannot POST /api/agents"
+
+**Diagnóstico:** A aplicação está retornando um erro 404 Not Found com a mensagem "Cannot POST /api/agents" ao tentar criar um novo agente. Isso indica que a rota para criar agentes não está registrada ou está configurada incorretamente no servidor Express.
+
+**Ação:** Verifique e, se necessário, crie a estrutura de rotas e o controlador para gerenciar agentes, garantindo que o endpoint `POST /api/agents` esteja funcional.
+
+---
+
+### **AÇÃO 1: CRIAR O CONTROLADOR DE AGENTES (`agentController.ts`)**
+
+**Instrução:** Crie um novo arquivo em `server/controllers/agentController.ts` (ou em um local similar) com a lógica para criar um agente.
+
+```typescript
+// Conteúdo para server/controllers/agentController.ts
+
+import type { Request, Response } from 'express';
+import { db } from '../../db'; // Ajuste o caminho para sua conexão Drizzle
+import { agents } from '../../db/schema/agents'; // Ajuste o caminho para seu schema
+
+export const agentController = {
+  // Função para criar um novo agente
+  createAgent: async (req: Request, res: Response) => {
+    try {
+      const { name, systemPrompt, model } = req.body;
+      const userId = req.user.id; // Supondo que o middleware de auth anexa o usuário
+
+      if (!name || !systemPrompt || !userId) {
+        return res.status(400).json({ message: "Nome, prompt de sistema e ID do usuário são obrigatórios." });
+      }
+
+      const newAgent = await db.insert(agents).values({
+        name,
+        systemPrompt,
+        model: model || 'gpt-4o', // Usa o modelo do corpo ou o padrão
+        ownerId: userId,
+      }).returning(); // .returning() retorna o objeto criado
+
+      console.log(`🤖 Novo agente criado: ${newAgent[0].name} (ID: ${newAgent[0].id})`);
+      res.status(201).json(newAgent[0]);
+
+    } catch (error) {
+      console.error("❌ Erro ao criar agente:", error);
+      res.status(500).json({ message: "Erro interno do servidor." });
+    }
+  },
+
+  // Adicione outras funções aqui (getAgents, updateAgent, etc.) conforme necessário
+};
+Use code with caution.
+Prompt
+AÇÃO 2: CRIAR O ARQUIVO DE ROTAS DOS AGENTES (agentRoutes.ts)
+Instrução: Crie um novo arquivo em server/routes/agentRoutes.ts para definir os endpoints da API para os agentes.
+Generated typescript
+// Conteúdo para server/routes/agentRoutes.ts
+
+import { Router } from 'express';
+import { agentController } from '../controllers/agentController';
+import { isAuthenticated } from '../middleware/authMiddleware'; // Supondo que você tenha um middleware de autenticação
+
+const router = Router();
+
+// Define a rota POST para criar um agente.
+// Ela será protegida pelo middleware de autenticação.
+router.post('/agents', isAuthenticated, agentController.createAgent);
+
+// Adicione outras rotas aqui (GET, PUT, DELETE)
+
+export default router;
+Use code with caution.
+TypeScript
+AÇÃO 3: REGISTRAR AS ROTAS NO SERVIDOR PRINCIPAL
+Instrução: No seu arquivo server/index.ts (ou onde quer que a função registerRoutes esteja), certifique-se de que as novas rotas de agente estão sendo importadas e usadas.
+Modifique a função registerRoutes (ou o arquivo server/routes.ts):
+Generated typescript
+// Exemplo em um arquivo como server/routes.ts
+
+import { type Express } from 'express';
+import authRoutes from './routes/authRoutes';
+import agentRoutes from './routes/agentRoutes'; // <-- IMPORTA A NOVA ROTA
+
+export async function registerRoutes(app: Express) {
+  app.use('/api', authRoutes);
+  app.use('/api', agentRoutes); // <-- USA A NOVA ROTA com o prefixo /api
+
+  const { createServer } = await import('http');
+  return createServer(app);
+}

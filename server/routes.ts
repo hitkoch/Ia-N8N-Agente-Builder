@@ -93,6 +93,38 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Create new agent
+  app.post("/api/agents", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    
+    try {
+      const { name, description, systemPrompt, model, temperature, maxTokens, status } = req.body;
+
+      if (!name || !systemPrompt) {
+        return res.status(400).json({ message: "Nome e prompt do sistema são obrigatórios" });
+      }
+
+      const agentData = {
+        name,
+        description: description || "",
+        systemPrompt,
+        model: model || "gpt-4o",
+        temperature: temperature !== undefined ? temperature : 0.7,
+        maxTokens: maxTokens || 1000,
+        status: status || "draft",
+        ownerId: user.id
+      };
+
+      const newAgent = await storage.createAgent(agentData);
+      console.log(`🤖 Novo agente criado: ${newAgent.name} (ID: ${newAgent.id})`);
+      
+      res.status(201).json(newAgent);
+    } catch (error) {
+      console.error("❌ Erro ao criar agente:", error);
+      res.status(500).json({ message: "Erro ao criar agente" });
+    }
+  });
+
   // Get single agent
   // WhatsApp instance management endpoints
   app.get("/api/agents/:agentId/whatsapp", requireAuth, async (req, res) => {
