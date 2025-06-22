@@ -68,7 +68,14 @@ export function setupWebhookRoutes(app: Express) {
         for (const message of data.messages) {
           if (message.key?.fromMe) continue;
 
-          const phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+          let phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+          
+          // Fix corrupted phone numbers with multiple country codes
+          if (phoneNumber.startsWith('555541')) {
+            phoneNumber = phoneNumber.replace('555541', '5541');
+          } else if (phoneNumber.startsWith('5555')) {
+            phoneNumber = phoneNumber.replace('5555', '55');
+          }
           let messageText = '';
           let mediaAnalysis = null;
           
