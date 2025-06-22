@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 5000
 
 # Comando para iniciar a aplicação
-CMD ["npx", "tsx", "server/index.ts"]
+CMD ["tail", "-f", "/dev/null"]
