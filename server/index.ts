@@ -6,12 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupWebhookRoutes } from "./webhook";
 import { keepAliveService } from "./keep-alive";
 import { webhookOptimizer } from "./webhook-optimizer";
-import { messagePollerService } from "./services/message-poller";
-import { directMonitor } from "./services/direct-monitor";
-import { whatsappListener } from "./services/whatsapp-listener";
-import { realMessageDetector } from "./services/real-message-detector";
-import { evolutionWebhookListener } from "./services/evolution-webhook-listener";
-import { finalWhatsAppMonitor } from "./services/final-whatsapp-monitor";
+// Removed monitoring services
 
 const app = express();
 
@@ -146,8 +141,6 @@ app.use((req, res, next) => {
       try {
         await webhookOptimizer.preWarmCaches();
         webhookOptimizer.startPeriodicWarmup();
-        // Apenas o monitor final - como N8N faz
-        finalWhatsAppMonitor.start();
       } catch (error) {
         console.log('Cache warmup will retry later');
       }
