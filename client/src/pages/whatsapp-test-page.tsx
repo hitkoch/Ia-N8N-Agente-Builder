@@ -132,7 +132,7 @@ export default function WhatsAppTestPage() {
       const startTime = Date.now();
       const webhookData = {
         event: "MESSAGES_UPSERT",
-        instance: `whatsapp-${phoneNumber}`,
+        instance: phoneNumber,
         data: {
           messages: [{
             key: {
@@ -157,10 +157,7 @@ export default function WhatsAppTestPage() {
       addTestResult("Webhook - Mensagem", "pending", { message: testMessage });
     },
     onSuccess: ({ data, duration, webhookData }) => {
-      addTestResult("Webhook - Mensagem", "success", { 
-        sent: webhookData, 
-        response: data 
-      }, duration);
+      addTestResult("Webhook - Mensagem", "success", data, duration);
       toast({
         title: "Webhook testado",
         description: "Mensagem processada via webhook.",
@@ -176,7 +173,7 @@ export default function WhatsAppTestPage() {
       const startTime = Date.now();
       const webhookData = {
         event: "CONNECTION_UPDATE",
-        instance: `whatsapp-${phoneNumber}`,
+        instance: phoneNumber,
         data: { state }
       };
       
