@@ -350,10 +350,10 @@ export class WhatsAppGatewayService {
    * Envia uma mensagem via WhatsApp
    */
   async sendMessage(instanceName: string, number: string, text: string): Promise<SendMessageResponse> {
-    // Use the correct Evolution API format as specified
+    // Use the correct Evolution API format with textMessage structure
     const requestData = {
       number: number,
-      text: text
+      textMessage: { text: text }
     };
 
     console.log(`📤 Enviando mensagem via Evolution API:`);
