@@ -22,8 +22,18 @@ app.use(cors({
 app.use('/api/whatsapp/webhook', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, apikey, x-api-key, authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
   next();
+});
+
+// Handle preflight requests for webhook
+app.options('/api/whatsapp/webhook', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, apikey, x-api-key, authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(200).end();
 });
 
 app.use(express.json({ limit: '10mb' }));
