@@ -8,7 +8,32 @@ import { webhookOptimizer } from "./webhook-optimizer";
 import { performanceMonitor } from "./middleware/performance-monitor";
 
 export function setupWebhookRoutes(app: Express) {
-  // GET endpoint for webhook verification - MUST be accessible externally
+  // Multiple webhook endpoints to catch Evolution API requests
+  const webhookHandler = async (req: any, res: any) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    console.log('WEBHOOK HIT - URL:', req.url);
+    console.log('WEBHOOK IP:', req.ip);
+    console.log('WEBHOOK HEADERS:', JSON.stringify(req.headers, null, 2));
+    console.log('WEBHOOK BODY:', JSON.stringify(req.body, null, 2));
+    
+    // Process webhook if it contains message data
+    if (req.body && (req.body.event === 'MESSAGES_UPSERT' || req.body.event === 'messages.upsert')) {
+      processWebhookMessage(req.body);
+    }
+    
+    res.json({ status: 'received', timestamp: new Date().toISOString() });
+  };
+
+  // Multiple endpoints to catch webhook
+  app.post("/api/whatsapp/webhook", webhookHandler);
+  app.post("/webhook", webhookHandler);
+  app.post("/api/webhook", webhookHandler);
+  app.post("/whatsapp/webhook", webhookHandler);
+  
+  // GET endpoint for verification
   app.get("/api/whatsapp/webhook", (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,52 +53,62 @@ export function setupWebhookRoutes(app: Express) {
     });
   });
 
-  // Simple webhook endpoint without middleware
-  app.post("/webhook", async (req, res) => {
-    console.log('🔥 ALTERNATIVE WEBHOOK HIT:', JSON.stringify(req.body, null, 2));
-    
-    // Process webhook same as main endpoint
-    if (req.body.event === 'MESSAGES_UPSERT' && req.body.data?.messages) {
-      const { instance, data } = req.body;
-      
-      for (const message of data.messages) {
-        if (message.key?.fromMe) continue;
+  async function processWebhookMessage(body: any) {
+    try {
+      if (body.event === 'MESSAGES_UPSERT' && body.data?.messages) {
+        const { instance, data } = body;
         
-        let phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
-        let messageText = message.message?.conversation || '';
-        
-        if (!messageText || !phoneNumber) continue;
-        
-        console.log(`📱 ALTERNATIVE: Processando mensagem de ${phoneNumber}: "${messageText}"`);
-        
-        // Get instance and agent
-        const whatsappInstance = await webhookOptimizer.getOptimizedInstance(instance);
-        if (!whatsappInstance) {
-          console.log(`❌ ALTERNATIVE: Instância não encontrada: ${instance}`);
-          continue;
-        }
-        
-        const agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, whatsappInstance.agentId);
-        if (!agent) {
-          console.log(`❌ ALTERNATIVE: Agente não encontrado`);
-          continue;
-        }
-        
-        // Generate response
-        const aiResponse = await agentService.testAgent(agent, messageText);
-        if (aiResponse?.trim()) {
-          try {
-            await whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
-            console.log(`✅ ALTERNATIVE: Resposta enviada para ${phoneNumber}`);
-          } catch (error) {
-            console.error(`❌ ALTERNATIVE: Erro ao enviar:`, error.message);
+        for (const message of data.messages) {
+          if (message.key?.fromMe) continue;
+          
+          let phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+          let messageText = message.message?.conversation || '';
+          
+          if (!messageText || !phoneNumber) continue;
+          
+          console.log(`PROCESSANDO MENSAGEM: ${phoneNumber} - "${messageText}"`);
+          
+          // Get instance and agent
+          const whatsappInstance = await webhookOptimizer.getOptimizedInstance(instance);
+          if (!whatsappInstance) {
+            console.log(`INSTANCIA NAO ENCONTRADA: ${instance}`);
+            continue;
+          }
+          
+          // Get agent with proper owner lookup
+          const agent = await storage.getAgent(whatsappInstance.agentId, 1);
+          if (!agent || agent.status !== 'active') {
+            console.log(`AGENTE NAO ENCONTRADO OU INATIVO: ${whatsappInstance.agentId}`);
+            continue;
+          }
+          
+          // Generate and send response
+          const aiResponse = await agentService.testAgent(agent, messageText);
+          if (aiResponse?.trim()) {
+            try {
+              await whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
+              console.log(`RESPOSTA ENVIADA: ${phoneNumber}`);
+              
+              // Store conversation in background
+              storage.createConversation({
+                agentId: agent.id,
+                contactId: phoneNumber,
+                messages: [
+                  { role: 'user', content: messageText, timestamp: new Date() },
+                  { role: 'assistant', content: aiResponse, timestamp: new Date() }
+                ]
+              }).catch(console.error);
+              
+            } catch (error) {
+              console.error(`ERRO AO ENVIAR:`, error.message);
+            }
           }
         }
       }
+    } catch (error) {
+      console.error('ERRO NO PROCESSAMENTO:', error);
     }
-    
-    res.json({ status: "received_alternative", timestamp: new Date().toISOString() });
-  });
+  }
 
   // Catch-all webhook endpoint
   app.all("/api/*", (req, res, next) => {
@@ -95,8 +130,9 @@ export function setupWebhookRoutes(app: Express) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    console.log('WEBHOOK RECEBIDO - IP:', req.ip);
-    console.log('BODY:', JSON.stringify(req.body, null, 2));
+    console.log('🚨 WEBHOOK EVOLUTION API - IP:', req.ip);
+    console.log('🚨 USER-AGENT:', req.headers['user-agent']);
+    console.log('🚨 BODY COMPLETO:', JSON.stringify(req.body, null, 2));
     
     // Handle async processing
     (async () => {

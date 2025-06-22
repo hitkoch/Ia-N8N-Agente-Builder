@@ -6,6 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupWebhookRoutes } from "./webhook";
 import { keepAliveService } from "./keep-alive";
 import { webhookOptimizer } from "./webhook-optimizer";
+import { messagePollerService } from "./services/message-poller";
 
 const app = express();
 
@@ -140,6 +141,7 @@ app.use((req, res, next) => {
       try {
         await webhookOptimizer.preWarmCaches();
         webhookOptimizer.startPeriodicWarmup();
+        messagePollerService.start();
       } catch (error) {
         console.log('Cache warmup will retry later');
       }
