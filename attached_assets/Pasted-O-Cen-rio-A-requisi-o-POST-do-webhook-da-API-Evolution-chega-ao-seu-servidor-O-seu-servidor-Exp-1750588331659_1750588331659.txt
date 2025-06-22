@@ -1,0 +1,39 @@
+O Cenário:
+A requisição POST do webhook da API Evolution chega ao seu servidor.
+O seu servidor Express precisa "parsear" o corpo da requisição para transformá-lo em um objeto JSON (req.body).
+Se o middleware express.json() não estiver configurado corretamente ou estiver na ordem errada, req.body pode ficar como undefined.
+Seu código tenta acessar req.body.instance (ou algo similar), encontra undefined e lança um erro, quebrando a execução silenciosamente antes de qualquer console.log importante.
+Por que a sua ação manual "conserta" isso?
+Quando você pede para o Replit "verificar", você está provavelmente acionando uma rota GET ou outra interação que não depende do req.body de um POST, ou que de alguma forma "prepara" o servidor.
+Como Verificar e Corrigir:
+Peça para a IA do Replit garantir que o seu arquivo server.js (ou o arquivo principal do Express) esteja configurado nesta ordem exata.
+Generated prompt
+## Tarefa Crítica de Depuração: Garantir a Ordem Correta dos Middlewares no Express
+
+**Diagnóstico:** Suspeito que o corpo das requisições POST do webhook não está sendo parseado corretamente, fazendo com que `req.body` fique indefinido.
+
+**Ação:** No meu arquivo principal do servidor (provavelmente `src/server.js` ou `index.js`), verifique e garanta que os middlewares do Express estão na seguinte ordem, ANTES de qualquer definição de rota.
+
+**Substitua a configuração de middlewares existente por esta sequência exata:**
+
+```javascript
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+
+// 1. CORS deve vir primeiro, para lidar com as permissões de origem.
+app.use(cors({ origin: '*' }));
+
+// 2. O parser de JSON deve vir em seguida, para que o corpo de todas as requisições POST/PUT seja transformado em um objeto.
+// A opção 'limit' é aumentada para garantir que payloads grandes (com mídia base64) não sejam rejeitados.
+app.use(express.json({ limit: '50mb' }));
+
+// 3. O parser de URL encoded também é uma boa prática ter.
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// --- AS SUAS ROTAS DEVEM VIR DEPOIS DISSO ---
+// Ex: app.use('/api/whatsapp', whatsappRoutes);
+// Ex: app.use('/api/auth', authRoutes);
+
+// ... resto da configuração do servidor ...

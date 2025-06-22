@@ -10,37 +10,18 @@ import { whatsappMonitor } from "./services/whatsapp-monitor";
 
 const app = express();
 
-// CORS configuration - must be BEFORE all routes
-// Maximum openness for testing and webchat external integration
-app.use(cors({ 
-  origin: '*',  // Allow ALL origins
-  credentials: false,  // Must be false when using origin: '*'
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  allowedHeaders: ['*'],  // Allow all headers
-  preflightContinue: false,
-  optionsSuccessStatus: 200  // Some legacy browsers choke on 204
-}));
+// 1. CORS deve vir primeiro, para lidar com as permissões de origem
+app.use(cors({ origin: '*' }));
 
-// Ensure webhooks work externally - explicit route handling
-app.use('/api/whatsapp/webhook', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, apikey, x-api-key, authorization');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  next();
-});
+// 2. O parser de JSON deve vir em seguida, para que o corpo de todas as requisições POST/PUT seja transformado em um objeto
+// A opção 'limit' é aumentada para garantir que payloads grandes (com mídia base64) não sejam rejeitados
+app.use(express.json({ limit: '50mb' }));
 
-// Handle preflight requests for webhook
-app.options('/api/whatsapp/webhook', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, apikey, x-api-key, authorization');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.status(200).end();
-});
+// 3. O parser de URL encoded também é uma boa prática ter
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+// Trust proxy for correct IP detection
+app.set('trust proxy', true);
 
 // Log webhook requests only
 app.use((req, res, next) => {
