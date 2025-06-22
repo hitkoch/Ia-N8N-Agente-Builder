@@ -76,32 +76,46 @@ export class AgentService {
 
   private async getKnowledgeContext(agent: Agent, userMessage: string): Promise<string | null> {
     try {
-      console.log('📄 Buscando documentos para o agente:', agent.id);
+      console.log('🔍 Iniciando busca RAG para agente:', agent.id);
       const ragDocs = await storage.getRagDocumentsByAgent(agent.id);
       
       if (!ragDocs || ragDocs.length === 0) {
-        console.log('📄 Nenhum documento encontrado - prosseguindo sem RAG');
+        console.log('📄 Nenhum documento RAG encontrado');
         return null;
       }
       
-      console.log(`📄 ${ragDocs.length} documentos encontrados - usando busca otimizada`);
+      console.log(`📄 Encontrados ${ragDocs.length} documentos RAG`);
       
-      // Busca rápida por palavras-chave
-      const keywords = userMessage.toLowerCase().split(' ').filter(word => word.length > 3);
+      // Busca por palavras-chave com scoring melhorado
+      const keywords = userMessage.toLowerCase()
+        .split(/\s+/)
+        .filter(word => word.length > 2)
+        .slice(0, 10); // Limitar para performance
+      
       let bestMatch = null;
       let bestScore = 0;
       
       for (const doc of ragDocs) {
-        if (!doc.content) continue;
+        if (!doc.content) {
+          console.log(`⚠️ Documento ${doc.originalName} sem conteúdo`);
+          continue;
+        }
         
         const content = doc.content.toLowerCase();
         let score = 0;
         
+        // Busca por palavras-chave
         for (const keyword of keywords) {
-          if (content.includes(keyword)) {
-            score += keyword.length;
-          }
+          const matches = (content.match(new RegExp(keyword, 'gi')) || []).length;
+          score += matches * keyword.length;
         }
+        
+        // Bonus para documentos com títulos relevantes
+        if (doc.originalName && doc.originalName.toLowerCase().includes(userMessage.toLowerCase().substring(0, 20))) {
+          score += 50;
+        }
+        
+        console.log(`📊 Documento ${doc.originalName}: score ${score}`);
         
         if (score > bestScore) {
           bestScore = score;
@@ -110,14 +124,16 @@ export class AgentService {
       }
       
       if (bestMatch && bestScore > 0) {
-        console.log(`📄 Documento relevante: ${bestMatch.originalName}`);
-        return bestMatch.content.substring(0, 1500);
+        console.log(`✅ Melhor documento: ${bestMatch.originalName} (score: ${bestScore})`);
+        // Retornar conteúdo limitado para otimizar performance
+        const contextLength = Math.min(2000, bestMatch.content.length);
+        return bestMatch.content.substring(0, contextLength);
       }
       
-      console.log('📄 Usando resposta geral');
+      console.log('❌ Nenhum documento relevante encontrado');
       return null;
     } catch (error) {
-      console.error("Erro ao buscar contexto:", error.message);
+      console.error("❌ Erro no sistema RAG:", error);
       return null;
     }
   }
