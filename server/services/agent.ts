@@ -1,12 +1,11 @@
 import { Agent } from "@shared/schema";
 import { openaiService, ChatMessage } from "./openai";
-import { embeddingService } from "./embeddings";
 import { storage } from "../storage";
 
 export class AgentService {
   async testAgent(agent: Agent, userMessage: string): Promise<string> {
     try {
-      // Recuperar contexto da base de conhecimento
+      // Recuperar contexto da base de conhecimento de forma otimizada
       const knowledgeContext = await this.getKnowledgeContext(agent, userMessage);
       
       const messages: ChatMessage[] = [];
@@ -47,7 +46,7 @@ export class AgentService {
         .pop()?.content || "";
 
       const knowledgeContext = await this.getKnowledgeContext(agent, lastUserMessage);
-
+      
       const messages: ChatMessage[] = [];
       
       // Adicionar prompt do sistema
@@ -77,214 +76,50 @@ export class AgentService {
 
   private async getKnowledgeContext(agent: Agent, userMessage: string): Promise<string | null> {
     try {
+      console.log('📄 Buscando documentos para o agente:', agent.id);
       const ragDocs = await storage.getRagDocumentsByAgent(agent.id);
       
       if (!ragDocs || ragDocs.length === 0) {
-        console.log('📄 Nenhum documento encontrado na base de conhecimento');
+        console.log('📄 Nenhum documento encontrado - prosseguindo sem RAG');
         return null;
       }
       
-      console.log(`📄 Documentos disponíveis: ${ragDocs.length}`);
+      console.log(`📄 ${ragDocs.length} documentos encontrados - usando busca otimizada`);
       
-      // Debug completo dos documentos
+      // Busca rápida por palavras-chave
+      const keywords = userMessage.toLowerCase().split(' ').filter(word => word.length > 3);
+      let bestMatch = null;
+      let bestScore = 0;
+      
       for (const doc of ragDocs) {
-        console.log(`📄 Documento: ${doc.originalName}`);
-        console.log(`   - ID: ${doc.id}`);
-        console.log(`   - Conteúdo: ${doc.content ? doc.content.length : 0} caracteres`);
-        console.log(`   - Has embedding: ${!!doc.embedding}`);
+        if (!doc.content) continue;
         
-        if (doc.embedding) {
-          try {
-            const chunks = JSON.parse(doc.embedding);
-            console.log(`   - Chunks: ${chunks.length}`);
-            if (chunks.length > 0) {
-              console.log(`   - Primeiro chunk: ${chunks[0].text?.substring(0, 100)}...`);
-              console.log(`   - Embedding length: ${chunks[0].embedding?.length || 0}`);
-            }
-          } catch (e) {
-            console.log(`   - Erro ao parsear embedding: ${e.message}`);
+        const content = doc.content.toLowerCase();
+        let score = 0;
+        
+        for (const keyword of keywords) {
+          if (content.includes(keyword)) {
+            score += keyword.length;
           }
         }
-      }
-      
-      // Verificar se temos documentos com embeddings válidos
-      const docsWithEmbeddings = ragDocs.filter(doc => {
-        if (!doc.embedding) return false;
-        try {
-          const chunks = JSON.parse(doc.embedding);
-          return chunks && chunks.length > 0 && chunks[0].embedding;
-        } catch {
-          return false;
-        }
-      });
-      
-      console.log(`🔮 Documentos com embeddings válidos: ${docsWithEmbeddings.length}`);
-      
-      if (docsWithEmbeddings.length > 0) {
-        console.log('🔍 Iniciando busca semântica');
-        const semanticResult = await this.getSemanticContext(docsWithEmbeddings, userMessage);
-        if (semanticResult) {
-          console.log('✅ Busca semântica encontrou resultado');
-          return semanticResult;
-        }
-        console.log('❌ Busca semântica não encontrou resultado relevante');
-      }
-      
-      // Usar busca por palavras-chave como fallback
-      console.log('📄 Usando fallback: buscando por palavras-chave');
-      const keywordContext = await this.getKeywordContext(ragDocs, userMessage);
-      
-      if (keywordContext) {
-        console.log('✅ Contexto por palavras-chave encontrado');
-        return keywordContext;
-      }
-      
-      // Como último recurso, retornar o conteúdo corrigido diretamente
-      console.log('📄 Usando conteúdo corrigido como último recurso');
-      const validContent = ragDocs
-        .filter(doc => doc.content && doc.content.includes('n8n'))
-        .map(doc => `=== ${doc.originalName} ===\n${doc.content}`)
-        .join('\n\n---\n\n');
-      
-      return validContent || null;
-      
-    } catch (error) {
-      console.error('❌ Erro ao buscar contexto da base de conhecimento:', error);
-      return null;
-    }
-  }
-  
-  private async getSemanticContext(ragDocs: any[], userMessage: string): Promise<string | null> {
-    try {
-      console.log('🔮 Criando embedding da consulta...');
-      const queryEmbedding = await embeddingService.createEmbedding(userMessage);
-      console.log(`🔮 Embedding criado: ${queryEmbedding.length} dimensões`);
-      
-      let allMatches: { text: string; similarity: number; docName: string }[] = [];
-      
-      // Buscar em todos os documentos
-      for (const doc of ragDocs) {
-        console.log(`📄 Processando documento: ${doc.originalName}`);
         
-        if (!doc.embedding) {
-          console.log(`❌ Documento sem embedding: ${doc.originalName}`);
-          continue;
-        }
-        
-        try {
-          const docChunks = JSON.parse(doc.embedding);
-          console.log(`🔮 Chunks no documento: ${docChunks.length}`);
-          
-          for (let i = 0; i < docChunks.length; i++) {
-            const chunk = docChunks[i];
-            if (!chunk.embedding || !chunk.text) {
-              console.log(`❌ Chunk ${i+1} inválido`);
-              continue;
-            }
-            
-            const similarity = embeddingService.calculateSimilarity(queryEmbedding, chunk.embedding);
-            console.log(`📊 Chunk ${i+1}: similaridade = ${similarity.toFixed(4)}`);
-            
-            if (similarity > 0.2) {
-              allMatches.push({
-                text: chunk.text,
-                similarity: similarity,
-                docName: doc.originalName
-              });
-              console.log(`✅ Match encontrado! Sim: ${similarity.toFixed(4)}`);
-            }
-          }
-        } catch (parseError) {
-          console.warn(`⚠️ Erro ao processar embeddings do documento ${doc.originalName}:`, parseError);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = doc;
         }
       }
       
-      console.log(`📊 Total de matches encontrados: ${allMatches.length}`);
-      
-      if (allMatches.length > 0) {
-        allMatches.sort((a, b) => b.similarity - a.similarity);
-        const topMatches = allMatches.slice(0, 3);
-        
-        console.log(`🎯 Retornando ${topMatches.length} trechos mais relevantes`);
-        return topMatches.map(match => `[${match.docName}]\n${match.text}`).join('\n\n');
+      if (bestMatch && bestScore > 0) {
+        console.log(`📄 Documento relevante: ${bestMatch.originalName}`);
+        return bestMatch.content.substring(0, 1500);
       }
       
-      console.log('❌ Nenhum match semântico encontrado');
+      console.log('📄 Usando resposta geral');
       return null;
     } catch (error) {
-      console.error('❌ Erro na busca semântica:', error);
+      console.error("Erro ao buscar contexto:", error.message);
       return null;
     }
-  }
-  
-  private async getKeywordContext(ragDocs: any[], userMessage: string): Promise<string | null> {
-    const messageWords = userMessage.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    
-    const relevantDocs = ragDocs.filter(doc => {
-      const docContent = doc.content.toLowerCase();
-      
-      // Ignorar arquivos não processados
-      if (docContent.includes('[arquivo não processado]') || 
-          docContent.includes('[formato não suportado]') ||
-          docContent.includes('[erro ao processar]') ||
-          docContent.includes('[PDF DETECTADO:')) {
-        console.log(`⚠️ ${doc.originalName}: arquivo não processado, ignorando`);
-        return false;
-      }
-      
-      // Calcular relevância baseada em palavras-chave
-      const keyWords = messageWords.filter(word => word.length > 2);
-      const matchCount = keyWords.filter(keyword => docContent.includes(keyword)).length;
-      const relevanceScore = matchCount / keyWords.length;
-      
-      console.log(`📄 ${doc.originalName}: ${relevanceScore > 0.1 ? '✅ relevante' : '❌ não relevante'}`);
-      return relevanceScore > 0.1;
-    });
-    
-    if (relevantDocs.length === 0) {
-      console.log('📄 Nenhum documento relevante encontrado');
-      return null;
-    }
-    
-    console.log(`✅ Encontrados ${relevantDocs.length} documentos relevantes`);
-    
-    const combinedContent = relevantDocs
-      .map(doc => `=== ${doc.originalName} ===\n${doc.content}`)
-      .join('\n\n---\n\n');
-    
-    const maxContextLength = 3000;
-    const truncatedContent = combinedContent.length > maxContextLength
-      ? combinedContent.substring(0, maxContextLength) + '...'
-      : combinedContent;
-    
-    console.log('📋 Contexto criado com', truncatedContent.length, 'caracteres');
-    return truncatedContent;
-  }
-
-  validateAgentConfiguration(agent: Partial<Agent>): string[] {
-    const errors: string[] = [];
-
-    if (!agent.name || agent.name.trim().length === 0) {
-      errors.push("Agent name is required");
-    }
-
-    if (!agent.systemPrompt || agent.systemPrompt.trim().length === 0) {
-      errors.push("System prompt is required");
-    }
-
-    if (agent.temperature !== undefined && (agent.temperature < 0 || agent.temperature > 2)) {
-      errors.push("Temperature must be between 0 and 2");
-    }
-
-    if (agent.maxTokens !== undefined && (agent.maxTokens < 1 || agent.maxTokens > 4096)) {
-      errors.push("Max tokens must be between 1 and 4096");
-    }
-
-    if (agent.topP !== undefined && (agent.topP < 0 || agent.topP > 1)) {
-      errors.push("Top P must be between 0 and 1");
-    }
-
-    return errors;
   }
 }
 
