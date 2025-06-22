@@ -48,6 +48,13 @@ export function setupWebhookRoutes(app: Express) {
         console.log(`🔍 Tentando instância sem prefixo: ${instanceNameWithoutPrefix}`);
       }
       
+      // Se ainda não encontrou, tentar apenas os últimos dígitos (para casos onde instance = número completo)
+      if (!whatsappInstance && instance.length > 11) {
+        const shortInstance = instance.slice(-11); // Pegar apenas os últimos 11 dígitos
+        whatsappInstance = await storage.getWhatsappInstanceByName(shortInstance);
+        console.log(`🔍 Tentando instância com formato curto: ${shortInstance}`);
+      }
+      
       if (!whatsappInstance) {
         console.log(`⚠️ Mensagem recebida para instância não registrada: ${instance}`);
         return res.json({ 
