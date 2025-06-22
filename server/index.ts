@@ -85,22 +85,27 @@ app.use((req, res, next) => {
   // Register API routes with absolute priority
   const server = await registerRoutes(app);
 
-  // Setup Vite/static serving AFTER API routes
-  if (app.get("env") === "development") {
+  // --- LÓGICA DE SERVIDOR DE FRONTEND CORRIGIDA ---
+  if (process.env.NODE_ENV === "development") {
+    // Importação dinâmica: só carrega o vite em modo de desenvolvimento
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
+    console.log("🌱 Servidor Vite configurado para desenvolvimento.");
     setTimeout(() => seedDatabase(), 1000);
   } else {
+    // Em produção, apenas sirva os arquivos estáticos já construídos
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
+    console.log("📦 Servindo arquivos estáticos para produção.");
     setTimeout(() => seedDatabase(), 1000);
   }
 
-  // Error handler for API routes
+  // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
+    const status = err.status || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
-    throw err;
+    console.error("❌ Erro não tratado:", err);
   });
 
   // ALWAYS serve the app on port 5000
@@ -112,21 +117,19 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`🚀 Servidor rodando na porta ${port} em modo ${process.env.NODE_ENV}`);
     
-    // Start optimization services
-    if (process.env.NODE_ENV === 'production' || process.env.REPL_URL) {
+    if (process.env.NODE_ENV === 'production') {
       keepAliveService.start();
     }
     
-    // Pre-warm caches for faster responses
     setTimeout(async () => {
       try {
         await webhookOptimizer.preWarmCaches();
         webhookOptimizer.startPeriodicWarmup();
         whatsappMonitor.start();
       } catch (error) {
-        console.log('Cache warmup will retry later');
+        console.log('Cache warmup irá rodar mais tarde.');
       }
     }, 3000);
   });

@@ -1,0 +1,65 @@
+## Tarefa Crítica: Isolar o Código do Vite para Evitar Crash em Produção
+
+**Diagnóstico:** A aplicação está crashando ao iniciar porque está tentando carregar a configuração do Vite (`vite.config.ts`) em modo de produção, resultando em um erro `TypeError`. Precisamos garantir que o código relacionado ao Vite seja executado APENAS em modo de desenvolvimento.
+
+**Ação:** Modifique o arquivo `server/index.ts` para usar uma importação dinâmica, garantindo que os módulos do Vite só sejam carregados quando `process.env.NODE_ENV === 'development'`.
+
+**Substitua o bloco de código de inicialização `(async () => { ... })();` no final do seu `server/index.ts` pelo código corrigido abaixo:**
+
+```typescript
+// Substitua o final do seu arquivo server/index.ts por este bloco
+
+(async () => {
+  // Setup webhook routes com prioridade
+  setupWebhookRoutes(app);
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  
+  // Registra as rotas da API
+  const server = await registerRoutes(app);
+
+  // --- LÓGICA DE SERVIDOR DE FRONTEND CORRIGIDA ---
+  if (process.env.NODE_ENV === "development") {
+    // Importação dinâmica: só carrega o vite em modo de desenvolvimento
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+    console.log("🌱 Servidor Vite configurado para desenvolvimento.");
+    setTimeout(() => seedDatabase(), 1000);
+  } else {
+    // Em produção, apenas sirva os arquivos estáticos já construídos
+    const { serveStatic } = await import("./vite");
+    serveStatic(app);
+    console.log("📦 Servindo arquivos estáticos para produção.");
+    setTimeout(() => seedDatabase(), 1000);
+  }
+
+  // Error handler
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    console.error("❌ Erro não tratado:", err);
+  });
+
+  const port = 5000;
+  server.listen({ port, host: "0.0.0.0" }, () => {
+    log(`🚀 Servidor rodando na porta ${port} em modo ${process.env.NODE_ENV}`);
+    
+    if (process.env.NODE_ENV === 'production') {
+      keepAliveService.start();
+    }
+    
+    setTimeout(async () => {
+      try {
+        await webhookOptimizer.preWarmCaches();
+        webhookOptimizer.startPeriodicWarmup();
+        whatsappMonitor.start();
+      } catch (error) {
+        console.log('Cache warmup irá rodar mais tarde.');
+      }
+    }, 3000);
+  });
+})();
