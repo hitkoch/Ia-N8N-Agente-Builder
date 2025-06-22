@@ -11,6 +11,7 @@ import { directMonitor } from "./services/direct-monitor";
 import { whatsappListener } from "./services/whatsapp-listener";
 import { realMessageDetector } from "./services/real-message-detector";
 import { evolutionWebhookListener } from "./services/evolution-webhook-listener";
+import { finalWhatsAppMonitor } from "./services/final-whatsapp-monitor";
 
 const app = express();
 
@@ -145,11 +146,8 @@ app.use((req, res, next) => {
       try {
         await webhookOptimizer.preWarmCaches();
         webhookOptimizer.startPeriodicWarmup();
-        messagePollerService.start();
-        directMonitor.start();
-        whatsappListener.start();
-        realMessageDetector.start();
-        evolutionWebhookListener.startListening();
+        // Apenas o monitor final - como N8N faz
+        finalWhatsAppMonitor.start();
       } catch (error) {
         console.log('Cache warmup will retry later');
       }
