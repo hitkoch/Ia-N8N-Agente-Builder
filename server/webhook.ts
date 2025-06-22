@@ -4,6 +4,7 @@ import { agentService } from "./services/agent";
 import { whatsappGatewayService } from "./services/whatsapp-gateway";
 import { multimediaService } from "./services/multimedia";
 import { validateWebhookData, webhookRateLimiter } from "./middleware/security";
+import { webhookOptimizer } from "./webhook-optimizer";
 
 export function setupWebhookRoutes(app: Express) {
   // GET endpoint for webhook verification - MUST be accessible externally
@@ -37,22 +38,17 @@ export function setupWebhookRoutes(app: Express) {
 
       const { event, instance, data } = req.body;
 
-      // Verificar se a instância existe no sistema
-      // Evolution API adiciona prefixo "whatsapp-" automaticamente, então tentamos ambos os formatos
-      let whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+      // Use optimized instance lookup
+      let whatsappInstance = await webhookOptimizer.getOptimizedInstance(instance);
       
       if (!whatsappInstance && instance.startsWith('whatsapp-')) {
-        // Tentar sem o prefixo "whatsapp-"
         const instanceNameWithoutPrefix = instance.replace('whatsapp-', '');
-        whatsappInstance = await storage.getWhatsappInstanceByName(instanceNameWithoutPrefix);
-        console.log(`🔍 Tentando instância sem prefixo: ${instanceNameWithoutPrefix}`);
+        whatsappInstance = await webhookOptimizer.getOptimizedInstance(instanceNameWithoutPrefix);
       }
       
-      // Se ainda não encontrou, tentar apenas os últimos dígitos (para casos onde instance = número completo)
       if (!whatsappInstance && instance.length > 11) {
-        const shortInstance = instance.slice(-11); // Pegar apenas os últimos 11 dígitos
-        whatsappInstance = await storage.getWhatsappInstanceByName(shortInstance);
-        console.log(`🔍 Tentando instância com formato curto: ${shortInstance}`);
+        const shortInstance = instance.slice(-11);
+        whatsappInstance = await webhookOptimizer.getOptimizedInstance(shortInstance);
       }
       
       if (!whatsappInstance) {
@@ -156,17 +152,13 @@ export function setupWebhookRoutes(app: Express) {
 
           console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
 
-          let agent = null;
-          for (let userId = 1; userId <= 100; userId++) {
-            try {
-              const userAgents = await storage.getAgentsByOwner(userId);
-              const foundAgent = userAgents.find(a => a.id === whatsappInstance.agentId);
-              if (foundAgent) {
-                agent = foundAgent;
-                break;
-              }
-            } catch (error) {
-              continue;
+          // Use optimized agent lookup
+          let agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, whatsappInstance.agentId);
+          if (!agent) {
+            // Fast fallback for cross-user agents
+            for (let userId = 1; userId <= 5; userId++) {
+              agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, userId);
+              if (agent) break;
             }
           }
 

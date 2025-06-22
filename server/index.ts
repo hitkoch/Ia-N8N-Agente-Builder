@@ -4,6 +4,8 @@ import { seedDatabase } from "./seed";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebhookRoutes } from "./webhook";
+import { keepAliveService } from "./keep-alive";
+import { webhookOptimizer } from "./webhook-optimizer";
 
 const app = express();
 
@@ -72,6 +74,15 @@ app.use((req, res, next) => {
 (async () => {
   // Setup webhook routes with ABSOLUTE PRIORITY
   setupWebhookRoutes(app);
+
+  // Health check endpoint for keep-alive
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
   
   // Register API routes with absolute priority
   const server = await registerRoutes(app);
@@ -104,5 +115,16 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start optimization services
+    if (process.env.NODE_ENV === 'production' || process.env.REPL_URL) {
+      keepAliveService.start();
+    }
+    
+    // Pre-warm caches for faster responses
+    setTimeout(async () => {
+      await webhookOptimizer.preWarmCaches();
+      webhookOptimizer.startPeriodicWarmup();
+    }, 3000);
   });
 })();
