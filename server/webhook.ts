@@ -167,6 +167,12 @@ export function setupWebhookRoutes(app: Express) {
             continue;
           }
 
+          // Check if agent is active
+          if (agent.status !== 'active') {
+            console.log(`⚠️ Agente ${agent.name} não está ativo (status: ${agent.status})`);
+            continue;
+          }
+
           console.log(`🤖 Processando com agente: ${agent.name}`);
 
           // Generate AI response with multimedia context
