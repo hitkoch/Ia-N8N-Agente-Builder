@@ -37,6 +37,17 @@ export function setupWebhookRoutes(app: Express) {
 
       const { event, instance, data } = req.body;
 
+      // Verificar se a instância existe no sistema
+      const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
+      if (!whatsappInstance) {
+        console.log(`⚠️ Mensagem recebida para instância não registrada: ${instance}`);
+        return res.json({ 
+          status: "ignored", 
+          reason: "Instance not found in system",
+          timestamp: new Date().toISOString() 
+        });
+      }
+
       if (event === 'MESSAGES_UPSERT' && data?.messages) {
         for (const message of data.messages) {
           if (message.key?.fromMe) continue;
@@ -116,12 +127,6 @@ export function setupWebhookRoutes(app: Express) {
           if (!messageText || !phoneNumber) continue;
 
           console.log(`📱 Processando mensagem de ${phoneNumber}: "${messageText}"`);
-
-          const whatsappInstance = await storage.getWhatsappInstanceByName(instance);
-          if (!whatsappInstance) {
-            console.log(`❌ Instância não encontrada: ${instance}`);
-            continue;
-          }
 
           let agent = null;
           for (let userId = 1; userId <= 100; userId++) {
