@@ -5,6 +5,12 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { fileURLToPath } from "url"; // Importa a função necessária
+
+// --- A CORREÇÃO PRINCIPAL ESTÁ AQUI ---
+// Define __dirname de forma segura para ambientes de Módulos ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const viteLogger = createLogger();
 
@@ -45,14 +51,14 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
+      // Caminho corrigido usando a nova variável __dirname
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        __dirname, // <-- MUDANÇA
         "..",
         "client",
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
@@ -68,17 +74,22 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // Caminho corrigido usando a nova variável __dirname
+  // Assumindo que o diretório 'dist' está um nível acima do diretório 'server'
+  const distPath = path.resolve(__dirname, "..", "dist", "public"); // <-- MUDANÇA
 
   if (!fs.existsSync(distPath)) {
+    console.error(`ERRO: Diretório de build não encontrado em: ${distPath}`);
+    // Em produção, talvez não queiramos crashar, mas sim logar o erro.
+    // Por enquanto, vamos manter o throw para depuração.
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
 
+  console.log(`Servindo arquivos estáticos de produção de: ${distPath}`);
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
