@@ -28,6 +28,66 @@ export function setupWebhookRoutes(app: Express) {
     });
   });
 
+  // Simple webhook endpoint without middleware
+  app.post("/webhook", async (req, res) => {
+    console.log('🔥 ALTERNATIVE WEBHOOK HIT:', JSON.stringify(req.body, null, 2));
+    
+    // Process webhook same as main endpoint
+    if (req.body.event === 'MESSAGES_UPSERT' && req.body.data?.messages) {
+      const { instance, data } = req.body;
+      
+      for (const message of data.messages) {
+        if (message.key?.fromMe) continue;
+        
+        let phoneNumber = message.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+        let messageText = message.message?.conversation || '';
+        
+        if (!messageText || !phoneNumber) continue;
+        
+        console.log(`📱 ALTERNATIVE: Processando mensagem de ${phoneNumber}: "${messageText}"`);
+        
+        // Get instance and agent
+        const whatsappInstance = await webhookOptimizer.getOptimizedInstance(instance);
+        if (!whatsappInstance) {
+          console.log(`❌ ALTERNATIVE: Instância não encontrada: ${instance}`);
+          continue;
+        }
+        
+        const agent = await webhookOptimizer.getOptimizedAgent(whatsappInstance.agentId, whatsappInstance.agentId);
+        if (!agent) {
+          console.log(`❌ ALTERNATIVE: Agente não encontrado`);
+          continue;
+        }
+        
+        // Generate response
+        const aiResponse = await agentService.testAgent(agent, messageText);
+        if (aiResponse?.trim()) {
+          try {
+            await whatsappGatewayService.sendMessage(whatsappInstance.instanceName, phoneNumber, aiResponse);
+            console.log(`✅ ALTERNATIVE: Resposta enviada para ${phoneNumber}`);
+          } catch (error) {
+            console.error(`❌ ALTERNATIVE: Erro ao enviar:`, error.message);
+          }
+        }
+      }
+    }
+    
+    res.json({ status: "received_alternative", timestamp: new Date().toISOString() });
+  });
+
+  // Catch-all webhook endpoint
+  app.all("/api/*", (req, res, next) => {
+    if (req.url.includes('webhook')) {
+      console.log('🎯 CATCH-ALL WEBHOOK:', {
+        method: req.method,
+        url: req.url,
+        body: req.body,
+        headers: req.headers
+      });
+    }
+    next();
+  });
+
   // POST endpoint for webhook processing - MUST be accessible externally
   app.post("/api/whatsapp/webhook", (req, res) => {
     // Set CORS headers first
@@ -35,9 +95,8 @@ export function setupWebhookRoutes(app: Express) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    console.log('🔍 WEBHOOK RECEBIDO - IP:', req.ip);
-    console.log('📋 BODY COMPLETO:', JSON.stringify(req.body, null, 2));
-    console.log('📋 HEADERS:', JSON.stringify(req.headers, null, 2));
+    console.log('WEBHOOK RECEBIDO - IP:', req.ip);
+    console.log('BODY:', JSON.stringify(req.body, null, 2));
     
     // Handle async processing
     (async () => {

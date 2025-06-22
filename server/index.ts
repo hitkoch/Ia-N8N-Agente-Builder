@@ -41,16 +41,17 @@ app.options('/api/whatsapp/webhook', (req, res) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Log ALL requests to webhook endpoint
-app.use('/api/whatsapp/webhook', (req, res, next) => {
-  console.log('🌐 WEBHOOK REQUEST INTERCEPTED:', {
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    body: req.body,
-    ip: req.ip,
-    timestamp: new Date().toISOString()
-  });
+// Log webhook requests only
+app.use((req, res, next) => {
+  if (req.url === '/api/whatsapp/webhook' || req.url === '/webhook') {
+    console.log('📨 WEBHOOK REQUEST:', {
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      body: req.body
+    });
+  }
   next();
 });
 
