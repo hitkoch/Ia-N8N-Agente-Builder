@@ -252,7 +252,7 @@ export function registerRoutes(app: Express): Server {
         
         res.json({ 
           message: "Monitoramento WhatsApp ativado com sucesso",
-          webhookUrl: "https://ian8n.replit.app/api/whatsapp/webhook",
+          webhookUrl: "https://ian8n.com.br/api/whatsapp/webhook",
           instanceName: instance.instanceName,
           monitoringActive: true
         });

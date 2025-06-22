@@ -396,7 +396,7 @@ export class WhatsAppGatewayService {
   async setWebhook(instanceName: string): Promise<any> {
     console.log(`🔗 Configurando webhook para instância: ${instanceName}`);
     
-    const webhookUrl = 'https://ian8n.replit.app/api/whatsapp/webhook';
+    const webhookUrl = 'https://ian8n.com.br/api/whatsapp/webhook';
     console.log(`📋 Configurando webhook com URL: ${webhookUrl}`);
     
     const webhookData = {

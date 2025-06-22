@@ -15,7 +15,7 @@ export function setupWebhookRoutes(app: Express) {
     res.json({
       service: "WhatsApp Webhook Endpoint",
       status: "active",
-      url: "https://ian8n.replit.app/api/whatsapp/webhook",
+      url: "https://ian8n.com.br/api/whatsapp/webhook",
       methods: ["GET", "POST"],
       description: "Endpoint para receber webhooks da Evolution API WhatsApp Gateway",
       supportedEvents: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
