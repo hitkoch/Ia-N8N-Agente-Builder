@@ -618,6 +618,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // API endpoint para enviar mensagens WhatsApp diretamente
+  app.post("/api/whatsapp/send-message", async (req, res) => {
+    try {
+      const { instanceName, phoneNumber, message } = req.body;
+      
+      if (!instanceName || !phoneNumber || !message) {
+        return res.status(400).json({
+          error: "Parâmetros obrigatórios: instanceName, phoneNumber, message"
+        });
+      }
+
+      const result = await whatsappGatewayService.sendMessage(instanceName, phoneNumber, message);
+      
+      res.json({
+        success: true,
+        message: "Mensagem enviada com sucesso",
+        data: result
+      });
+    } catch (error) {
+      console.error("❌ Erro ao enviar mensagem:", error);
+      res.status(500).json({
+        error: "Falha ao enviar mensagem",
+        details: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
