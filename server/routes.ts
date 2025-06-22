@@ -113,6 +113,7 @@ export function registerRoutes(app: Express): Server {
         hasInstance: true,
         id: instance.id,
         instanceName: instance.instanceName,
+        phoneNumber: instance.phoneNumber || instance.instanceName,
         status: instance.status,
         qrCode: instance.qrCode,
         agentId: instance.agentId,
@@ -136,14 +137,18 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Agente não encontrado" });
       }
 
+      if (!phoneNumber || !phoneNumber.trim()) {
+        return res.status(400).json({ message: "Número de telefone é obrigatório" });
+      }
+
       // Check if instance already exists
       const existingInstance = await storage.getWhatsappInstance(agentId);
       if (existingInstance) {
         return res.status(400).json({ message: "Instância WhatsApp já existe para este agente" });
       }
 
-      // Generate unique instance name
-      const instanceName = whatsappGatewayService.generateInstanceName(agentId, user.id);
+      // Use phone number as instance name for Evolution API
+      const instanceName = phoneNumber.trim();
       
       console.log(`📱 Criando instância WhatsApp: ${instanceName} para agente ${agentId}`);
 
@@ -163,9 +168,9 @@ export function registerRoutes(app: Express): Server {
       const whatsappInstance = await storage.createWhatsappInstance({
         agentId: agentId,
         instanceName: instanceName,
+        phoneNumber: phoneNumber.trim(),
         status: 'AWAITING_QR_SCAN',
-        qrCode: gatewayResponse.qrcode?.base64 || null,
-        apiKey: gatewayResponse.hash?.apikey || null
+        qrCode: gatewayResponse.qrcode?.base64 || null
       });
 
       console.log(`✅ Instância WhatsApp criada: ${whatsappInstance.id}`);
@@ -175,6 +180,7 @@ export function registerRoutes(app: Express): Server {
         instance: {
           id: whatsappInstance.id,
           instanceName: whatsappInstance.instanceName,
+          phoneNumber: whatsappInstance.phoneNumber,
           status: whatsappInstance.status,
           qrCode: whatsappInstance.qrCode,
           agentId: whatsappInstance.agentId,

@@ -98,6 +98,7 @@ export const conversations = pgTable("conversations", {
 export const whatsappInstances = pgTable("whatsapp_instances", {
   id: serial("id").primaryKey(),
   instanceName: text("instance_name").unique().notNull(),
+  phoneNumber: text("phone_number").notNull(),
   status: text("status").default("PENDING").notNull(),
   qrCode: text("qr_code"),
   agentId: integer("agent_id").references(() => agents.id, { onDelete: "cascade" }).unique().notNull(),
@@ -187,6 +188,8 @@ export const insertWhatsappInstanceSchema = createInsertSchema(whatsappInstances
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  phoneNumber: z.string().min(10, "Número de telefone deve ter pelo menos 10 dígitos")
 });
 
 export type User = typeof users.$inferSelect;

@@ -3,6 +3,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Loader2, Smartphone, QrCode, CheckCircle, XCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +13,7 @@ import type { Agent } from '@shared/schema';
 interface WhatsAppInstance {
   id: number;
   instanceName: string;
+  phoneNumber: string;
   status: string;
   qrCode?: string;
   agentId: number;
@@ -25,6 +28,7 @@ interface WhatsAppIntegrationProps {
 export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps) {
   const { toast } = useToast();
   const [showQrCode, setShowQrCode] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Buscar instância WhatsApp do agente
   const { data: whatsappData, isLoading: isLoadingInstance } = useQuery({
@@ -44,7 +48,12 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
   // Criar instância WhatsApp
   const createInstanceMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', `/api/agents/${agent.id}/whatsapp/create-instance`);
+      if (!phoneNumber.trim()) {
+        throw new Error("Número de telefone é obrigatório");
+      }
+      const response = await apiRequest('POST', `/api/agents/${agent.id}/whatsapp/create-instance`, {
+        phoneNumber: phoneNumber.trim()
+      });
       return await response.json();
     },
     onSuccess: () => {
@@ -54,6 +63,7 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
         description: "Instância WhatsApp criada com sucesso. Escaneie o QR Code para conectar.",
       });
       setShowQrCode(true);
+      setPhoneNumber('');
     },
     onError: (error: Error) => {
       toast({
@@ -199,27 +209,45 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
       <CardContent className="space-y-4">
         {!whatsappInstance ? (
           // Nenhuma instância criada
-          <div className="text-center space-y-4">
-            <p className="text-muted-foreground">
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-center">
               Nenhuma instância WhatsApp configurada para este agente.
             </p>
-            <Button 
-              onClick={() => createInstanceMutation.mutate()}
-              disabled={createInstanceMutation.isPending}
-              className="w-full"
-            >
-              {createInstanceMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando instância...
-                </>
-              ) : (
-                <>
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Criar Instância WhatsApp
-                </>
-              )}
-            </Button>
+            
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="phoneNumber">Número do WhatsApp</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="Ex: 5541999887766"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Digite apenas números (com código do país e DDD)
+                </p>
+              </div>
+              
+              <Button 
+                onClick={() => createInstanceMutation.mutate()}
+                disabled={createInstanceMutation.isPending || !phoneNumber.trim()}
+                className="w-full"
+              >
+                {createInstanceMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando instância...
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    Criar Instância WhatsApp
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         ) : (
           // Instância existe
@@ -227,7 +255,10 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
             {/* Status da instância */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Instância: {whatsappInstance.instanceName}</p>
+                <p className="font-medium">WhatsApp: {whatsappInstance.phoneNumber}</p>
+                <p className="text-sm text-muted-foreground">
+                  Instância: {whatsappInstance.instanceName}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   Criada em {new Date(whatsappInstance.createdAt).toLocaleDateString('pt-BR')}
                 </p>
