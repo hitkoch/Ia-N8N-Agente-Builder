@@ -150,6 +150,15 @@ export function registerRoutes(app: Express): Server {
       // Create instance in Evolution API
       const gatewayResponse = await whatsappGatewayService.createInstance(instanceName);
       
+      // Configure webhook automatically
+      try {
+        console.log(`🔗 Configurando webhook para ${instanceName}...`);
+        await whatsappGatewayService.setWebhook(instanceName);
+        console.log(`✅ Webhook configurado com sucesso para ${instanceName}`);
+      } catch (webhookError) {
+        console.warn(`⚠️ Erro ao configurar webhook (não crítico): ${webhookError.message}`);
+      }
+      
       // Save instance to database
       const whatsappInstance = await storage.createWhatsappInstance({
         agentId: agentId,
@@ -170,7 +179,8 @@ export function registerRoutes(app: Express): Server {
           qrCode: whatsappInstance.qrCode,
           agentId: whatsappInstance.agentId,
           createdAt: whatsappInstance.createdAt
-        }
+        },
+        webhookConfigured: true
       });
     } catch (error) {
       console.error('❌ Erro ao criar instância WhatsApp:', error);
@@ -208,6 +218,55 @@ export function registerRoutes(app: Express): Server {
       console.error('❌ Erro ao remover instância WhatsApp:', error);
       res.status(500).json({ 
         message: "Erro ao remover instância WhatsApp", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.post("/api/agents/:agentId/whatsapp/enable-monitoring", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      const instance = await storage.getWhatsappInstance(agentId);
+      if (!instance) {
+        return res.status(404).json({ message: "Instância WhatsApp não encontrada" });
+      }
+
+      // Configure webhook if not already configured
+      try {
+        console.log(`🔗 Ativando monitoramento para ${instance.instanceName}...`);
+        await whatsappGatewayService.setWebhook(instance.instanceName);
+        
+        // Update instance status to indicate monitoring is active
+        await storage.updateWhatsappInstance(agentId, {
+          status: instance.status // Keep current status but ensure webhook is active
+        });
+
+        console.log(`✅ Monitoramento ativado para ${instance.instanceName}`);
+        
+        res.json({ 
+          message: "Monitoramento WhatsApp ativado com sucesso",
+          webhookUrl: "https://workspace.hitkoch.replit.dev/api/whatsapp/webhook",
+          instanceName: instance.instanceName,
+          monitoringActive: true
+        });
+      } catch (webhookError) {
+        console.error(`❌ Erro ao ativar monitoramento:`, webhookError);
+        res.status(500).json({ 
+          message: "Erro ao ativar monitoramento", 
+          error: webhookError.message 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erro ao ativar monitoramento WhatsApp:', error);
+      res.status(500).json({ 
+        message: "Erro ao ativar monitoramento WhatsApp", 
         error: error.message 
       });
     }

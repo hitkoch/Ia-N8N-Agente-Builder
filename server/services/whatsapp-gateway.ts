@@ -424,10 +424,28 @@ export class WhatsAppGatewayService {
     });
 
     if (!response.ok) {
-      throw new Error(`Falha ao configurar webhook: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Erro ao configurar webhook:`, errorText);
+      throw new Error(`Falha ao configurar webhook: ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json();
+    let data: any;
+    try {
+      const responseText = await response.text();
+      console.log(`📋 Raw webhook response:`, responseText);
+      
+      const cleanedResponse = responseText.replace(/<!DOCTYPE[^>]*>/gi, '').replace(/<html[^>]*>.*<\/html>/gis, '').trim();
+      
+      if (!cleanedResponse.startsWith('{')) {
+        throw new Error(`Resposta de webhook não é JSON válido: ${cleanedResponse.substring(0, 200)}`);
+      }
+      
+      data = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error(`❌ Erro ao fazer parse da resposta de webhook:`, parseError);
+      throw new Error(`Resposta de webhook não é JSON válido: ${parseError.message}`);
+    }
+    
     console.log(`✅ Webhook configurado com sucesso para: ${instanceName}`);
     console.log(`📋 Resposta da API: ${JSON.stringify(data, null, 2)}`);
     

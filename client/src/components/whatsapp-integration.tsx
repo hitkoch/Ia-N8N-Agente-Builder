@@ -107,6 +107,28 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
     },
   });
 
+  // Ativar monitoramento
+  const enableMonitoringMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/agents/${agent.id}/whatsapp/enable-monitoring`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agents', agent.id, 'whatsapp'] });
+      toast({
+        title: "Monitoramento ativado",
+        description: "Webhook configurado e monitoramento ativo.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao ativar monitoramento",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Excluir instância
   const deleteInstanceMutation = useMutation({
     mutationFn: async () => {
@@ -212,7 +234,7 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
             </div>
 
             {/* Ações */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 onClick={() => checkStatusMutation.mutate()}
@@ -237,6 +259,36 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
                   <QrCode className="w-4 h-4 mr-2" />
                 )}
                 Gerar QR Code
+              </Button>
+
+              <Button
+                variant="default"
+                onClick={() => enableMonitoringMutation.mutate()}
+                disabled={enableMonitoringMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {enableMonitoringMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  "Monitoramento"
+                )}
+              </Button>
+            </div>
+
+            {/* Botão de remover instância separado */}
+            <div className="pt-2">
+              <Button
+                variant="destructive"
+                onClick={() => deleteInstanceMutation.mutate()}
+                disabled={deleteInstanceMutation.isPending}
+                className="w-full"
+              >
+                {deleteInstanceMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Remover Instância
               </Button>
             </div>
 
