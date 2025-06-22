@@ -265,12 +265,12 @@ export default function WhatsAppIntegration({ agent }: WhatsAppIntegrationProps)
                 variant="default"
                 onClick={() => enableMonitoringMutation.mutate()}
                 disabled={enableMonitoringMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-green-600 hover:bg-green-700"
               >
                 {enableMonitoringMutation.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  "Monitoramento"
+                  "🔗 Ativar Monitoramento"
                 )}
               </Button>
             </div>
