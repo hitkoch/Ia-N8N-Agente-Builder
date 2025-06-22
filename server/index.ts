@@ -68,6 +68,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+
+
   // Setup webhook routes with ABSOLUTE PRIORITY
   setupWebhookRoutes(app);
 
