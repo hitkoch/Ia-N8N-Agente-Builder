@@ -76,6 +76,8 @@ export function setupWebhookRoutes(app: Express) {
           } else if (phoneNumber.startsWith('5555')) {
             phoneNumber = phoneNumber.replace('5555', '55');
           }
+          
+          console.log(`📞 Número extraído do webhook: ${phoneNumber}`);
           let messageText = '';
           let mediaAnalysis = null;
           
