@@ -1,0 +1,46 @@
+## Tarefa Final de Otimização: Corrigir a Conexão Drizzle em `server/db.ts`
+
+**Diagnóstico:** O arquivo `server/db.ts` está usando o driver `@neondatabase/serverless`, que força uma conexão WebSocket (WSS) e causa o erro `ECONNREFUSED` no ambiente Docker do Easypanel. Precisamos substituí-lo pelo driver padrão `postgres-js` para uma conexão direta.
+
+**Ação:** Substitua completamente o conteúdo do arquivo `server/db.ts` pelo código corrigido abaixo.
+
+```typescript
+// Substitua todo o conteúdo de server/db.ts por este códigoSim, a imagem:
+
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from '@shared/schema'; // Mantém sua importação de schema existente
+
+// Pega a string que você enviou mostra que o arquivo está em `server/db.ts`. **Este é o caminho correto e o arquivo exato que precisa ser corrigido.**
+
+A imagem confirma nosso diagnóstico:
+ de conexão do ambiente.
+const connectionString = process.env.DATABASE_URL;
+
+// Validação para garantir que a variável de ambiente existe.
+if (!connectionString) {
+  throw new Error("A variável de ambiente DATABASE_URL*   `import { Pool, neonConfig } from '@neondatabase/serverless';`
+*   `import { drizzle } from 'drizzle-orm/neon-serverless';`
+*   `neonConfig.webSocketConstructor = ws;`
+
+Todo o arquivo está construído em torno da biblioteca da Neon, que força a conexão WebSocket não está definida.");
+}
+
+// Cria o cliente de conexão usando o pacote padrão 'postgres'.
+const client = postgres(connectionString);
+
+// Exporta a instância do Drizzle pronta para uso, com o schema e o novo cliente.
+export const db = drizzle(client, { schema });
+
+console.log("🐘 Conexão com o banco de dados D (`wss://`) e causou o erro `ECONNREFUSED`.
+
+### Ação Correta
+
+Agora que sabemos o caminho exato do arquivo, podemos dar a instrução mais precisa possível.
+
+**Use este prompt para a IA do Replit:**
+
+```prompt
+## Tarefa Crítica: Corrigir a Conexão com o Banco de Dados em `server/db.ts`
+
+**Diagnóstico:** O arquivo `server/db.ts` está usandorizzle configurada com sucesso usando o driver 'postgres-js'.");

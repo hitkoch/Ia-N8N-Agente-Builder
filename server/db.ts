@@ -1,15 +1,21 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+// Substitua todo o conteúdo de server/db.ts por este código
 
-neonConfig.webSocketConstructor = ws;
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from '../shared/schema';
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Pega a string de conexão do ambiente.
+const connectionString = process.env.DATABASE_URL;
+
+// Validação para garantir que a variável de ambiente existe.
+if (!connectionString) {
+  throw new Error("A variável de ambiente DATABASE_URL não está definida.");
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+// Cria o cliente de conexão usando o pacote padrão 'postgres'.
+const client = postgres(connectionString);
+
+// Exporta a instância do Drizzle pronta para uso, com o schema e o novo cliente.
+export const db = drizzle(client, { schema });
+
+console.log("🐘 Conexão com o banco de dados Drizzle configurada com sucesso usando o driver 'postgres-js'.");
