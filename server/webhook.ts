@@ -29,15 +29,20 @@ export function setupWebhookRoutes(app: Express) {
   });
 
   // POST endpoint for webhook processing - MUST be accessible externally
-  app.post("/api/whatsapp/webhook", webhookRateLimiter, validateWebhookData, async (req, res) => {
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    // Set CORS headers first
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
     try {
+      const { event, instance, data } = req.body;
+      
       console.log('📨 Webhook recebido:', {
-        event: req.body.event,
-        instance: req.body.instance,
+        event: event,
+        instance: instance,
         timestamp: new Date().toISOString()
       });
-
-      const { event, instance, data } = req.body;
 
       // Use optimized instance lookup
       let whatsappInstance = await webhookOptimizer.getOptimizedInstance(instance);
