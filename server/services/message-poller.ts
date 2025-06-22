@@ -17,7 +17,7 @@ interface ProcessedMessage {
 class MessagePollerService {
   private intervalId: NodeJS.Timeout | null = null;
   private processedMessages = new Map<string, ProcessedMessage>();
-  private readonly pollInterval = 5000; // 5 seconds
+  private readonly pollInterval = 2000; // 2 seconds for faster detection
   private readonly maxProcessedMessages = 1000;
 
   start() {
@@ -53,34 +53,55 @@ class MessagePollerService {
 
   private async checkInstanceMessages(instanceName: string) {
     try {
-      // Fetch recent messages from Evolution API
-      const response = await fetch(`https://apizap.ecomtools.com.br/chat/findMessages/${instanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': process.env.WHATSAPP_GATEWAY_TOKEN || '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx'
-        },
-        body: JSON.stringify({
-          where: {
-            key: {
-              fromMe: false
+      // Try different Evolution API endpoints for fetching messages
+      const endpoints = [
+        `https://apizap.ecomtools.com.br/chat/findMessages/${instanceName}`,
+        `https://apizap.ecomtools.com.br/message/findMessages/${instanceName}`,
+        `https://apizap.ecomtools.com.br/chat/fetchMessages/${instanceName}`
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': process.env.WHATSAPP_GATEWAY_TOKEN || '8Tu2U0TAe7k3dnhHJlXgy9GgQeiWdVbx'
+            },
+            body: JSON.stringify({
+              where: {
+                key: {
+                  fromMe: false
+                }
+              },
+              limit: 5
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            let messages = [];
+            
+            if (Array.isArray(result)) {
+              messages = result;
+            } else if (result.messages && Array.isArray(result.messages)) {
+              messages = result.messages;
+            } else if (result.data && Array.isArray(result.data)) {
+              messages = result.data;
             }
-          },
-          limit: 10
-        })
-      });
-
-      if (!response.ok) return;
-
-      const result = await response.json();
-      const messages = Array.isArray(result) ? result : (result.messages || []);
-      
-      for (const message of messages) {
-        await this.processMessage(message, instanceName);
+            
+            for (const message of messages) {
+              await this.processMessage(message, instanceName);
+            }
+            break; // Success, exit loop
+          }
+        } catch (endpointError) {
+          continue; // Try next endpoint
+        }
       }
       
     } catch (error) {
-      console.error(`❌ Erro ao verificar mensagens da instância ${instanceName}:`, error.message);
+      // Silently continue - polling errors are expected
     }
   }
 
@@ -89,9 +110,9 @@ class MessagePollerService {
       // Skip if already processed
       if (this.processedMessages.has(message.key.id)) return;
 
-      // Skip messages older than 1 minute
+      // Skip messages older than 30 seconds
       const messageTime = message.messageTimestamp * 1000;
-      if (Date.now() - messageTime > 60000) return;
+      if (Date.now() - messageTime > 30000) return;
 
       // Extract message details
       const phoneNumber = message.key.remoteJid.replace('@s.whatsapp.net', '');

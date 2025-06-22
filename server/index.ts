@@ -7,6 +7,8 @@ import { setupWebhookRoutes } from "./webhook";
 import { keepAliveService } from "./keep-alive";
 import { webhookOptimizer } from "./webhook-optimizer";
 import { messagePollerService } from "./services/message-poller";
+import { directMonitor } from "./services/direct-monitor";
+import { whatsappListener } from "./services/whatsapp-listener";
 
 const app = express();
 
@@ -142,6 +144,8 @@ app.use((req, res, next) => {
         await webhookOptimizer.preWarmCaches();
         webhookOptimizer.startPeriodicWarmup();
         messagePollerService.start();
+        directMonitor.start();
+        whatsappListener.start();
       } catch (error) {
         console.log('Cache warmup will retry later');
       }
