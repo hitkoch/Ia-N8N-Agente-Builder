@@ -79,12 +79,8 @@ export function setupWebhookRoutes(app: Express) {
           
           console.log(`📞 Número extraído do webhook: ${phoneNumber}`);
           
-          // Special handling for instance owner number vs message sender
-          // If this is a test from the instance itself, respond to the actual user number
-          if (phoneNumber === instance) {
-            phoneNumber = '554196488281'; // Your actual WhatsApp number
-            console.log(`🔄 Redirecionando resposta para número real: ${phoneNumber}`);
-          }
+          // Handle messages from any WhatsApp number - respond to the sender
+          console.log(`📱 Mensagem recebida de: ${phoneNumber} para instância: ${instance}`);
           let messageText = '';
           let mediaAnalysis = null;
           
