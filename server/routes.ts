@@ -618,6 +618,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Test agent endpoint
+  app.post("/api/agents/:agentId/test", requireAuth, async (req, res) => {
+    const user = getAuthenticatedUser(req);
+    const agentId = parseInt(req.params.agentId);
+    const { message } = req.body;
+    
+    try {
+      const agent = await storage.getAgent(agentId, user.id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agente não encontrado" });
+      }
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ message: "Mensagem é obrigatória" });
+      }
+
+      console.log(`🧪 Testando agente ${agent.name} (ID: ${agentId})`);
+      console.log(`💬 Mensagem: "${message}"`);
+
+      const response = await agentService.testAgent(agent, message.trim());
+      
+      res.json({ 
+        response,
+        agentId: agent.id,
+        agentName: agent.name
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro no teste do agente:', error);
+      res.status(500).json({ 
+        message: "Erro ao testar agente", 
+        error: error.message 
+      });
+    }
+  });
+
   // API endpoint para enviar mensagens WhatsApp diretamente
   app.post("/api/whatsapp/send-message", async (req, res) => {
     try {
